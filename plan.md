@@ -66,7 +66,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   feature vectors only, session IDs), false-alarm / missed-violation feedback,
   opt-in session statistics (duration, violations, corrections, mean confidence),
   local data screen with record count, JSON export via system file picker, delete.
-- [ ] Step 07: instrumented end-to-end tests on the API 34 emulator (setup, demo,
+- [x] Step 07: instrumented end-to-end tests on the API 34 emulator (setup, demo,
   pause, settings, data management) wired into `localPipeline.sh` and CI via an
   emulator runner; capture genuine running-UI screenshots with `adb exec-out screencap`.
 - [ ] Step 08: Docker image that serves the release APK plus source/license links;
@@ -316,3 +316,25 @@ require consented physical sessions and must not be fabricated.
   AARs; upstream versions checked on Google Maven / Maven Central.
 - Next for the implementing agent: read `plan_v2/plan_v2.md` §2.3 and §5; M1 (F1, F2,
   F5, F7, F8, F10) before any real-table calibration is stored.
+
+### 0.5.14 — test: add UiAutomator end-to-end flows and screenshot capture
+
+- Done: `UiFlowTest` drives the installed APK with real touches: synthetic demo shows
+  the warning and status words; settings persist across an activity restart; with a
+  rear camera, setup → position (live people count) → four real screen taps on the
+  preview → save table → seats → start monitoring → grace → pause/resume → stop →
+  local data → delete dialog cancel (without a rear camera it asserts the recovery
+  message instead). `scripts/screenshots.sh` installs the APK and captures genuine
+  welcome, synthetic-demo-warning and settings screenshots into `docs/screenshots/`.
+  CI emulator gets an emulated rear camera; runs are no longer cancelled by newer
+  pushes, so every commit keeps a visible remote result.
+- Validation: `connectedDebugAndroidTest` on the API 34 emulator — 4 tests, 0 failed
+  (NativeModelTest + 3 UiFlowTest flows using the emulator's emulated rear camera).
+  Full local pipeline green.
+- Plan of record: `plan_v2/plan_v2.md` (committed by the planning agent in 0.5.13)
+  now decides what to build. Next work follows its milestones: M1 foundations
+  (image-space coordinates, freshness vs gap budgets, Throwable handling, orientation/
+  insets, persisted maxGapMs), then M2 frame path + ABI split, M3/M4 residuals,
+  M5 landmark session logs + replay harness + module split, M6 guards, M7 docs,
+  M8 signing + Docker/GHCR + release, M9 gate. Physical-phone evidence (§7) cannot be
+  produced by this agent and stays recorded as pending, never fabricated.

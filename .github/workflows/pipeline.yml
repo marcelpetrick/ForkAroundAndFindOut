@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: pipeline-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back emulated
           script: ./localPipeline.sh --noRun --noOpen --e2e required --report-dir artifacts/pipeline
       - uses: actions/upload-artifact@v4
         if: always()
