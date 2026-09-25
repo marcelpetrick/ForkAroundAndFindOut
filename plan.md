@@ -527,3 +527,24 @@ require consented physical sessions and must not be fabricated.
   still the tip of main, so parallel runs cannot publish an older image as latest.
 - Validation: 50 tests incl. a Robolectric German-locale flow; 98.2 % merged lines; E2E
   4/4; Docker PASS. Remote: 0.7.21 and 0.8.22 green.
+
+### 0.9.26 — fix(privacy): block MediaPipe's telemetry upload and guard the permission set (plan_v2 M6, F6)
+
+- **Finding:** a new manifest guard test showed the merged manifest requested
+  `INTERNET` and `ACCESS_NETWORK_STATE`, added by `com.google.android.datatransport`
+  (transport-backend-cct), a dependency of MediaPipe Tasks. On the emulator the library
+  stores `COREML_ON_DEVICE_SOLUTIONS` usage events and schedules uploads to Google's
+  logging endpoint (`firebaselogging.googleapis.com`). No images or landmarks are part of
+  it, but it contradicts "nothing is uploaded". **Builds up to 0.9.25 (including the GHCR
+  images published so far) could send this library usage telemetry.**
+- Done: `INTERNET` removed from the merged manifest (`tools:node="remove"`).
+  `ACCESS_NETWORK_STATE` stays: read-only, and Android 14 throws a SecurityException for
+  network-constrained jobs without it. Evidence on the emulator: the forced upload job fails
+  with `EPERM` inside the library's executor, the app keeps running, crash buffer empty.
+  `PrivacyGuardTest` fails if any permission beyond camera, network-state and AndroidX's
+  receiver signature permission appears, if INTERNET returns, or if backup is enabled.
+- Done (F6): the engine test no longer reflects into MediaPipe's options class; the
+  engine's result/error listeners delegate to internal `handle`/`fail` used by the test.
+- Validation: 51 tests, 98.2 % merged lines; E2E 4/4; Docker PASS; `aapt dump
+  permissions` of the debug APK lists CAMERA, ACCESS_NETWORK_STATE and the receiver
+  permission only.

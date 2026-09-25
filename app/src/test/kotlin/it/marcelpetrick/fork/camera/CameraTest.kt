@@ -19,11 +19,8 @@ import androidx.camera.view.transform.OutputTransform
 import androidx.lifecycle.MutableLiveData
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
-import com.google.mediapipe.tasks.core.ErrorListener
-import com.google.mediapipe.tasks.core.OutputHandler
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import it.marcelpetrick.fork.detection.Pose
@@ -154,7 +151,6 @@ class CameraTest {
     }
 
     @Test
-    @Suppress("UNCHECKED_CAST")
     fun engineMapsConfidenceAndReleasesInputOnResultErrorAndClose() {
         val context = RuntimeEnvironment.getApplication()
         val native = mock(PoseLandmarker::class.java)
@@ -169,18 +165,7 @@ class CameraTest {
                 options = o
                 native
             })
-        val listener =
-            PoseLandmarker.PoseLandmarkerOptions::class.java
-                .getDeclaredMethod("resultListener")
-                .apply {
-                    isAccessible = true
-                }.invoke(options) as Optional<OutputHandler.ResultListener<PoseLandmarkerResult, MPImage>>
-        val errorListener =
-            PoseLandmarker.PoseLandmarkerOptions::class.java
-                .getDeclaredMethod("errorListener")
-                .apply {
-                    isAccessible = true
-                }.invoke(options) as Optional<ErrorListener>
+        assertNotNull(options) // built through the factory seam; no reflection into MediaPipe
         val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
         engine.submit(bitmap, 100)
         assertThrows(IllegalStateException::class.java) { engine.submit(bitmap, 101) }
@@ -196,7 +181,7 @@ class CameraTest {
                 ),
             ),
         )
-        listener.get().run(result, BitmapImageBuilder(bitmap).build())
+        engine.handle(result)
         assertFalse("the analyzer reuses its bitmap; the engine must not recycle it", bitmap.isRecycled)
         assertEquals(0.8, poses.single().landmarks[0].confidence, 0.001)
         assertEquals(
@@ -209,7 +194,7 @@ class CameraTest {
         )
         assertEquals(0.0, poses.single().landmarks[1].confidence, 0.001)
         engine.submit(bitmap, 200)
-        errorListener.get().onError(IllegalStateException("inference failed"))
+        engine.fail(IllegalStateException("inference failed"))
         assertEquals(1, errors)
         doThrow(IllegalStateException("bad frame")).`when`(native).detectAsync(any(MPImage::class.java), anyLong())
         assertThrows(IllegalStateException::class.java) { engine.submit(bitmap, 300) }

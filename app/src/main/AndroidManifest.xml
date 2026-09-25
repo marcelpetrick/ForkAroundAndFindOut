@@ -1,6 +1,10 @@
 <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- MediaPipe Tasks pulls in Google's datatransport telemetry uploader. The app promises
+         that nothing leaves the phone, so network access is removed from the merged manifest. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <application android:theme="@style/AppTheme" android:label="Fork Around &amp; Find Out"
         android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/app_icon" android:supportsRtl="true" android:enableOnBackInvokedCallback="true">

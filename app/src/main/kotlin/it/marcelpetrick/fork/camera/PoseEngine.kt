@@ -8,6 +8,7 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import it.marcelpetrick.fork.detection.Landmark
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Pose
@@ -28,8 +29,8 @@ interface PoseEngine : AutoCloseable {
 class MediaPipeEngine(
     context: Context,
     settings: Settings,
-    onResult: (List<Pose>, Long) -> Unit,
-    onError: (Exception) -> Unit,
+    private val onResult: (List<Pose>, Long) -> Unit,
+    private val onError: (Exception) -> Unit,
     factory: (Context, PoseLandmarker.PoseLandmarkerOptions) -> PoseLandmarker = PoseLandmarker::createFromOptions,
 ) : PoseEngine {
     private val pending = AtomicReference<MPImage?>()
@@ -44,25 +45,33 @@ class MediaPipeEngine(
                 .setMinPoseDetectionConfidence(0.6f)
                 .setMinPosePresenceConfidence(0.6f)
                 .setMinTrackingConfidence(0.6f)
-                .setResultListener { result, _ ->
-                    val poses =
-                        result.landmarks().map { joints ->
-                            Pose(
-                                joints.map { joint ->
-                                    Landmark(
-                                        Point(joint.x().toDouble(), joint.y().toDouble()),
-                                        minOf(joint.visibility().orElse(0f), joint.presence().orElse(0f)).toDouble(),
-                                    )
-                                },
-                            )
-                        }
-                    pending.set(null)
-                    onResult(poses, result.timestampMs())
-                }.setErrorListener { error ->
-                    pending.set(null)
-                    onError(error)
-                }.build(),
+                .setResultListener { result, _ -> handle(result) }
+                .setErrorListener { error -> fail(error) }
+                .build(),
         )
+
+    /** MediaPipe result callback: joint confidence is min(visibility, presence). */
+    internal fun handle(result: PoseLandmarkerResult) {
+        val poses =
+            result.landmarks().map { joints ->
+                Pose(
+                    joints.map { joint ->
+                        Landmark(
+                            Point(joint.x().toDouble(), joint.y().toDouble()),
+                            minOf(joint.visibility().orElse(0f), joint.presence().orElse(0f)).toDouble(),
+                        )
+                    },
+                )
+            }
+        pending.set(null)
+        onResult(poses, result.timestampMs())
+    }
+
+    /** MediaPipe error callback. */
+    internal fun fail(error: RuntimeException) {
+        pending.set(null)
+        onError(error)
+    }
 
     override fun submit(
         bitmap: Bitmap,
