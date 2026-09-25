@@ -13,6 +13,29 @@ vision’s Flutter recommendation.
 Docker will serve a downloadable Android APK with source/license links. The Android
 app includes an explicitly labelled synthetic demo for reproducible UI testing.
 
+## Owner input log
+
+Instructions from the owner, recorded so any agent can resume faithfully.
+
+- Mandate: implement the complete `vision.md` and keep working until the product works;
+  make routine decisions independently. Work on `main`; atomic conventional commits;
+  semver (patch every commit, minor for major features); every commit green before
+  commit and push; push continuously.
+- Quality: `localPipeline.sh` early, growing to formatting, linting, static checks,
+  unit/integration/e2e tests, >=95% coverage, builds and Docker checks; GitHub
+  Actions mirror it and stay green. Small documented reusable scripts.
+- Delivery: local product first, then Docker; build and publish the image to GHCR via
+  Actions. GPLv3-or-later with `LICENSE` and headers. README with badges modelled on
+  `~/repos/Cullendula` / myLastFmPlayer, setup, testing, pipeline, Docker, usage and at
+  least one real UI screenshot. Do not skip requirements.
+- Finish: `/reviewBranch`, fix findings, `/githubAbout`, audit every `vision.md` item,
+  full local pipeline, green Actions, working Docker image, everything pushed, clean
+  tree. Then make a **public GitHub release**.
+- 2026-09-25 session: Kotlin throughout (not Flutter). Another agent works in the same
+  checkout and writes the plan (`plan_v2/`); this agent implements. **Commit only files
+  this agent changed** (explicit paths, never `git add -A`). Document everything in
+  `plan.md` — update the plan first, then continue. Check remote CI and fix failures.
+
 ## Tasks
 
 - [x] Step 01: preserve vision, working agreement, plan, and initial version on `main`.
@@ -22,18 +45,39 @@ app includes an explicitly labelled synthetic demo for reproducible UI testing.
   per-arm state machine, configuration and deterministic acceptance fixtures.
 - [x] Step 04: implement native rear-camera selection, permission/lifecycle handling,
   720p latest-frame analysis, MediaPipe multi-pose inference, preview and event bridge.
-- [ ] Step 05: implement monitoring UI, calibration and seat zones, persisted settings,
-  debug overlay, pause, configurable visual/audio alarms and automatic clearing.
-- [ ] Step 06: implement explicit labelled local training samples, deletion/export,
-  false-alarm/missed-violation feedback and optional non-image session statistics.
-- [ ] Step 07: validate local Android builds, unit/integration/e2e tests and >=95%
-  coverage; capture an actual running-UI screenshot.
-- [ ] Step 08: Dockerize APK distribution, add Docker smoke
-  checks and GHCR build/publish Actions; verify the published image.
-- [ ] Step 09: complete README, script documentation, architecture, hardware
-  validation procedure and full vision traceability matrix.
-- [ ] Step 10: run reviewBranch, resolve findings, run githubAbout, complete all
-  local/remote gates, push and verify a clean working tree.
+- [ ] Step 05 (in progress): native monitoring UI — welcome, camera positioning with
+  live skeleton, four-corner table calibration (letterbox taps rejected), optional
+  non-overlapping seat regions, monitor with per-seat left/right status words,
+  always-visible Pause, grace period, watchdog tick that expires stale evidence,
+  configurable visual (border/icon/tint/slow pulse) and audio (once/repeat/continuous,
+  volume) warnings, silence on pause/background/camera loss, recalibration notice on
+  geometry change, adult diagnostics (FPS, latency, scores, confidence), persisted
+  settings screen for every FR-13 item, and a clearly labelled synthetic demo that
+  never sounds or stores data. Robolectric flow tests plus unit tests.
+- [ ] Step 06: explicit training mode (NORMAL / LEFT / RIGHT / BOTH labels, per seat,
+  feature vectors only, session IDs), false-alarm / missed-violation feedback,
+  opt-in session statistics (duration, violations, corrections, mean confidence),
+  local data screen with record count, JSON export via system file picker, delete.
+- [ ] Step 07: instrumented end-to-end tests on the API 34 emulator (setup, demo,
+  pause, settings, data management) wired into `localPipeline.sh` and CI via an
+  emulator runner; capture genuine running-UI screenshots with `adb exec-out screencap`.
+- [ ] Step 08: Docker image that serves the release APK plus source/license links;
+  Docker smoke test in the pipeline; GitHub Actions workflow builds and publishes
+  to GHCR; verify by pulling and running the published image.
+- [ ] Step 09: README (badges, setup, usage, testing, pipeline, Docker, screenshot),
+  script docs, architecture, hardware validation checklist, full vision traceability.
+- [ ] Step 10: run `/reviewBranch`, fix confirmed findings, run `/githubAbout`, audit
+  every `vision.md` section, full local pipeline, green Actions, verified GHCR image,
+  clean working tree.
+- [ ] Step 11: public GitHub release (tag `v<VERSION>`) with the APK attached and
+  honest release notes separating software evidence from pending household evidence.
+
+### Coordination
+
+A second agent authored `plan_v2/` (review, re-sequenced plan, UI/UX design) in
+parallel. Per `plan_v2/README.md`, once published `plan_v2/plan_v2.md` decides *what to
+build* and this file remains the ledger of *what was built*. Commits stage explicit
+paths only, so neither agent commits the other's uncommitted files.
 
 ## Vision traceability
 
@@ -165,3 +209,19 @@ require consented physical sessions and must not be fabricated.
 - Pending: UI integration (step 05), e2e in the pipeline, physical camera evidence.
 - Handoff: `CameraSession` delivers poses already mapped to preview-normalized
   coordinates, so calibration taps and detection share one coordinate system.
+
+### 0.3.8 — docs: record remaining delivery plan and parallel-agent coordination
+
+- Done: re-audited repository state after 0.3.7. Steps 01–04 complete; remote Actions
+  green for 0.3.7 (earlier red runs were the superseded SDK-setup failure and a
+  cancelled run). Expanded steps 05–10 with concrete scope; added step 11, a public
+  GitHub release; recorded coordination with the parallel `plan_v2/` work.
+- Step 05 status: overlay, settings model, speaker, synthetic demo and activity flow
+  are implemented locally but not committed; one Robolectric permission-flow test is
+  still failing, so the feature is held back until the whole pipeline is green.
+- Validation: documentation-only change (plan, version files); product code is
+  identical to 0.3.7, which passed the full local pipeline, the instrumented
+  emulator test and remote Actions. Pipeline re-run on a clean worktree of this commit.
+- Pending: steps 05–11 and physical-camera/household evidence.
+- New ideas: demo scenario doubles as README screenshot source (labelled synthetic);
+  seat overlap uses a separating-axis test so diagonal regions are not falsely rejected.
