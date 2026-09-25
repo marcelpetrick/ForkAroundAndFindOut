@@ -180,8 +180,10 @@ class UiFlowTest {
         waitFor("Warnings begin in")
         Thread.sleep(5_000) // let the latency window fill
         tap("Adult diagnostics")
-        waitFor("FPS")
-        val readout = device.findObject(By.textContains("FPS")).text
+        // "latency p50" is unique to the diagnostics readout; a slow CI emulator also shows
+        // an FPS figure in the "Processing is slow" status line.
+        waitFor("latency p50")
+        val readout = device.findObject(By.textContains("latency p50")).text
         Log.i("ForkPerformance", readout.lines().first())
         assertTrue(readout, Regex("""\d+(\.\d)? FPS · latency p50 \d+ / p95 \d+ ms · dropped \d+""").containsMatchIn(readout))
         tap("Hide diagnostics")

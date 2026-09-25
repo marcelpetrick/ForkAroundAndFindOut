@@ -548,3 +548,12 @@ require consented physical sessions and must not be fabricated.
 - Validation: 51 tests, 98.2 % merged lines; E2E 4/4; Docker PASS; `aapt dump
   permissions` of the debug APK lists CAMERA, ACCESS_NETWORK_STATE and the receiver
   permission only.
+
+### 0.9.27 — test(e2e): read the diagnostics readout by its unique text
+
+- Evidence: the remote run for 0.9.24 failed in UiFlowTest only: the CI emulator ran at
+  5 FPS, the app correctly showed "Processing is slow (5 FPS)…", and the test picked that
+  status line (first text containing "FPS") instead of the diagnostics readout.
+- Done: the test locates the readout by "latency p50". Product behaviour unchanged and
+  correct (slow-processing message on a slow device).
+- Validation: 4 instrumented tests PASS on the local emulator.
