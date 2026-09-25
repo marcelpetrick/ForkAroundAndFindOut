@@ -18,9 +18,9 @@ app includes an explicitly labelled synthetic demo for reproducible UI testing.
 - [x] Step 01: preserve vision, working agreement, plan, and initial version on `main`.
 - [x] Step 02: scaffold Kotlin Android project, GPL license, reusable scripts,
   initial local quality pipeline and mirrored GitHub Actions.
-- [ ] Step 03: implement and test geometry, feature extraction, seat assignment,
+- [x] Step 03: implement and test geometry, feature extraction, seat assignment,
   per-arm state machine, configuration and deterministic acceptance fixtures.
-- [ ] Step 04: implement native rear-camera selection, permission/lifecycle handling,
+- [x] Step 04: implement native rear-camera selection, permission/lifecycle handling,
   720p latest-frame analysis, MediaPipe multi-pose inference, preview and event bridge.
 - [ ] Step 05: implement monitoring UI, calibration and seat zones, persisted settings,
   debug overlay, pause, configurable visual/audio alarms and automatic clearing.
@@ -150,3 +150,18 @@ require consented physical sessions and must not be fabricated.
 - Pending: camera/UI integration, e2e, screenshot, Docker and final gates.
 - Handoff: `Monitor` must be ticked even without callbacks; `LocalStore.add` is called
   only for explicit training/feedback or opted-in statistics. Keep demo data separate.
+
+### 0.3.7 — feat: add native CameraX and MediaPipe pose pipeline
+
+- Done: rear-camera selection by Camera2 ID, 720p preview plus RGBA latest-frame
+  analysis, busy-drop analyzer, rotation handling, CameraX coordinate transform into
+  preview space, MediaPipe LIVE_STREAM engine (Full/Lite, up to 4 poses, 0.6 gates),
+  image ownership until async completion, late-callback suppression after close.
+- Done: `scripts/models.py` downloads pinned model version 1 and verifies SHA-256;
+  models are not committed. Lint opt-ins added for experimental CameraX transforms.
+- Validation: full local pipeline passed, 552/560 Kotlin lines covered (98.6%).
+  Instrumented `NativeModelTest` ran both bundled models through the real native
+  runtime on the API 34 x86_64 emulator; a blank frame yields zero poses.
+- Pending: UI integration (step 05), e2e in the pipeline, physical camera evidence.
+- Handoff: `CameraSession` delivers poses already mapped to preview-normalized
+  coordinates, so calibration taps and detection share one coordinate system.

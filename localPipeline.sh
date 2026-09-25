@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+python3 scripts/models.py
 shellcheck localPipeline.sh
 python3 -m compileall -q scripts
 ./gradlew --console=plain spotlessCheck :app:lintDebug :app:testDebugUnitTest :app:koverXmlReportDebug :app:koverVerifyDebug :app:assembleDebug :app:assembleRelease

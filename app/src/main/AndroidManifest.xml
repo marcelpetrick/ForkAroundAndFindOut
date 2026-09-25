@@ -1,5 +1,7 @@
 <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <application android:theme="@style/AppTheme" android:label="Fork Around &amp; Find Out"
         android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/app_icon" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">

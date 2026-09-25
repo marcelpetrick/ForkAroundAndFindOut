@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 package it.marcelpetrick.fork.monitoring
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AtomicFile
 import it.marcelpetrick.fork.detection.SeatResult
@@ -25,6 +26,8 @@ class LocalStore(
             Settings()
         }
 
+    // The KTX edit helper discards commit()'s result; a failed save must be reported.
+    @SuppressLint("UseKtx")
     fun save(settings: Settings) {
         check(preferences.edit().putString("config", settings.encode()).commit()) { "Settings could not be saved" }
     }
