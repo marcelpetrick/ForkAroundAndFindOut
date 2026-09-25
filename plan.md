@@ -133,3 +133,20 @@ require consented physical sessions and must not be fabricated.
   Next implement persisted settings/data and a monitoring controller, then camera/UI.
 - New ideas: expose all computed feature values in labelled session exports; never
   present heuristic scores as calibrated probabilities or measured meal accuracy.
+
+### 0.2.6 — feat: persist settings and add fail-safe monitoring sessions
+
+- Done: complete versioned settings serialization (calibration, seats, camera/model,
+  people, thresholds, delays, visual/audio modes, volume, grace, diagnostics/statistics).
+- Done: monitoring session controller, grace period, frame freshness watchdog,
+  geometry-change invalidation, per-arm violation counts/confidence; independent
+  once/repeat/continuous audio policy that stops on pause or missing evidence.
+- Done: private atomic feature storage, bounded capacity, explicit sample/feedback
+  records with session IDs, raw export, deletion and corrupt-file recovery notice.
+  No image persistence. UI opt-in/controls remain pending.
+- Validation: 18 unit/Robolectric tests pass, including persistence, malformed data,
+  stale callbacks, calibration, alarms and exports. Full local pipeline passed;
+  Kotlin coverage 416/417 lines.
+- Pending: camera/UI integration, e2e, screenshot, Docker and final gates.
+- Handoff: `Monitor` must be ticked even without callbacks; `LocalStore.add` is called
+  only for explicit training/feedback or opted-in statistics. Keep demo data separate.
