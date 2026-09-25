@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -148,6 +149,13 @@ class UiFlowTest {
         tap("Finish setup")
         tap("Start monitoring")
         waitFor("Warnings begin in")
+        Thread.sleep(5_000) // let the latency window fill
+        tap("Adult diagnostics")
+        waitFor("FPS")
+        val readout = device.findObject(By.textContains("FPS")).text
+        Log.i("ForkPerformance", readout.lines().first())
+        assertTrue(readout, Regex("""\d+(\.\d)? FPS · latency p50 \d+ / p95 \d+ ms · dropped \d+""").containsMatchIn(readout))
+        tap("Hide diagnostics")
         tap("Pause")
         waitFor("Paused. No warnings until you resume.")
         tap("Resume")

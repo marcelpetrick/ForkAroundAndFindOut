@@ -2,6 +2,7 @@
 package it.marcelpetrick.fork.camera
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.os.Looper
@@ -48,16 +49,32 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import java.nio.ByteBuffer
 import java.util.Optional
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.TimeUnit
 
-fun image(degrees: Int = 0): ImageProxy {
+/**
+ * An 80×40 RGBA frame whose top-left pixel is magenta; [padding] adds row-stride bytes.
+ * Magenta is symmetric under R/B swaps, so the check holds for Robolectric's host BGRA too.
+ */
+fun image(
+    degrees: Int = 0,
+    padding: Int = 0,
+): ImageProxy {
     val image = mock(ImageProxy::class.java)
     val info = mock(ImageInfo::class.java)
-    `when`(image.toBitmap()).thenReturn(Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888))
+    val plane = mock(ImageProxy.PlaneProxy::class.java)
+    val stride = 80 * 4 + padding
+    val pixels = ByteBuffer.allocateDirect(stride * 40)
+    pixels.put(0, 0xFF.toByte()).put(2, 0xFF.toByte()).put(3, 0xFF.toByte()) // R, B, A of pixel (0, 0)
+    `when`(plane.buffer).thenReturn(pixels)
+    `when`(plane.rowStride).thenReturn(stride)
+    `when`(plane.pixelStride).thenReturn(4)
+    `when`(image.planes).thenReturn(arrayOf(plane))
     `when`(image.width).thenReturn(80)
     `when`(image.height).thenReturn(40)
     `when`(image.cropRect).thenReturn(Rect(0, 0, 80, 40))
@@ -80,6 +97,7 @@ class CameraTest {
         analyzer.analyze(first)
         verify(first).close()
         analyzer.analyze(image()) // busy, discard
+        assertEquals(1, analyzer.dropped)
         assertEquals(1, inputs.size)
         analyzer.completed()
         analyzer.analyze(image(90))
@@ -98,6 +116,41 @@ class CameraTest {
         assertEquals(1, errors)
         analyzer.analyze(image())
         assertEquals(2, errors)
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // real pixel copies and canvas rotation
+    fun analyzerRotatesIntoReusedBitmapsAndRemovesRowPadding() {
+        val marker = mutableListOf<Pair<Int, Int>>()
+        val sizes = mutableListOf<Pair<Int, Int>>()
+        val frames = mutableListOf<Int>()
+        lateinit var analyzer: FrameAnalyzer
+        val engine =
+            object : PoseEngine {
+                override fun submit(
+                    bitmap: Bitmap,
+                    timeMs: Long,
+                ) {
+                    frames += System.identityHashCode(bitmap)
+                    sizes += bitmap.width to bitmap.height
+                    val hit =
+                        (0 until bitmap.width).flatMap { x -> (0 until bitmap.height).map { y -> x to y } }.single { (x, y) ->
+                            bitmap.getPixel(x, y) ==
+                                Color.MAGENTA
+                        }
+                    marker += hit
+                    analyzer.completed()
+                }
+
+                override fun close() = Unit
+            }
+        analyzer = FrameAnalyzer(engine, { _, _, _, _ -> }, { throw AssertionError(it) }, { 1 })
+        for ((degrees, padding) in listOf(0 to 0, 90 to 16, 180 to 0, 270 to 16, 90 to 16)) analyzer.analyze(image(degrees, padding))
+        assertEquals(listOf(80 to 40, 40 to 80, 80 to 40, 40 to 80, 40 to 80), sizes)
+        // Sensor pixel (0, 0) lands where a clockwise rotation puts the top-left corner.
+        assertEquals(listOf(0 to 0, 39 to 0, 79 to 39, 0 to 79, 39 to 0), marker)
+        assertEquals("a steady stream reuses the same bitmap", frames[3], frames[4])
+        assertEquals(0, analyzer.dropped)
     }
 
     @Test
@@ -144,6 +197,7 @@ class CameraTest {
             ),
         )
         listener.get().run(result, BitmapImageBuilder(bitmap).build())
+        assertFalse("the analyzer reuses its bitmap; the engine must not recycle it", bitmap.isRecycled)
         assertEquals(0.8, poses.single().landmarks[0].confidence, 0.001)
         assertEquals(
             0.2,
@@ -161,6 +215,7 @@ class CameraTest {
         assertThrows(IllegalStateException::class.java) { engine.submit(bitmap, 300) }
         engine.close()
         verify(native).close()
+        assertFalse(bitmap.isRecycled)
     }
 
     @Test

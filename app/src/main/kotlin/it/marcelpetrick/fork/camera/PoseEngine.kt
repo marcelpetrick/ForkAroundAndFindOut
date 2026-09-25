@@ -21,7 +21,10 @@ interface PoseEngine : AutoCloseable {
     )
 }
 
-/** Native inference with explicit input ownership until its asynchronous completion. */
+/**
+ * Native inference with one frame in flight. The caller owns and reuses the bitmap, so the
+ * `MPImage` wrapper is only tracked, never closed: closing it would recycle that bitmap.
+ */
 class MediaPipeEngine(
     context: Context,
     settings: Settings,
@@ -53,10 +56,10 @@ class MediaPipeEngine(
                                 },
                             )
                         }
-                    pending.getAndSet(null)?.close()
+                    pending.set(null)
                     onResult(poses, result.timestampMs())
                 }.setErrorListener { error ->
-                    pending.getAndSet(null)?.close()
+                    pending.set(null)
                     onError(error)
                 }.build(),
         )
@@ -67,19 +70,18 @@ class MediaPipeEngine(
     ) {
         val image = BitmapImageBuilder(bitmap).build()
         if (!pending.compareAndSet(null, image)) {
-            image.close()
             error("Only one inference may be in flight")
         }
         try {
             landmarker.detectAsync(image, timeMs)
         } catch (error: Exception) {
-            pending.getAndSet(null)?.close()
+            pending.set(null)
             throw error
         }
     }
 
     override fun close() {
         landmarker.close()
-        pending.getAndSet(null)?.close()
+        pending.set(null)
     }
 }

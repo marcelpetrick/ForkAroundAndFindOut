@@ -40,6 +40,10 @@ data class FrameInfo(
 interface FrameSource : AutoCloseable {
     val mapping: Matrix?
 
+    /** Frames the camera delivered while an inference was still running (not analysed). */
+    val dropped: Long
+        get() = 0
+
     fun start()
 }
 
@@ -87,6 +91,9 @@ class CameraSession(
     override var mapping: Matrix? = null
         private set
 
+    override val dropped: Long
+        get() = analyzer?.dropped ?: 0
+
     override fun start() {
         previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -129,10 +136,17 @@ class CameraSession(
                             ).build()
                     val preview = Preview.Builder().setResolutionSelector(resolution).build()
                     preview.setSurfaceProvider(previewView.surfaceProvider)
+                    // Pose models run at 256 px input; a small analysis stream saves copies and power.
+                    val analysisResolution =
+                        ResolutionSelector
+                            .Builder()
+                            .setResolutionStrategy(
+                                ResolutionStrategy(Size(640, 360), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                            ).build()
                     val analysis =
                         ImageAnalysis
                             .Builder()
-                            .setResolutionSelector(resolution)
+                            .setResolutionSelector(analysisResolution)
                             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()

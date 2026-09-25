@@ -402,3 +402,24 @@ require consented physical sessions and must not be fabricated.
   lines, 4 instrumented tests on the API 34 emulator, Docker stage PASS; `apksigner`
   confirms the release certificate SHA-256 `aaf85804…5ae0`.
 - Pending: verify the published GHCR image by pulling it (after the remote run).
+
+### 0.7.18 — perf: allocation-free frame path and processing diagnostics (plan_v2 M2, F4)
+
+- Done: separate 640×360 analysis stream (preview stays 720p); RGBA plane copied into a
+  reused bitmap (row padding removed) and rotated with a SRC-mode canvas into a reused
+  upright bitmap — no per-frame allocation or `toBitmap()`. The engine no longer closes
+  the `MPImage` (closing recycled the reused bitmap; caught by the real-camera e2e test
+  as "Canvas: trying to use a recycled bitmap"). Dropped-frame counter; diagnostics now
+  show FPS, latency p50/p95, dropped frames, model, thermal status and battery.
+- Decision: rotation stays in software instead of `ImageProcessingOptions` because the
+  output-coordinate convention of MediaPipe's rotation option can only be verified with a
+  real person image, which this project does not commit; own rotation is correct by
+  construction and pixel-exactly tested (Robolectric native graphics, all four angles,
+  padded rows, magenta marker invariant to host BGRA order).
+- Evidence (emulator, x86_64 host CPU — **not phone evidence**): Full model 27.9 FPS,
+  latency p50 23 ms / p95 35 ms, thermal none (ForkPerformance log from UiFlowTest).
+  Release APK 38.7 MB (arm64-only, from 0.7.17).
+- Validation: unit tests incl. rotation/stride test and engine no-recycle assertion; 4
+  instrumented tests PASS (camera flow asserts the diagnostics readout format); full
+  pipeline green. Remote Actions: 0.6.16 green (8m39s) with required emulator e2e.
+- Pending (needs a phone): first phone run of Position/diagnostics per plan_v2 §7 step 1.

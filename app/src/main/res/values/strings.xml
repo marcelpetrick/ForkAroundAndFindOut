@@ -58,7 +58,7 @@
     <string name="warning_text">Elbows off the table, please</string>
     <string name="show_diagnostics">Adult diagnostics</string>
     <string name="hide_diagnostics">Hide diagnostics</string>
-    <string name="diagnostics">%1$.1f FPS · latency %2$d ms · model %3$s · violations %4$d · mean joint confidence %5$.2f</string>
+    <string name="diagnostics">%1$.1f FPS · latency p50 %2$d / p95 %3$d ms · dropped %4$d · model %5$s · thermal %6$s · battery %7$d %% · violations %8$d · mean joint confidence %9$.2f</string>
     <string name="arm_score">Seat %1$d %2$s: score %3$s, elbow distance %4$s, angle %5$s</string>
     <string name="left">left</string>
     <string name="right">right</string>

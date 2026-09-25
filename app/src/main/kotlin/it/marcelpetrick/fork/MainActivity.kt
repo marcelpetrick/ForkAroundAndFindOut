@@ -9,9 +9,11 @@ import android.content.res.Configuration
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
@@ -58,6 +60,15 @@ import it.marcelpetrick.fork.ui.title
 import org.json.JSONObject
 import java.util.UUID
 
+internal fun thermalLabel(status: Int): String =
+    when (status) {
+        PowerManager.THERMAL_STATUS_NONE -> "none"
+        PowerManager.THERMAL_STATUS_LIGHT -> "light"
+        PowerManager.THERMAL_STATUS_MODERATE -> "moderate"
+        PowerManager.THERMAL_STATUS_SEVERE -> "severe"
+        else -> "critical"
+    }
+
 typealias SourceFactory = (
     PreviewView,
     Settings,
@@ -98,7 +109,7 @@ class MainActivity : ComponentActivity() {
     private val seats = mutableListOf<Polygon>()
     private var lastFrame = 0L
     private var fps = 0.0
-    private var latency = 0L
+    private val latencies = ArrayDeque<Long>()
     private var frameInfo: FrameInfo? = null
 
     /** True once a frame (and with it the image geometry and view mapping) has arrived. */
@@ -673,7 +684,22 @@ class MainActivity : ComponentActivity() {
 
     private fun diagnostics(active: Monitor): String {
         val confidence = if (active.confidenceCount == 0) 0.0 else active.confidenceTotal / active.confidenceCount
-        val header = getString(R.string.diagnostics, fps, latency, settings.model.name, active.violations, confidence)
+        val sorted = latencies.sorted()
+
+        fun percentile(p: Int) = if (sorted.isEmpty()) 0L else sorted[(sorted.size - 1) * p / 100]
+        val header =
+            getString(
+                R.string.diagnostics,
+                fps,
+                percentile(50),
+                percentile(95),
+                source?.dropped ?: 0L,
+                settings.model.name,
+                thermal(),
+                getSystemService(BatteryManager::class.java)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 0,
+                active.violations,
+                confidence,
+            )
         val arms =
             active.results.flatMap { seat ->
                 listOf(getString(R.string.left) to seat.left, getString(R.string.right) to seat.right).map { (side, arm) ->
@@ -773,7 +799,8 @@ class MainActivity : ComponentActivity() {
         val now = clock()
         if (lastFrame in 1 until time) fps = if (fps == 0.0) 1000.0 / (time - lastFrame) else fps * 0.8 + 200.0 / (time - lastFrame)
         lastFrame = time
-        latency = info.latencyMs
+        latencies.addLast(info.latencyMs)
+        if (latencies.size > 60) latencies.removeFirst()
         frameInfo = info
         stage?.mapping = source?.mapping
         stage?.poses = poses
@@ -806,6 +833,7 @@ class MainActivity : ComponentActivity() {
         source?.close()
         source = null
         frameInfo = null
+        latencies.clear()
         lastFrame = 0L
         fps = 0.0
     }
@@ -832,6 +860,10 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    /** Thermal throttling explains slow processing on a phone that has run for a whole meal. */
+    private fun thermal(): String =
+        thermalLabel(getSystemService(PowerManager::class.java)?.currentThermalStatus ?: PowerManager.THERMAL_STATUS_NONE)
 
     private fun backCameras(): List<String> =
         try {

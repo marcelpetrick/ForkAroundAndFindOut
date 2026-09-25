@@ -19,6 +19,7 @@ import it.marcelpetrick.fork.monitoring.PoseModel
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
+import it.marcelpetrick.fork.thermalLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -100,6 +101,12 @@ class UiTest {
                 .size,
             4,
         )
+    }
+
+    @Test
+    fun thermalStatusesHaveReadableLabels() {
+        val labels = (0..6).map(::thermalLabel)
+        assertEquals(listOf("none", "light", "moderate", "severe", "critical", "critical", "critical"), labels)
     }
 
     @Test
