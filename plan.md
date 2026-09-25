@@ -119,3 +119,17 @@ require consented physical sessions and must not be fabricated.
 - Pending: verify new remote run; detector feature is independently in progress and
   will be committed separately after its regression suite and pipeline pass.
 - Handoff: use `gh run list` and `gh run view <id> --log-failed` for remote evidence.
+
+### 0.1.5 — feat: add conservative per-elbow detection and regression tests
+
+- Done: aspect-corrected calibration geometry, visible-joint model, stable one-to-one
+  seat matching, ambiguity rejection, motion/geometry features, conservative contact
+  rules, independent elbow hysteresis/clear/cooldown and stale-evidence rejection.
+- Validation: 13 deterministic unit/Robolectric tests; all 212 executable Kotlin lines
+  covered (100%). Full local formatting, lint, tests, coverage and APK builds pass.
+- Pending: persistent configuration from step 03 moves with step 05 UI/storage;
+  camera and controller must expire stale callbacks even when no new frame arrives.
+- Handoff: `docs/detection.md` defines input timestamps/coordinates and failure policy.
+  Next implement persisted settings/data and a monitoring controller, then camera/UI.
+- New ideas: expose all computed feature values in labelled session exports; never
+  present heuristic scores as calibrated probabilities or measured meal accuracy.
