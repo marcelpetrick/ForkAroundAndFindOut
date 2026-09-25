@@ -4,7 +4,7 @@ package it.marcelpetrick.fork.ui
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
-import android.media.ToneGenerator
+import android.media.SoundPool
 import android.view.MotionEvent
 import android.view.View
 import it.marcelpetrick.fork.R
@@ -27,9 +27,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.anyFloat
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -167,26 +172,39 @@ class UiTest {
     }
 
     @Test
-    fun speakerMapsSoundsToTonesAndRecreatesOnVolumeChange() {
-        val generators = mutableListOf<ToneGenerator>()
-        val speaker =
-            ToneSpeaker { _ -> mock(ToneGenerator::class.java).also { generators += it } }
-        speaker.play(Sound.STOP, 50)
+    fun chimePlaysAfterLoadingLoopsForContinuousAndStops() {
+        val pool = mock(SoundPool::class.java)
+        `when`(pool.load(context, R.raw.chime, 1)).thenReturn(7)
+        `when`(pool.play(anyInt(), anyFloat(), anyFloat(), anyInt(), anyInt(), anyFloat())).thenReturn(11)
+        val speaker = ChimeSpeaker(context) { pool }
         speaker.play(Sound.NONE, 50)
-        assertTrue(generators.isEmpty())
-        speaker.play(Sound.BEEP, 50)
-        speaker.play(Sound.START, 50)
         speaker.play(Sound.STOP, 50)
-        verify(generators.single()).startTone(ToneGenerator.TONE_PROP_BEEP, 400)
-        verify(generators.single()).startTone(ToneGenerator.TONE_SUP_DIAL, -1)
-        verify(generators.single()).stopTone()
-        speaker.play(Sound.BEEP, 80)
-        assertEquals(2, generators.size)
-        verify(generators[0]).release()
+        speaker.play(Sound.BEEP, 50) // requested before the chime has loaded
+        verify(pool, never()).play(anyInt(), anyFloat(), anyFloat(), anyInt(), anyInt(), anyFloat())
+        val listener = ArgumentCaptor.forClass(SoundPool.OnLoadCompleteListener::class.java)
+        verify(pool).setOnLoadCompleteListener(listener.capture())
+        listener.value.onLoadComplete(pool, 7, 0)
+        verify(pool).play(7, 0.5f, 0.5f, 1, 0, 1f)
+        speaker.play(Sound.START, 150)
+        verify(pool).stop(11)
+        verify(pool).play(7, 1f, 1f, 1, -1, 1f)
+        speaker.play(Sound.STOP, 0)
+        verify(pool, times(2)).stop(11)
+        speaker.prepare() // already prepared: no second pool or load
+        verify(pool, times(1)).load(context, R.raw.chime, 1)
         speaker.release()
-        verify(generators[1]).release()
-        verify(generators[1], times(1)).stopTone()
-        speaker.release()
-        ToneSpeaker().release()
+        verify(pool).release()
+        // A failed load never plays and never crashes.
+        val broken = mock(SoundPool::class.java)
+        val failing = ChimeSpeaker(context) { broken }
+        failing.play(Sound.BEEP, 40)
+        val captor = ArgumentCaptor.forClass(SoundPool.OnLoadCompleteListener::class.java)
+        verify(broken).setOnLoadCompleteListener(captor.capture())
+        captor.value.onLoadComplete(broken, 0, 1)
+        verify(broken, never()).play(anyInt(), anyFloat(), anyFloat(), anyInt(), anyInt(), anyFloat())
+        ChimeSpeaker(context).apply {
+            prepare()
+            release()
+        }
     }
 }

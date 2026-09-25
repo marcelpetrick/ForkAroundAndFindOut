@@ -50,11 +50,11 @@ import it.marcelpetrick.fork.monitoring.VisibilityCheck
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.monitoring.sessionRecord
+import it.marcelpetrick.fork.ui.ChimeSpeaker
 import it.marcelpetrick.fork.ui.Lens
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
-import it.marcelpetrick.fork.ui.ToneSpeaker
 import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.column
@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
         private set
     internal var notice: String? = null
     internal var sourceFactory: SourceFactory = { view, s, frame, error -> CameraSession(this, this, view, s, frame, error) }
-    internal var speaker: Speaker = ToneSpeaker()
+    internal var speaker: Speaker = ChimeSpeaker(this)
     internal var clock: () -> Long = SystemClock::uptimeMillis
     internal var cameraIds: () -> List<Lens> = ::backCameras
     internal var monitor: Monitor? = null
@@ -311,6 +311,12 @@ class MainActivity : ComponentActivity() {
                     ),
                 )
             }
+            addView(
+                action(getString(R.string.test_sound)) {
+                    speaker.prepare()
+                    speaker.play(Sound.BEEP, settings.volume)
+                },
+            )
             addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
         }
 
@@ -540,6 +546,7 @@ class MainActivity : ComponentActivity() {
         snoozedUntil = 0L
         resumedAt = clock()
         alarm = AlarmPolicy()
+        speaker.prepare()
         show(Screen.MONITOR)
     }
 

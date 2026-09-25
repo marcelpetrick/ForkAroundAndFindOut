@@ -21,9 +21,10 @@ color. Use a scrollable layout on small screens and at large system font sizes.
    their role in stable assignment and that seat numbers do not identify people.
 5. **Monitor:** preview plus per-seat left/right statuses. Primary control becomes
    Pause, always available without opening a menu. Uncertainty reads “Not visible”
-   rather than “Good posture”. Setup and settings never produce alarms; the demo previews the visual warning only, never sound or storage.
+   rather than “Good posture”. Setup and settings never produce alarms (Settings has an explicit "Test sound" preview); the demo previews the visual warning only, never sound or storage.
 6. **Warning:** static perimeter and a plain-language elbow reminder by default.
-   Audio and all alternate visual modes are configurable. Clear automatically on
+   Audio (a soft generated two-note chime, respecting Do-Not-Disturb) and all alternate
+   visual modes are configurable. "False alarm" silences and rests reminders for 30 s. Clear automatically on
    correction; silence immediately on pause, backgrounding, lost camera or stale data.
 7. **Adult diagnostics:** expandable skeleton, confidence, table, seats, score, FPS
    and latency. False alarm / missed violation feedback is separate from routine use.

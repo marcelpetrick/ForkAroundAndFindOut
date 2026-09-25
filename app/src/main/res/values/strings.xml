@@ -87,6 +87,7 @@
     <string name="option_visual">Visual warning</string>
     <string name="option_audio">Sound</string>
     <string name="option_volume">Volume</string>
+    <string name="test_sound">Test sound</string>
     <string name="option_repeat">Repeat sound every</string>
     <string name="option_debug">Skeleton overlay</string>
     <string name="option_statistics">Save session statistics</string>

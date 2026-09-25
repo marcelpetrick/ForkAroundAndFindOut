@@ -145,6 +145,8 @@ class MainActivityTest {
             val saved = LocalStore(activity).settings()
             assertEquals(3, saved.people)
             assertEquals(activity.settings, saved)
+            activity.click("Test sound") // explicit preview only; no alarm logic involved
+            assertEquals(listOf(Sound.BEEP), speaker.sounds)
             activity.click("Back")
             activity.onBackPressedDispatcher.onBackPressed()
             assertTrue(activity.isFinishing)

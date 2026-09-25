@@ -499,3 +499,17 @@ require consented physical sessions and must not be fabricated.
   (uses the secondary button: the emulator scene has no people); Docker PASS.
 - Not done from plan_v2 M3: loupe while tapping and auto-proposed seat zones (optional
   polish; seats remain manual, overlap-checked).
+
+### 0.9.24 — feat: gentle generated chime via SoundPool with a settings preview (plan_v2 §3.6)
+
+- Done: the dial-tone `ToneGenerator` is replaced by a two-note chime generated
+  deterministically by `scripts/chime.py` (committed WAV, 48 KB; the pipeline verifies it
+  still matches the generator). `ChimeSpeaker` plays it through `SoundPool` with
+  `USAGE_NOTIFICATION_EVENT`/`CONTENT_TYPE_SONIFICATION` (respects Do-Not-Disturb and the
+  notification volume); once/repeat as single chimes, continuous as a loop; app volume
+  0–100 %. Loading is started when monitoring or settings open; a reminder requested
+  before loading completes plays from the load listener, a failed load stays silent.
+  Settings gains "Test sound".
+- Validation: 49 tests, 98.2 % merged lines; E2E 4/4; Docker PASS. On the emulator the
+  audio service shows the app's SoundPool player with notification-event attributes and
+  no errors (audible quality needs a phone and a listener).
