@@ -257,3 +257,12 @@ require consented physical sessions and must not be fabricated.
   (05b), e2e in pipeline, Docker/GHCR, docs, review, release.
 - Decision: the demo shows the configured *visual* warning so adults can preview it,
   but no sound or storage; `docs/ux.md` wording updated accordingly.
+
+### 0.4.10 — docs: record collaboration rules and working order in agents.md
+
+- Done: `agents.md` gains the owner's collaboration rules: explicit-path commits with
+  a parallel agent, read-only `plan_v2/` checked at the end of each task batch, plan
+  first, step-by-step until done, self-review only after implementation work runs out,
+  reference-style pipeline/badges, public release at the end.
+- Validation: documentation-only; product code identical to 0.4.9 (pipeline green).
+- Next: step 05b (pipeline restyle and badges), then step 06.

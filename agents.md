@@ -12,6 +12,21 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 - Never equate synthetic tests with physical-camera or household validation. Record
   unavailable evidence and remaining acceptance work honestly.
 
+## Collaboration and working order
+
+- Other agents may work in the same checkout. Stage and commit only files you changed,
+  by explicit path; never `git add -A` / `git add .`, and never revert others' files.
+- `plan_v2/` is written by a planning agent. Do not edit it; read it at the end of the
+  current task batch and fold its decisions into the remaining work.
+- Update `plan.md` first when the plan changes, commit and push it, then continue.
+  Record the owner's instructions in its owner input log.
+- Work step by step until the whole project is done; do not stop early.
+- Only when no implementation work remains: review your own changes, fix the errors
+  found, then check `plan_v2/` again.
+- `localPipeline.sh` and the README badge set follow `~/repos/myLastFmPlayer` and
+  `~/repos/Cullendula` (usage text, numbered stages, stage logs, final summary).
+- When everything is complete and verified, publish a public GitHub release.
+
 ## Product stack
 
 - Use Kotlin throughout the Android product, including its native UI. The user
