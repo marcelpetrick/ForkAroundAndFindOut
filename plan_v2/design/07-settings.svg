@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 07: Settings -->
+  <rect width="390" height="844" rx="28" fill="#F7F2E8"/>
+  <text x="24" y="30" font-size="13" fill="#6B7570">9:41</text>
+  <text x="24" y="74" font-size="24" font-weight="600" fill="#1F2A26">Settings</text>
+
+  <g font-size="15" fill="#1F2A26">
+    <!-- Reminders -->
+    <text x="24" y="112" font-size="13" font-weight="600" fill="#286552">REMINDERS</text>
+    <rect x="20" y="122" width="350" height="230" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="150">Visual</text>
+    <text x="36" y="170" font-size="13" fill="#6B7570">Red frame (default) · Icon only · Soft tint · Slow pulse</text>
+    <rect x="36" y="180" width="94" height="26" rx="13" fill="#286552"/><text x="83" y="198" font-size="13" text-anchor="middle" fill="#FFF">Red frame</text>
+    <rect x="138" y="180" width="70" height="26" rx="13" fill="none" stroke="#E4DCCB"/><text x="173" y="198" font-size="13" text-anchor="middle" fill="#1F2A26">Icon</text>
+    <rect x="216" y="180" width="60" height="26" rx="13" fill="none" stroke="#E4DCCB"/><text x="246" y="198" font-size="13" text-anchor="middle" fill="#1F2A26">Tint</text>
+    <rect x="284" y="180" width="70" height="26" rx="13" fill="none" stroke="#E4DCCB"/><text x="319" y="198" font-size="13" text-anchor="middle" fill="#1F2A26">Pulse</text>
+    <line x1="36" y1="218" x2="354" y2="218" stroke="#E4DCCB"/>
+    <text x="36" y="244">Sound</text>
+    <text x="36" y="264" font-size="13" fill="#6B7570">Off · Once · Every 3 s · Continuous</text>
+    <rect x="240" y="232" width="114" height="26" rx="13" fill="#DCEBE3"/><text x="297" y="250" font-size="13" text-anchor="middle" fill="#286552">Every 3 s ▾</text>
+    <line x1="36" y1="280" x2="354" y2="280" stroke="#E4DCCB"/>
+    <text x="36" y="306">Volume</text>
+    <rect x="110" y="300" width="180" height="6" rx="3" fill="#E4DCCB"/><rect x="110" y="300" width="72" height="6" rx="3" fill="#286552"/><circle cx="182" cy="303" r="10" fill="#286552"/>
+    <circle cx="330" cy="303" r="14" fill="#DCEBE3"/><text x="330" y="308" font-size="12" text-anchor="middle" fill="#286552">▶</text>
+    <text x="36" y="338" font-size="13" fill="#6B7570">Quiet start: no reminders in the first 3 s of a session</text>
+
+    <!-- Sensitivity -->
+    <text x="24" y="382" font-size="13" font-weight="600" fill="#286552">SENSITIVITY</text>
+    <rect x="20" y="392" width="350" height="96" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <rect x="36" y="406" width="150" height="30" rx="15" fill="#286552"/><text x="111" y="426" font-size="13" text-anchor="middle" fill="#FFF">Conservative</text>
+    <rect x="194" y="406" width="150" height="30" rx="15" fill="none" stroke="#E4DCCB"/><text x="269" y="426" font-size="13" text-anchor="middle" fill="#1F2A26">Normal</text>
+    <text x="36" y="462" font-size="13" fill="#6B7570">Remind after 1.0 s resting · clear after 0.5 s off</text>
+    <text x="36" y="480" font-size="13" fill="#6B7570">Raw values are in Diagnostics</text>
+
+    <!-- Camera & model -->
+    <text x="24" y="518" font-size="13" font-weight="600" fill="#286552">CAMERA &amp; MODEL</text>
+    <rect x="20" y="528" width="350" height="120" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="556">Lens</text><text x="354" y="556" text-anchor="end" fill="#6B7570">Main ▾</text>
+    <line x1="36" y1="570" x2="354" y2="570" stroke="#E4DCCB"/>
+    <text x="36" y="596">Model</text><text x="354" y="596" text-anchor="end" fill="#6B7570">Full ▾</text>
+    <text x="36" y="614" font-size="13" fill="#6B7570">Lite is faster on older phones</text>
+    <line x1="36" y1="622" x2="354" y2="622" stroke="#E4DCCB"/>
+    <text x="36" y="641" font-size="14">GPU acceleration (experimental)</text>
+    <rect x="316" y="628" width="38" height="20" rx="10" fill="#E4DCCB"/><circle cx="326" cy="638" r="8" fill="#FFF"/>
+
+    <!-- Seats / Data / Language / About rows -->
+    <rect x="20" y="664" width="350" height="150" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="692">Seats · 2</text><text x="354" y="692" text-anchor="end" fill="#286552">Edit ›</text>
+    <line x1="36" y1="704" x2="354" y2="704" stroke="#E4DCCB"/>
+    <text x="36" y="730">Mark the table again</text><text x="354" y="730" text-anchor="end" fill="#286552">›</text>
+    <line x1="36" y1="742" x2="354" y2="742" stroke="#E4DCCB"/>
+    <text x="36" y="768">Data &amp; training</text><text x="354" y="768" text-anchor="end" fill="#286552">›</text>
+    <line x1="36" y1="780" x2="354" y2="780" stroke="#E4DCCB"/>
+    <text x="36" y="804">Language · English</text><text x="354" y="804" text-anchor="end" fill="#6B7570">About ›</text>
+  </g>
+</svg>

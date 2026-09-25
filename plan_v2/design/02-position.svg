@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 02: Position + visibility check -->
+  <rect width="390" height="844" rx="28" fill="#F7F2E8"/>
+  <text x="24" y="30" font-size="13" fill="#6B7570">9:41</text>
+  <text x="24" y="74" font-size="24" font-weight="600" fill="#1F2A26">Position the phone</text>
+  <text x="24" y="98" font-size="14" fill="#6B7570">Step 1 of 3</text>
+
+  <!-- preview 16:9 letterboxed -->
+  <rect x="20" y="112" width="350" height="197" rx="16" fill="#2B2F2D"/>
+  <!-- table -->
+  <path d="M70 240 L320 240 L340 300 L50 300 Z" fill="#3A403C" stroke="#5A625D"/>
+  <!-- person 1 skeleton -->
+  <g stroke="#9FD9BF" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <circle cx="135" cy="160" r="12"/>
+    <path d="M110 190 L160 190 M110 190 L98 232 L112 246 M160 190 L172 232 L158 246"/>
+  </g>
+  <!-- person 2 skeleton -->
+  <g stroke="#9FD9BF" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <circle cx="260" cy="165" r="12"/>
+    <path d="M235 195 L285 195 M235 195 L222 236 L238 248 M285 195 L298 236 L282 248"/>
+  </g>
+  <text x="34" y="132" font-size="11" fill="#CFD6D2">Live preview · 12 FPS · 85 ms</text>
+
+  <!-- tip card -->
+  <rect x="20" y="322" width="350" height="76" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <text x="36" y="347" font-size="14" font-weight="600" fill="#1F2A26">Above head height, from a corner</text>
+  <text x="36" y="368" font-size="13" fill="#6B7570">Looking down at an angle so shoulders, elbows, wrists</text>
+  <text x="36" y="386" font-size="13" fill="#6B7570">and the tabletop are all visible. Plug in the charger.</text>
+
+  <!-- visibility check card -->
+  <rect x="20" y="412" width="350" height="122" rx="20" fill="#DCEBE3"/>
+  <circle cx="60" cy="452" r="22" fill="none" stroke="#B9D7C9" stroke-width="5"/>
+  <path d="M60 430 A22 22 0 1 1 41 463" fill="none" stroke="#286552" stroke-width="5" stroke-linecap="round"/>
+  <text x="60" y="457" font-size="12" font-weight="600" text-anchor="middle" fill="#286552">8s</text>
+  <text x="96" y="446" font-size="16" font-weight="600" fill="#286552">2 of 2 people visible</text>
+  <text x="96" y="468" font-size="14" fill="#1F2A26">Both elbows ✓  ·  both wrists ✓</text>
+  <text x="96" y="490" font-size="13" fill="#6B7570">Checks for 10 s while everyone sits normally</text>
+  <text x="36" y="520" font-size="12" fill="#6B7570">If failing: "Right seat: elbows hidden — move the phone higher."</text>
+
+  <!-- seats stepper + lens -->
+  <rect x="20" y="548" width="168" height="48" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <text x="36" y="578" font-size="15" fill="#1F2A26">Seats</text>
+  <text x="104" y="578" font-size="18" fill="#286552">−</text>
+  <text x="130" y="578" font-size="16" font-weight="600" fill="#1F2A26">2</text>
+  <text x="156" y="578" font-size="18" fill="#286552">+</text>
+  <rect x="202" y="548" width="80" height="48" rx="16" fill="#286552"/>
+  <text x="242" y="578" font-size="15" text-anchor="middle" fill="#FFFFFF">Main</text>
+  <rect x="290" y="548" width="80" height="48" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <text x="330" y="578" font-size="15" text-anchor="middle" fill="#1F2A26">Wide</text>
+
+  <!-- slow banner example -->
+  <rect x="20" y="612" width="350" height="44" rx="12" fill="#F6E7D2"/>
+  <text x="36" y="639" font-size="13" fill="#7A4E12">Processing is slow (4 FPS). Switch to the Lite model?  ›</text>
+
+  <!-- actions -->
+  <rect x="20" y="700" width="350" height="56" rx="16" fill="#286552"/>
+  <text x="195" y="735" font-size="18" font-weight="600" text-anchor="middle" fill="#FFFFFF">Continue</text>
+  <text x="195" y="786" font-size="14" text-anchor="middle" fill="#286552">Why is it not passing?</text>
+  <text x="195" y="826" font-size="11" text-anchor="middle" fill="#6B7570">Continue is disabled until the visibility check passes.</text>
+</svg>

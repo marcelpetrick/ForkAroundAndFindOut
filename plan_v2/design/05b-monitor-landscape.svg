@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 844 390" width="844" height="390" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 05b: Monitor (landscape, recommended while propped) -->
+  <rect width="844" height="390" rx="28" fill="#F7F2E8"/>
+  <!-- demo ribbon example -->
+  <rect x="0" y="0" width="844" height="26" fill="#C9822B"/>
+  <text x="422" y="18" font-size="12" font-weight="600" text-anchor="middle" fill="#FFFFFF">SYNTHETIC DEMO — NOT A CAMERA  (ribbon shown only in demo mode)</text>
+
+  <!-- preview -->
+  <rect x="16" y="40" width="520" height="292" rx="16" fill="#2B2F2D"/>
+  <path d="M90 250 L470 250 L500 320 L60 320 Z" fill="none" stroke="#9FD9BF" stroke-width="1.5" stroke-opacity="0.7"/>
+  <g stroke="#9FD9BF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-opacity="0.9">
+    <circle cx="190" cy="120" r="14"/><path d="M160 156 L220 156 M160 156 L146 210 L166 226 M220 156 L236 210 L216 226"/>
+    <circle cx="380" cy="126" r="14"/><path d="M350 162 L410 162 M350 162 L336 216 L356 232 M410 162 L426 216 L406 232"/>
+  </g>
+  <text x="30" y="60" font-size="11" fill="#CFD6D2">12 min · 1 reminder · 12 FPS</text>
+
+  <!-- right column -->
+  <rect x="552" y="40" width="276" height="112" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <circle cx="576" cy="66" r="8" fill="#286552"/>
+  <text x="592" y="71" font-size="15" font-weight="600" fill="#1F2A26">Seat 1</text>
+  <rect x="566" y="86" width="118" height="30" rx="15" fill="#DCEBE3"/>
+  <text x="625" y="106" font-size="14" text-anchor="middle" fill="#286552">L ✓ Clear</text>
+  <rect x="696" y="86" width="118" height="30" rx="15" fill="#DCEBE3"/>
+  <text x="755" y="106" font-size="14" text-anchor="middle" fill="#286552">R ✓ Clear</text>
+  <text x="566" y="140" font-size="12" fill="#6B7570">Clean for 12 min</text>
+
+  <rect x="552" y="164" width="276" height="112" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <circle cx="576" cy="190" r="8" fill="#3E6FA8"/>
+  <text x="592" y="195" font-size="15" font-weight="600" fill="#1F2A26">Seat 2</text>
+  <rect x="566" y="210" width="118" height="30" rx="15" fill="#F6E7D2"/>
+  <text x="625" y="230" font-size="14" text-anchor="middle" fill="#7A4E12">L … Checking</text>
+  <rect x="696" y="210" width="118" height="30" rx="15" fill="#ECEAE3"/>
+  <text x="755" y="230" font-size="14" text-anchor="middle" fill="#6B7570">R — Not visible</text>
+  <text x="566" y="264" font-size="12" fill="#6B7570">1 reminder</text>
+
+  <rect x="552" y="288" width="216" height="52" rx="16" fill="#1F2A26"/>
+  <text x="660" y="321" font-size="17" font-weight="600" text-anchor="middle" fill="#FFFFFF">▮▮  Pause</text>
+  <circle cx="802" cy="314" r="22" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <text x="802" y="320" font-size="16" text-anchor="middle" fill="#6B7570">⚙</text>
+
+  <text x="422" y="366" font-size="11" text-anchor="middle" fill="#6B7570">Orientation is locked to the calibrated orientation during a session.</text>
+</svg>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 04: Seats (optional) -->
+  <rect width="390" height="844" rx="28" fill="#F7F2E8"/>
+  <text x="24" y="30" font-size="13" fill="#6B7570">9:41</text>
+  <text x="24" y="74" font-size="24" font-weight="600" fill="#1F2A26">Seats (optional)</text>
+  <text x="24" y="98" font-size="14" fill="#6B7570">Step 3 of 3 · proposed from the table edges</text>
+
+  <rect x="20" y="112" width="350" height="420" rx="16" fill="#2B2F2D"/>
+  <rect x="20" y="112" width="350" height="60" fill="#1F2321"/>
+  <rect x="20" y="472" width="350" height="60" fill="#1F2321"/>
+  <!-- table -->
+  <path d="M84 300 L306 300 L336 440 L54 440 Z" fill="#286552" fill-opacity="0.18" stroke="#9FD9BF" stroke-width="1.5"/>
+  <!-- seat 1 (left edge, green) -->
+  <rect x="28" y="260" width="70" height="120" rx="14" fill="#286552" fill-opacity="0.35" stroke="#286552" stroke-width="2"/>
+  <circle cx="44" cy="276" r="11" fill="#286552"/><text x="44" y="280" font-size="11" font-weight="600" text-anchor="middle" fill="#FFF">1</text>
+  <!-- seat 2 (far edge, blue) -->
+  <rect x="140" y="196" width="110" height="80" rx="14" fill="#3E6FA8" fill-opacity="0.35" stroke="#3E6FA8" stroke-width="2"/>
+  <circle cx="156" cy="212" r="11" fill="#3E6FA8"/><text x="156" y="216" font-size="11" font-weight="600" text-anchor="middle" fill="#FFF">2</text>
+  <!-- seat 3 (right edge, amber) — switched off, dashed -->
+  <rect x="300" y="260" width="66" height="120" rx="14" fill="none" stroke="#C9822B" stroke-width="2" stroke-dasharray="6 5"/>
+  <circle cx="316" cy="276" r="11" fill="#C9822B" fill-opacity="0.5"/><text x="316" y="280" font-size="11" font-weight="600" text-anchor="middle" fill="#FFF">3</text>
+  <!-- drag handle affordance on seat 2 -->
+  <rect x="242" y="268" width="14" height="14" rx="3" fill="#FFFDF9" stroke="#3E6FA8"/>
+  <text x="34" y="132" font-size="11" fill="#CFD6D2">Drag a region to move; corner square to resize</text>
+
+  <!-- seat toggles -->
+  <g font-size="15">
+    <rect x="20" y="548" width="350" height="48" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <circle cx="44" cy="572" r="8" fill="#286552"/><text x="62" y="577" fill="#1F2A26">Seat 1 · left side</text>
+    <rect x="316" y="562" width="38" height="20" rx="10" fill="#286552"/><circle cx="345" cy="572" r="8" fill="#FFF"/>
+    <rect x="20" y="604" width="350" height="48" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <circle cx="44" cy="628" r="8" fill="#3E6FA8"/><text x="62" y="633" fill="#1F2A26">Seat 2 · far side</text>
+    <rect x="316" y="618" width="38" height="20" rx="10" fill="#286552"/><circle cx="345" cy="628" r="8" fill="#FFF"/>
+  </g>
+  <text x="36" y="676" font-size="13" fill="#6B7570">Same chair, same seat. Seats are colours, not people.</text>
+
+  <!-- bottom bar -->
+  <rect x="20" y="700" width="160" height="48" rx="16" fill="none" stroke="#286552" stroke-width="2"/>
+  <text x="100" y="730" font-size="15" text-anchor="middle" fill="#286552">Skip</text>
+  <rect x="196" y="696" width="174" height="56" rx="16" fill="#286552"/>
+  <text x="283" y="731" font-size="17" font-weight="600" text-anchor="middle" fill="#FFFFFF">Continue</text>
+  <rect x="20" y="770" width="350" height="40" rx="12" fill="#F6E7D2"/>
+  <text x="36" y="795" font-size="13" fill="#7A4E12">Overlap example: "Seats must not overlap."</text>
+</svg>

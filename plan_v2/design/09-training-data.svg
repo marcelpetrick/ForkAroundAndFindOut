@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 09: Data & training -->
+  <rect width="390" height="844" rx="28" fill="#F7F2E8"/>
+  <text x="24" y="30" font-size="13" fill="#6B7570">9:41</text>
+  <text x="24" y="74" font-size="24" font-weight="600" fill="#1F2A26">Data &amp; training</text>
+
+  <rect x="20" y="96" width="350" height="96" rx="20" fill="#DCEBE3"/>
+  <text x="36" y="122" font-size="14" font-weight="600" fill="#286552">Never pictures</text>
+  <text x="36" y="144" font-size="13" fill="#1F2A26">Training mode stores body landmark positions</text>
+  <text x="36" y="162" font-size="13" fill="#1F2A26">(33 points per person, per frame) to improve the rules.</text>
+  <text x="36" y="180" font-size="13" fill="#1F2A26">Everything stays on this phone until you export it.</text>
+
+  <g font-size="15" fill="#1F2A26">
+    <rect x="20" y="208" width="350" height="64" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="234">Session statistics</text>
+    <text x="36" y="256" font-size="13" fill="#6B7570">Duration, reminders, false alarms. No landmarks.</text>
+    <rect x="316" y="230" width="38" height="20" rx="10" fill="#286552"/><circle cx="345" cy="240" r="8" fill="#FFF"/>
+
+    <rect x="20" y="284" width="350" height="64" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="310">Training mode</text>
+    <text x="36" y="332" font-size="13" fill="#6B7570">Landmark streams + labels, this session only.</text>
+    <rect x="316" y="306" width="38" height="20" rx="10" fill="#286552"/><circle cx="345" cy="316" r="8" fill="#FFF"/>
+  </g>
+
+  <!-- label bar preview -->
+  <text x="24" y="382" font-size="13" font-weight="600" fill="#286552">LABEL BAR (shown on Monitor while training)</text>
+  <rect x="20" y="392" width="350" height="52" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <g font-size="13" text-anchor="middle">
+    <rect x="30" y="402" width="76" height="32" rx="16" fill="#DCEBE3"/><text x="68" y="423" fill="#286552">Normal</text>
+    <rect x="112" y="402" width="76" height="32" rx="16" fill="none" stroke="#E4DCCB"/><text x="150" y="423" fill="#1F2A26">Left</text>
+    <rect x="194" y="402" width="76" height="32" rx="16" fill="none" stroke="#E4DCCB"/><text x="232" y="423" fill="#1F2A26">Right</text>
+    <rect x="276" y="402" width="84" height="32" rx="16" fill="none" stroke="#E4DCCB"/><text x="318" y="423" fill="#1F2A26">Both</text>
+  </g>
+  <text x="36" y="466" font-size="12" fill="#6B7570">Labels apply to the selected seat.</text>
+
+  <!-- sessions list -->
+  <text x="24" y="500" font-size="13" font-weight="600" fill="#286552">SESSIONS ON THIS PHONE</text>
+  <g font-size="14" fill="#1F2A26">
+    <rect x="20" y="510" width="350" height="70" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="536" font-weight="600">Thu 25 Sep · dinner</text>
+    <text x="36" y="558" font-size="13" fill="#6B7570">38 min · 2 seats · 6 labels · 1.1 MB</text>
+    <text x="300" y="536" fill="#286552">Export</text><text x="300" y="560" fill="#B3261E">Delete</text>
+
+    <rect x="20" y="590" width="350" height="70" rx="16" fill="#FFFDF9" stroke="#E4DCCB"/>
+    <text x="36" y="616" font-weight="600">Wed 24 Sep · lunch</text>
+    <text x="36" y="638" font-size="13" fill="#6B7570">22 min · 2 seats · 2 labels · 0.6 MB</text>
+    <text x="300" y="616" fill="#286552">Export</text><text x="300" y="640" fill="#B3261E">Delete</text>
+  </g>
+
+  <rect x="20" y="700" width="350" height="48" rx="16" fill="none" stroke="#B3261E" stroke-width="2"/>
+  <text x="195" y="730" font-size="15" text-anchor="middle" fill="#B3261E">Delete all sessions</text>
+  <text x="195" y="782" font-size="12" text-anchor="middle" fill="#6B7570">Export via share sheet / file picker; no storage permission.</text>
+  <text x="195" y="802" font-size="12" text-anchor="middle" fill="#6B7570">Sessions feed the desktop replay harness (tools/replay).</text>
+</svg>

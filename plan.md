@@ -298,3 +298,21 @@ require consented physical sessions and must not be fabricated.
   release (11). Remote run for 0.4.11 (first emulator CI) was still running at commit.
 - New ideas: export filename could carry the date; a training-session summary per
   label would help check class balance before any learned classifier.
+
+### 0.5.13 — docs: add plan v2 review, decisions and UI/UX designs
+
+- Done: `plan_v2/` (planning agent's workspace, read-only for the implementing agent):
+  `plan_v2.md` reviews every aspect of the project at `c32d9a0` with an addendum for
+  `49e660c`/`abcfbc9` — twelve decisions (image-space coordinates, frame-path performance,
+  decoupled latency/gap budgets, session landmark logs + replay harness, in-app
+  visibility check, plain Views, JVM module split, ABI split, CI signing, minimal
+  Docker/GHCR, emulator e2e), fifteen ranked findings with `file:line`, milestones
+  M1–M9 with evidence requirements, vision traceability v2, a hardware validation
+  protocol and open owner questions. `design/ui-ux.md` plus eleven SVG mockups
+  define tokens, flow, screens, copy (en/de) and accessibility.
+- Validation: documentation only; product code identical to 0.5.12. SVGs validated
+  with `xmllint` and rendered with `rsvg-convert`; line references re-checked with
+  `git show c32d9a0:<file>`; MediaPipe API claims verified with `javap` on the 1.0.0
+  AARs; upstream versions checked on Google Maven / Maven Central.
+- Next for the implementing agent: read `plan_v2/plan_v2.md` §2.3 and §5; M1 (F1, F2,
+  F5, F7, F8, F10) before any real-table calibration is stored.

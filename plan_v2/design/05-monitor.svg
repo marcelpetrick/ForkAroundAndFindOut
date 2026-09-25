@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="system-ui, sans-serif">
+  <!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. Screen 05: Monitor (portrait) -->
+  <rect width="390" height="844" rx="28" fill="#F7F2E8"/>
+  <text x="24" y="30" font-size="13" fill="#6B7570">9:41</text>
+  <text x="24" y="74" font-size="24" font-weight="600" fill="#1F2A26">Dinner</text>
+  <text x="24" y="98" font-size="14" fill="#6B7570">12 min · 1 reminder · 12 FPS</text>
+  <circle cx="346" cy="80" r="18" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <text x="346" y="86" font-size="16" text-anchor="middle" fill="#6B7570">⚙</text>
+
+  <!-- preview -->
+  <rect x="20" y="112" width="350" height="197" rx="16" fill="#2B2F2D"/>
+  <path d="M70 240 L320 240 L340 300 L50 300 Z" fill="none" stroke="#9FD9BF" stroke-width="1.5" stroke-opacity="0.7"/>
+  <g stroke="#9FD9BF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-opacity="0.9">
+    <circle cx="135" cy="160" r="12"/><path d="M110 190 L160 190 M110 190 L98 232 L112 246 M160 190 L172 232 L158 246"/>
+    <circle cx="260" cy="165" r="12"/><path d="M235 195 L285 195 M235 195 L222 236 L238 248 M285 195 L298 236 L282 248"/>
+  </g>
+  <text x="34" y="132" font-size="11" fill="#CFD6D2">Table outline only; skeletons appear with diagnostics on</text>
+
+  <!-- seat cards -->
+  <rect x="20" y="324" width="169" height="128" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <circle cx="44" cy="350" r="8" fill="#286552"/>
+  <text x="60" y="355" font-size="15" font-weight="600" fill="#1F2A26">Seat 1</text>
+  <rect x="34" y="372" width="141" height="30" rx="15" fill="#DCEBE3"/>
+  <text x="104" y="392" font-size="14" text-anchor="middle" fill="#286552">L  ✓ Clear</text>
+  <rect x="34" y="410" width="141" height="30" rx="15" fill="#DCEBE3"/>
+  <text x="104" y="430" font-size="14" text-anchor="middle" fill="#286552">R  ✓ Clear</text>
+
+  <rect x="201" y="324" width="169" height="128" rx="20" fill="#FFFDF9" stroke="#E4DCCB"/>
+  <circle cx="225" cy="350" r="8" fill="#3E6FA8"/>
+  <text x="241" y="355" font-size="15" font-weight="600" fill="#1F2A26">Seat 2</text>
+  <rect x="215" y="372" width="141" height="30" rx="15" fill="#F6E7D2"/>
+  <text x="285" y="392" font-size="14" text-anchor="middle" fill="#7A4E12">L  … Checking</text>
+  <rect x="215" y="410" width="141" height="30" rx="15" fill="#ECEAE3"/>
+  <text x="285" y="430" font-size="14" text-anchor="middle" fill="#6B7570">R  — Not visible</text>
+
+  <!-- chip legend -->
+  <text x="24" y="482" font-size="12" fill="#6B7570">Every state has words, never just a colour.</text>
+
+  <!-- health banner (hidden unless needed) -->
+  <rect x="20" y="500" width="350" height="44" rx="12" fill="#F6E7D2"/>
+  <text x="36" y="527" font-size="13" fill="#7A4E12">Phone is warm — switched to the Lite model.</text>
+
+  <!-- paused variant note -->
+  <rect x="20" y="560" width="350" height="64" rx="16" fill="#ECEAE3"/>
+  <text x="36" y="585" font-size="13" fill="#6B7570">Paused: preview dims, chips turn grey, a "Paused" pill</text>
+  <text x="36" y="605" font-size="13" fill="#6B7570">appears, the button reads Resume, reminders stop at once.</text>
+
+  <!-- pause -->
+  <rect x="20" y="700" width="350" height="56" rx="16" fill="#1F2A26"/>
+  <text x="195" y="735" font-size="18" font-weight="600" text-anchor="middle" fill="#FFFFFF">▮▮  Pause</text>
+  <text x="195" y="790" font-size="14" text-anchor="middle" fill="#286552">End dinner and show summary</text>
+</svg>
