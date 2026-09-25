@@ -460,3 +460,24 @@ require consented physical sessions and must not be fabricated.
   in-test dismissal of "isn't responding" dialogs stays as a second defence.
 - Validation: workflow change only; product code identical to 0.7.20 (local pipeline
   green). Remote verification is the next run.
+
+### 0.8.22 — feat: record training sessions as landmark logs and replay them on the desktop (plan_v2 M5, F3)
+
+- Done: training mode (adult diagnostics, off by default, per session) now writes a
+  gzip JSON-Lines session log to `files/sessions/` — header with calibration, geometry,
+  model and timing; every accepted frame with 33 landmarks per pose and the live per-arm
+  states; label events (NORMAL/LEFT/RIGHT/BOTH, and FALSE_ALARM/MISSED_VIOLATION feedback
+  while a log is open). Sync-flushed every 30 frames and on labels; 100 MB cap. The
+  5-second feature snapshots are replaced by these logs (plan_v2 finding F3).
+- Done: `:core` gains a dependency-free JSON reader, `SessionLog` (writer/reader, tolerant
+  of a truncated last line), `Replay` (reminders, reminders near negative labels,
+  detected positive labels, UNKNOWN fraction, live/replay agreement after warm-up) and a
+  labelled synthetic session generator. New `:tools` JVM module and `scripts/replay.sh`
+  (`replay` with timing overrides, `demo-log`); truncated gzip (killed app) is readable.
+  Local data screen lists logs with size, exports a log (gzip via file picker), deletes
+  one log with confirmation; delete-all also removes logs. `docs/data.md` documents
+  stores, schema, privacy and session-split evaluation.
+- Validation: 45 tests, merged coverage 98.1 % (1797/1832); replay of the synthetic
+  session: 2 reminders, 2/2 labels, 100 % agreement; activity test replays a log recorded
+  through the UI with 100 % agreement; E2E 4/4 on the emulator; Docker PASS.
+- Remote: 0.7.20 run green (9m18s) → first GHCR publish expected from it.

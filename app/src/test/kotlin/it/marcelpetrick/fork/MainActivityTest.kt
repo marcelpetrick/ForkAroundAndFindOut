@@ -21,6 +21,8 @@ import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.monitoring.LocalStore
+import it.marcelpetrick.fork.monitoring.Replay
+import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.ui.Speaker
@@ -42,6 +44,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlertDialog
 import java.io.ByteArrayOutputStream
 import java.time.Duration
+import java.util.zip.GZIPInputStream
 
 /** A source whose camera image exactly fills [view] (no letterbox). */
 class FakeSource(
@@ -370,29 +373,62 @@ class MainActivityTest {
                 )
             }
             activity.click("LEFT ELBOW")
-            assertTrue(activity.texts().contains("Recording LEFT for seat 1"))
-            feed(5200)
-            assertTrue(activity.texts().contains("Saved: LEFT ×"))
-            activity.click("RIGHT ELBOW")
-            activity.click("Training mode: on") // turning training off discards the capture
-            feed(5200)
+            assertTrue(activity.texts().contains("Labelled LEFT for seat 1."))
+            activity.click("False alarm") // logged as an event while training is on
+            feed(3000)
+            val log = activity.recorder!!.file
+            activity.click("Training mode: on") // turning training off closes the log
+            assertNull(activity.recorder)
+            assertFalse(activity.texts().contains("LEFT ELBOW"))
+            feed(1000) // not logged any more
             activity.click("Stop")
+
+            // The log holds landmarks and labels only, and replays to the live decisions.
+            val recording = SessionLog.read(GZIPInputStream(log.inputStream()).bufferedReader().readLines().asSequence())
+            assertEquals(listOf("LEFT", "FALSE_ALARM"), recording.labels.map { it.label })
+            assertEquals(listOf(1, 0), recording.labels.map { it.seat })
+            assertTrue(recording.frames.size in 25..35)
+            assertEquals(1.0, Replay.run(recording).agreement, 0.0)
+            assertFalse(log.readBytes().isEmpty())
 
             val records = LocalStore(activity).records()
             val types = (0 until records.length()).map { records.getJSONObject(it).getString("type") }
             val labels = (0 until records.length()).mapNotNull { records.getJSONObject(it).optString("label").ifEmpty { null } }
             assertEquals("session", types.last())
-            assertTrue(labels.containsAll(listOf("FALSE_ALARM", "MISSED_VIOLATION", "LEFT")))
-            assertFalse(labels.contains("RIGHT"))
-            assertTrue(labels.count { it == "LEFT" } in 30..60)
+            assertEquals(listOf("FALSE_ALARM", "MISSED_VIOLATION", "FALSE_ALARM"), labels)
             val stats = records.getJSONObject(records.length() - 1)
-            assertEquals(1, stats.getInt("falseAlarms"))
+            assertEquals(2, stats.getInt("falseAlarms"))
             assertEquals(1, stats.getInt("missedViolations"))
-            assertTrue(stats.getLong("durationMs") > 10_000)
+            assertTrue(stats.getLong("durationMs") > 5_000)
 
             activity.click("Local data")
             assertEquals(MainActivity.Screen.DATA, activity.screen)
             assertTrue(activity.texts().contains("Stored records: ${records.length()}"))
+            assertTrue(activity.texts().contains("Session logs: 1"))
+            assertTrue(activity.texts().contains(log.name))
+            val logTarget = Uri.parse("content://test/session.jsonl.gz")
+            val logCopy = ByteArrayOutputStream()
+            shadowOf(activity.contentResolver).registerOutputStream(logTarget, logCopy)
+            activity.click("Export log")
+            val logRequest = shadowOf(activity).nextStartedActivityForResult
+            assertEquals(Intent.ACTION_CREATE_DOCUMENT, logRequest.intent.action)
+            shadowOf(activity).receiveResult(logRequest.intent, Activity.RESULT_OK, Intent().setData(logTarget))
+            idle()
+            assertTrue(log.readBytes().contentEquals(logCopy.toByteArray()))
+            activity.click("Export log")
+            shadowOf(activity).receiveResult(shadowOf(activity).nextStartedActivityForResult.intent, Activity.RESULT_CANCELED, null)
+            idle()
+            activity.click("Delete log")
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+            idle()
+            assertTrue(log.exists())
+            activity.click("Delete log")
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            idle()
+            assertFalse(log.exists())
+            assertTrue(activity.texts().contains("Session log deleted."))
+            assertTrue(activity.texts().contains("Session logs: 0"))
+
             val target = Uri.parse("content://test/export.json")
             val exported = ByteArrayOutputStream()
             shadowOf(activity.contentResolver).registerOutputStream(target, exported)

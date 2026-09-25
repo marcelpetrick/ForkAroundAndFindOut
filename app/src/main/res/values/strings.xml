@@ -106,7 +106,7 @@
     <string name="decrease">Decrease %1$s</string>
     <string name="increase">Increase %1$s</string>
     <string name="data_title">Local data</string>
-    <string name="data_help">Only labelled feature numbers you explicitly record, feedback you press, and opted-in session statistics are stored. No images.</string>
+    <string name="data_help">Only feedback you press, opted-in session statistics and training-mode landmark logs are stored. Never images or video.</string>
     <string name="data_count">Stored records: %1$d</string>
     <string name="export">Export JSON</string>
     <string name="delete">Delete all</string>
@@ -114,7 +114,7 @@
     <string name="export_failed">Export failed: %1$s</string>
     <string name="deleted">All local records deleted.</string>
     <string name="local_data">Local data</string>
-    <string name="delete_confirm">Delete every stored sample, feedback and statistics record? This cannot be undone.</string>
+    <string name="delete_confirm">Delete every stored feedback and statistics record and every session log? This cannot be undone.</string>
     <string name="cancel">Cancel</string>
     <string name="false_alarm">False alarm</string>
     <string name="missed_violation">Missed violation</string>
@@ -122,11 +122,18 @@
     <string name="storage_failed">Not saved: %1$s</string>
     <string name="training_on">Training mode: on</string>
     <string name="training_off">Training mode: off</string>
-    <string name="training_help">Training records only numbers describing each arm, for the selected seat, for five seconds after you choose a label. Nothing is recorded otherwise.</string>
+    <string name="training_help">Training mode writes this session\'s body-landmark coordinates (never images) to a log on this phone. Tap a label when you see it happen; it is stored with the time and seat. Logs are for tuning and can be exported or deleted under Local data.</string>
     <string name="training_seat">Seat to record: %1$d</string>
     <string name="label_normal">NORMAL</string>
     <string name="label_left">LEFT ELBOW</string>
     <string name="label_right">RIGHT ELBOW</string>
     <string name="label_both">BOTH</string>
-    <string name="recording">Recording %1$s for seat %2$d…</string>
+    <string name="labelled">Labelled %1$s for seat %2$d.</string>
+    <string name="log_full">Session log storage is full. Not recorded: %1$s, seat %2$d. Export and delete logs.</string>
+    <string name="session_logs">Session logs: %1$d (%2$d KB)</string>
+    <string name="session_entry">%1$s · %2$d KB</string>
+    <string name="export_log">Export log</string>
+    <string name="delete_log">Delete log</string>
+    <string name="delete_log_confirm">Delete this session log? This cannot be undone.</string>
+    <string name="deleted_log">Session log deleted.</string>
 </resources>

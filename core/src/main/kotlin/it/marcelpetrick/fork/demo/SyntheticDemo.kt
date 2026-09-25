@@ -1,10 +1,12 @@
 // Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 package it.marcelpetrick.fork.demo
 
+import it.marcelpetrick.fork.detection.Detector
 import it.marcelpetrick.fork.detection.Landmark
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
+import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.Settings
 import kotlin.math.PI
 import kotlin.math.sin
@@ -27,6 +29,28 @@ object SyntheticDemo {
         val wrist: Point,
         val confidence: Double = 0.95,
     )
+
+    /**
+     * A labelled synthetic session log (the format phones record in training mode), for
+     * testing the replay harness without any family data: NORMAL on seat 1 and LEFT on
+     * seat 2 each loop, live states computed exactly as the app would.
+     */
+    fun sessionLog(
+        loops: Int = 2,
+        frameMs: Long = 66,
+        aspect: Double = 1.0,
+    ): List<String> {
+        val detector = Detector(table, settings.people, settings.seats, settings.timing)
+        val lines = mutableListOf(SessionLog.header("synthetic-demo", "demo", settings.copy(calibrationAspect = aspect)))
+        for (time in 0L until LOOP_MS * loops step frameMs) {
+            val poses = poses(time)
+            lines += SessionLog.frame(time, aspect, poses, detector.process(poses, time, aspect))
+            val phase = time % LOOP_MS
+            if (phase in 1000L until 1000L + frameMs) lines += SessionLog.label(time, "NORMAL", 1)
+            if (phase in 6000L until 6000L + frameMs) lines += SessionLog.label(time, "LEFT", 2)
+        }
+        return lines
+    }
 
     fun poses(timeMs: Long): List<Pose> {
         val t = Math.floorMod(timeMs, LOOP_MS)

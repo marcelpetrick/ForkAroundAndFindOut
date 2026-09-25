@@ -41,6 +41,9 @@ import it.marcelpetrick.fork.monitoring.AlarmPolicy
 import it.marcelpetrick.fork.monitoring.Health
 import it.marcelpetrick.fork.monitoring.LocalStore
 import it.marcelpetrick.fork.monitoring.Monitor
+import it.marcelpetrick.fork.monitoring.SessionFiles
+import it.marcelpetrick.fork.monitoring.SessionLog
+import it.marcelpetrick.fork.monitoring.SessionRecorder
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
@@ -58,6 +61,8 @@ import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.settingsOptions
 import it.marcelpetrick.fork.ui.title
 import org.json.JSONObject
+import java.io.File
+import java.io.OutputStream
 import java.util.UUID
 
 internal fun thermalLabel(status: Int): String =
@@ -126,19 +131,22 @@ class MainActivity : ComponentActivity() {
     private var missedViolations = 0
     private var training = false
     private var trainingSeat = 1
-    private var recording: Recording? = null
-
-    /** An explicit, time-boxed labelled capture of feature vectors for one seat. */
-    private class Recording(
-        val label: String,
-        val seat: Int,
-        val until: Long,
-        val samples: MutableList<JSONObject> = mutableListOf(),
-    )
+    internal var recorder: SessionRecorder? = null
+        private set
+    private var exportLog: File? = null
+    internal val sessionsDir: File
+        get() = File(filesDir, "sessions")
 
     private val exporter =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-            if (uri != null) exportTo(uri)
+            if (uri != null) exportTo(uri) { it.write(store.export().toByteArray()) }
+        }
+
+    private val logExporter =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
+            val log = exportLog
+            exportLog = null
+            if (uri != null && log != null) exportTo(uri) { out -> log.inputStream().use { it.copyTo(out) } }
         }
 
     private val permission =
@@ -182,6 +190,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         endSession()
+        closeRecorder()
         speaker.release()
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
@@ -488,7 +497,6 @@ class MainActivity : ComponentActivity() {
         diagnosticsOpen = false // adult tools start collapsed in every session
         falseAlarms = 0
         missedViolations = 0
-        recording = null
         resumedAt = clock()
         alarm = AlarmPolicy()
         show(Screen.MONITOR)
@@ -574,14 +582,14 @@ class MainActivity : ComponentActivity() {
                     )
                     addView(
                         row(
-                            action(getString(R.string.label_normal)) { record("NORMAL") },
-                            action(getString(R.string.label_left)) { record("LEFT") },
+                            action(getString(R.string.label_normal)) { labelEvent("NORMAL") },
+                            action(getString(R.string.label_left)) { labelEvent("LEFT") },
                         ),
                     )
                     addView(
                         row(
-                            action(getString(R.string.label_right)) { record("RIGHT") },
-                            action(getString(R.string.label_both)) { record("BOTH") },
+                            action(getString(R.string.label_right)) { labelEvent("RIGHT") },
+                            action(getString(R.string.label_both)) { labelEvent("BOTH") },
                         ),
                     )
                 },
@@ -589,22 +597,41 @@ class MainActivity : ComponentActivity() {
             trainingStatus = label("", 15f, bold = true).also(::addView)
         }
 
+    /** Training mode records this session's landmarks (never images) into a local log. */
     private fun toggleTraining() {
         training = !training
-        if (!training) recording = null
+        if (training) {
+            recorder =
+                try {
+                    SessionRecorder(sessionsDir, session, BuildConfig.VERSION_NAME, settings)
+                } catch (error: IllegalStateException) {
+                    training = false
+                    trainingStatus?.text = getString(R.string.storage_failed, error.message)
+                    null
+                }
+        } else {
+            closeRecorder()
+        }
         refreshMonitorPanel()
+    }
+
+    private fun closeRecorder() {
+        recorder?.close()
+        recorder = null
     }
 
     private fun feedback(label: String) {
         val active = monitor ?: return
+        recorder?.label(SessionLog.label(clock(), label, 0))
         if (persist(listOf(sampleRecord(session, clock(), label, active.results, 0)), label)) {
             if (label == "FALSE_ALARM") falseAlarms++ else missedViolations++
         }
     }
 
-    private fun record(label: String) {
-        recording = Recording(label, trainingSeat, clock() + RECORD_MS)
-        trainingStatus?.text = getString(R.string.recording, label, trainingSeat)
+    private fun labelEvent(label: String) {
+        val log = recorder ?: return
+        log.label(SessionLog.label(clock(), label, trainingSeat))
+        trainingStatus?.text = getString(if (log.full) R.string.log_full else R.string.labelled, label, trainingSeat)
     }
 
     private fun persist(
@@ -620,13 +647,6 @@ class MainActivity : ComponentActivity() {
             false
         }
 
-    private fun finishRecording(now: Long) {
-        val capture = recording ?: return
-        if (now < capture.until) return
-        recording = null
-        persist(capture.samples, capture.label)
-    }
-
     private fun dataPage(): View =
         column().apply {
             addView(title(getString(R.string.data_title)))
@@ -636,26 +656,60 @@ class MainActivity : ComponentActivity() {
             notice?.let { addView(label(it, bold = true)) }
             addView(label(getString(R.string.data_count, count), 19f, bold = true))
             addView(action(getString(R.string.export)) { exporter.launch("fork-around-samples.json") })
+            val logs = SessionFiles.list(sessionsDir)
+            addView(label(getString(R.string.session_logs, logs.size, SessionFiles.totalBytes(sessionsDir) / 1024), 19f, bold = true))
+            for (log in logs) {
+                addView(
+                    card(
+                        label(getString(R.string.session_entry, log.name, log.length() / 1024)),
+                        row(
+                            action(getString(R.string.export_log)) {
+                                exportLog = log
+                                logExporter.launch(log.name)
+                            },
+                            action(getString(R.string.delete_log)) {
+                                confirm(R.string.delete_log_confirm) {
+                                    log.delete()
+                                    notice = getString(R.string.deleted_log)
+                                }
+                            },
+                        ),
+                    ),
+                )
+            }
             addView(
                 action(getString(R.string.delete)) {
-                    AlertDialog
-                        .Builder(this@MainActivity)
-                        .setMessage(R.string.delete_confirm)
-                        .setPositiveButton(R.string.delete) { _, _ ->
-                            store.delete()
-                            notice = getString(R.string.deleted)
-                            show(Screen.DATA)
-                        }.setNegativeButton(R.string.cancel, null)
-                        .show()
+                    confirm(R.string.delete_confirm) {
+                        store.delete()
+                        SessionFiles.deleteAll(sessionsDir)
+                        notice = getString(R.string.deleted)
+                    }
                 },
             )
             addView(action(getString(R.string.back), primary = true) { begin(Screen.WELCOME) })
         }
 
-    private fun exportTo(uri: Uri) {
+    private fun confirm(
+        message: Int,
+        action: () -> Unit,
+    ) {
+        AlertDialog
+            .Builder(this)
+            .setMessage(message)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                action()
+                show(Screen.DATA)
+            }.setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun exportTo(
+        uri: Uri,
+        write: (OutputStream) -> Unit,
+    ) {
         notice =
             try {
-                contentResolver.openOutputStream(uri, "wt")!!.use { it.write(store.export().toByteArray()) }
+                contentResolver.openOutputStream(uri, "wt")!!.use(write)
                 getString(R.string.exported)
             } catch (error: Exception) {
                 getString(R.string.export_failed, error.message)
@@ -782,7 +836,6 @@ class MainActivity : ComponentActivity() {
             show(Screen.WELCOME)
             return
         }
-        finishRecording(now)
         view.results = active.results
         view.warning = if (alarming) settings.visual else VisualMode.OFF
         speaker.play(alarm.update(alarming, settings.audio, now, settings.repeatMs), settings.volume)
@@ -807,9 +860,7 @@ class MainActivity : ComponentActivity() {
         if (screen == Screen.MONITOR) {
             monitor?.let { active ->
                 active.frame(poses, time, now, info.aspect, info.rotation)
-                recording?.takeIf { now < it.until && active.results.isNotEmpty() }?.let {
-                    it.samples += sampleRecord(session, time, it.label, active.results, it.seat)
-                }
+                if (active.active) recorder?.frame(SessionLog.frame(time, info.aspect, poses, active.results))
             }
         }
         if (screen == Screen.POSITION) status?.text = getString(R.string.people_detected, poses.size)
@@ -850,7 +901,7 @@ class MainActivity : ComponentActivity() {
         active.pause(clock())
         silence()
         monitor = null
-        recording = null
+        closeRecorder()
         training = false
         if (settings.statistics && active.elapsedMs > 0) {
             val confidence = if (active.confidenceCount == 0) null else active.confidenceTotal / active.confidenceCount
@@ -884,6 +935,5 @@ class MainActivity : ComponentActivity() {
         const val TRAINING_TAG = "training"
         const val SEAT_TAG = "seat"
         const val LABELS_TAG = "labels"
-        const val RECORD_MS = 5000L
     }
 }

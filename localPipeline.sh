@@ -36,7 +36,7 @@ Local project pipeline (GitHub Actions runs the same script):
   4. Whitespace    reject whitespace errors in the working tree
   5. Format        ktlint via Spotless for Kotlin and Gradle Kotlin DSL
   6. Android Lint  lint with warnings as errors (Kotlin compiler: -Werror)
-  7. Unit Tests    JVM (:detection, :core) + Robolectric (:app) tests, merged Kover
+  7. Unit Tests    JVM (:detection, :core, :tools) + Robolectric (:app) tests, merged Kover
                    coverage over all modules (>=95% lines), HTML report
   8. APK Build     debug APK and unsigned release APK
   9. E2E           instrumented tests on an attached emulator/device
@@ -128,9 +128,9 @@ stage_lint() {
 }
 
 stage_tests() {
-    "${GRADLE[@]}" :detection:test :core:test :app:testDebugUnitTest \
+    "${GRADLE[@]}" :detection:test :core:test :tools:test :app:testDebugUnitTest \
         :app:koverXmlReportAll :app:koverHtmlReportAll :app:koverVerifyAll || return 1
-    detail "$(python3 scripts/report.py tests detection/build/test-results/test core/build/test-results/test app/build/test-results/testDebugUnitTest) · $(python3 scripts/report.py coverage app/build/reports/kover/reportAll.xml)"
+    detail "$(python3 scripts/report.py tests detection/build/test-results/test core/build/test-results/test tools/build/test-results/test app/build/test-results/testDebugUnitTest) · $(python3 scripts/report.py coverage app/build/reports/kover/reportAll.xml)"
 }
 
 stage_apk() {

@@ -49,6 +49,9 @@ android {
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         }
     }
+    buildFeatures {
+        buildConfig = true // the version is written into session-log headers
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -75,6 +78,7 @@ dependencies {
     implementation(project(":core"))
     kover(project(":core"))
     kover(project(":detection"))
+    kover(project(":tools"))
     testImplementation(testFixtures(project(":detection")))
     androidTestImplementation(testFixtures(project(":detection")))
     implementation("androidx.activity:activity-ktx:1.13.0")
