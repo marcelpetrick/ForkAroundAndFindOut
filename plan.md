@@ -109,3 +109,13 @@ require consented physical sessions and must not be fabricated.
 - Handoff: continue with geometry/temporal tests, then native camera and setup UI.
 - New ideas: support a labelled synthetic demo within the same native UI for repeatable
   e2e tests without storing or committing webcam/family footage.
+
+### 0.0.4 — fix(ci): avoid removed Android SDK tools package
+
+- Done: fix the SDK setup action's default attempt to install the obsolete `tools`
+  package; request `platform-tools` explicitly and suppress license-text log noise.
+- Evidence: first remote run failed during SDK setup before executing application
+  gates. The local native foundation was green. Re-run full local gate before push.
+- Pending: verify new remote run; detector feature is independently in progress and
+  will be committed separately after its regression suite and pipeline pass.
+- Handoff: use `gh run list` and `gh run view <id> --log-failed` for remote evidence.
