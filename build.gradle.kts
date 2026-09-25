@@ -6,11 +6,11 @@ plugins {
 }
 spotless {
     kotlin {
-        target("app/src/**/*.kt")
+        target("*/src/**/*.kt")
         ktlint("1.7.1")
     }
     kotlinGradle {
-        target("*.gradle.kts", "app/*.gradle.kts")
+        target("*.gradle.kts", "*/*.gradle.kts")
         ktlint("1.7.1")
     }
 }

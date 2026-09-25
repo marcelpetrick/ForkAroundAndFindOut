@@ -436,3 +436,17 @@ require consented physical sessions and must not be fabricated.
   run and pulls them into the report directory (uploaded by CI).
 - Validation: full local pipeline green (E2E 4/4, Docker PASS). GHCR publish for 0.7.17
   was skipped because that run failed; the next green run publishes the image.
+
+### 0.7.20 — refactor: split pure detection and core logic into JVM modules (plan_v2 decision 8)
+
+- Done: `:detection` (geometry, features, rules, seat tracker, temporal filter; shared
+  synthetic fixtures as `testFixtures`) and `:core` (settings model, monitor, alarm policy,
+  synthetic demo) are plain Kotlin/JVM modules with no Android imports; `:app` keeps
+  camera, engine, views, store and the org.json settings codec (`SettingsCodec.kt`,
+  `Settings.Companion.decode` extension keeps call sites unchanged). Kover merges all
+  modules into a custom `all` variant; the 95 % gate applies to the merged report.
+  Spotless covers every module; the pipeline runs `:detection:test :core:test
+  :app:testDebugUnitTest`; `scripts/report.py tests` accepts several result directories.
+- Validation: full local pipeline green: 38 tests, merged line coverage 98.3 % (1436/1461;
+  detection 228/228, demo 23/23), E2E 4/4 on the emulator, Docker PASS.
+- Next (M5): session landmark logs + replay tool (`:tools`) on top of `:core`.

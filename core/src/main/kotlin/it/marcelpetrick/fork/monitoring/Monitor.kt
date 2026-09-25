@@ -107,8 +107,8 @@ class Monitor(
         for (seat in results) {
             for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
                 if (arm.state == ElbowState.VIOLATION) current += seat.seat to left
-                if (arm.features != null) {
-                    confidenceTotal += arm.features.confidence
+                arm.features?.let {
+                    confidenceTotal += it.confidence
                     confidenceCount++
                 }
             }

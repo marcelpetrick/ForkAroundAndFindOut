@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 """Summarize JUnit XML results or Kover line coverage for the pipeline summary.
 
-Usage: scripts/report.py tests DIR     -> "N tests, F failed, S skipped"
+Usage: scripts/report.py tests DIR...  -> "N tests, F failed, S skipped"
        scripts/report.py coverage XML  -> "line coverage 98.2% (1198/1220)"
 """
 import sys
@@ -10,9 +10,9 @@ import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 
-def tests(directory: Path) -> str:
+def tests(*directories: Path) -> str:
     total = failed = skipped = 0
-    for report in directory.rglob("TEST-*.xml"):
+    for report in (found for directory in directories for found in directory.rglob("TEST-*.xml")):
         suite = ElementTree.parse(report).getroot()
         total += int(suite.get("tests", 0))
         failed += int(suite.get("failures", 0)) + int(suite.get("errors", 0))
@@ -29,8 +29,8 @@ def coverage(report: Path) -> str:
 
 
 if __name__ == "__main__":
-    kind, target = sys.argv[1], Path(sys.argv[2])
+    kind, targets = sys.argv[1], [Path(argument) for argument in sys.argv[2:]]
     try:
-        print(tests(target) if kind == "tests" else coverage(target))
+        print(tests(*targets) if kind == "tests" else coverage(targets[0]))
     except (OSError, ElementTree.ParseError, KeyError) as problem:
         print(f"no {kind} report ({problem.__class__.__name__})")

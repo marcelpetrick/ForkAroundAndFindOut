@@ -72,6 +72,11 @@ kotlin {
     }
 }
 dependencies {
+    implementation(project(":core"))
+    kover(project(":core"))
+    kover(project(":detection"))
+    testImplementation(testFixtures(project(":detection")))
+    androidTestImplementation(testFixtures(project(":detection")))
     implementation("androidx.activity:activity-ktx:1.13.0")
     implementation("androidx.camera:camera-camera2:1.6.2")
     implementation("androidx.camera:camera-lifecycle:1.6.2")
@@ -85,6 +90,10 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.17")
 }
 kover {
+    // One report over app (debug) + :core + :detection; the 95 % gate applies to all of it.
+    currentProject {
+        createVariant("all") { add("debug") }
+    }
     reports {
         verify {
             rule { minBound(95) }

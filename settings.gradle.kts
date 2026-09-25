@@ -14,4 +14,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "ForkAroundAndFindOut"
-include(":app")
+include(":app", ":core", ":detection")
