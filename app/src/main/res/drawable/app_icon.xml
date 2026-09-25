@@ -1,0 +1,5 @@
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#286552" android:pathData="M0,0H108V108H0Z" />
+    <path android:strokeColor="#FFF9EF" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M30,24V43Q30,54 42,54Q54,54 54,43V24M42,24V83M76,24V83M28,68H84" />
+</vector>

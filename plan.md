@@ -16,7 +16,7 @@ app includes an explicitly labelled synthetic demo for reproducible UI testing.
 ## Tasks
 
 - [x] Step 01: preserve vision, working agreement, plan, and initial version on `main`.
-- [ ] Step 02: scaffold Kotlin Android project, GPL license, reusable scripts,
+- [x] Step 02: scaffold Kotlin Android project, GPL license, reusable scripts,
   initial local quality pipeline and mirrored GitHub Actions.
 - [ ] Step 03: implement and test geometry, feature extraction, seat assignment,
   per-arm state machine, configuration and deterministic acceptance fixtures.
@@ -94,3 +94,18 @@ require consented physical sessions and must not be fabricated.
 - Pending: steps 02–10. Capture a real Android UI screenshot for README.
 - New ideas: reject ambiguous seat assignments, prefer UNKNOWN on hidden landmarks,
   invalidate calibration when camera geometry changes, benchmark Full vs Lite on phone.
+
+### 0.0.3 — chore: establish native Android build and quality gates
+
+- Done: Kotlin-only Android foundation, min API 34 (Android 14), compile/target 37;
+  GPL license, pinned Gradle/dependencies, native Activity test and Kover 95% gate;
+  shared local/CI pipeline and documented scripts.
+- Validation: full `localPipeline.sh` passed; all Kotlin lines covered (100%),
+  Robolectric Android 14 launch test passed, Android lint/format passed, debug and
+  release APK builds passed. Explicit backup exclusions and launcher icon added.
+- Environment evidence: emulator sees Integrated Webcam HD as `webcam0`; KVM works;
+  API 34 system image already installed. Webcam use and real UI screenshot planned.
+- Pending: steps 03–10. Step 02 complete.
+- Handoff: continue with geometry/temporal tests, then native camera and setup UI.
+- New ideas: support a labelled synthetic demo within the same native UI for repeatable
+  e2e tests without storing or committing webcam/family footage.
