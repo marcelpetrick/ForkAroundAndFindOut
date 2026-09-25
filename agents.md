@@ -12,6 +12,13 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 - Never equate synthetic tests with physical-camera or household validation. Record
   unavailable evidence and remaining acceptance work honestly.
 
+## Product stack
+
+- Use Kotlin throughout the Android product, including its native UI. The user
+  explicitly selected Kotlin and rejected a mixed Flutter/Kotlin implementation.
+- Use CameraX and MediaPipe Pose Landmarker behind a replaceable pose adapter.
+- Docker distributes the APK; it does not run the phone camera on a server.
+
 ## Git and releases
 
 - Work directly on `main`. Preserve user changes.

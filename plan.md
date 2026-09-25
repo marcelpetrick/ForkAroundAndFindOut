@@ -5,18 +5,18 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 ## Goal and interpretation
 
 Build the Android-first, offline dining-table elbow monitor in `vision.md` using
-Flutter UI, a native Kotlin CameraX/MediaPipe pipeline, persistent calibration,
+a native Kotlin UI and CameraX/MediaPipe pipeline, persistent calibration,
 independent elbow classification, conservative temporal alarms, and local diagnostic
-data. There is no existing Flutter application in this repository, so create one.
+data. The user explicitly selected Kotlin for the entire Android app; this overrides the
+vision’s Flutter recommendation.
 
-Docker will deliver the Flutter web diagnostic/demo UI and downloadable Android APK,
-not pretend that an Android camera application executes inside a server container.
-The web UI will clearly distinguish synthetic demonstrations from Android monitoring.
+Docker will serve a downloadable Android APK with source/license links. The Android
+app includes an explicitly labelled synthetic demo for reproducible UI testing.
 
 ## Tasks
 
 - [x] Step 01: preserve vision, working agreement, plan, and initial version on `main`.
-- [ ] Step 02: scaffold Flutter/Android project, GPL license, reusable scripts,
+- [ ] Step 02: scaffold Kotlin Android project, GPL license, reusable scripts,
   initial local quality pipeline and mirrored GitHub Actions.
 - [ ] Step 03: implement and test geometry, feature extraction, seat assignment,
   per-arm state machine, configuration and deterministic acceptance fixtures.
@@ -26,9 +26,9 @@ The web UI will clearly distinguish synthetic demonstrations from Android monito
   debug overlay, pause, configurable visual/audio alarms and automatic clearing.
 - [ ] Step 06: implement explicit labelled local training samples, deletion/export,
   false-alarm/missed-violation feedback and optional non-image session statistics.
-- [ ] Step 07: validate local Android/web builds, unit/integration/e2e tests and >=95%
+- [ ] Step 07: validate local Android builds, unit/integration/e2e tests and >=95%
   coverage; capture an actual running-UI screenshot.
-- [ ] Step 08: Dockerize the working diagnostic UI/APK distribution, add Docker smoke
+- [ ] Step 08: Dockerize APK distribution, add Docker smoke
   checks and GHCR build/publish Actions; verify the published image.
 - [ ] Step 09: complete README, script documentation, architecture, hardware
   validation procedure and full vision traceability matrix.
@@ -39,7 +39,7 @@ The web UI will clearly distinguish synthetic demonstrations from Android monito
 
 | Vision sections | Delivery / evidence | Status |
 | --- | --- | --- |
-| 1–6, 16–19, 32–35 | Android Flutter/Kotlin/CameraX/MediaPipe architecture and pose feasibility | Pending |
+| 1–6, 16–19, 32–35 | Android Kotlin/CameraX/MediaPipe architecture and pose feasibility | Pending |
 | 7, FR-05 | Four-corner table calibration and persistence | Pending |
 | 8, FR-06 | Optional seat regions and stable association despite reordered detections | Pending |
 | 9–10, 28 | Table-relative arm geometry, confidence and motion classifier | Pending |
@@ -82,3 +82,15 @@ require consented physical sessions and must not be fabricated.
 - [ ] Deterministic synthetic scenario replay shared by demo and regression tests.
 - [ ] Calibration reminder after camera/model changes and orientation handling.
 - [ ] Session-separated export metadata for future classifier training without leakage.
+
+### 0.0.2 — docs: select native Kotlin and MediaPipe after framework comparison
+
+- Done: researched MediaPipe, ML Kit, MoveNet MultiPose, RTMPose, YOLO Pose and
+  OpenPose using upstream documentation; selected MediaPipe Full with Lite fallback.
+- Done: record user decision for Kotlin throughout; discarded uncommitted Flutter
+  scaffold. See `docs/pose-frameworks.md` for selection and integration strategy.
+- Validation: documentation whitespace, source links and version check; no product
+  code in this atomic decision commit.
+- Pending: steps 02–10. Capture a real Android UI screenshot for README.
+- New ideas: reject ambiguous seat assignments, prefer UNKNOWN on hidden landmarks,
+  invalidate calibration when camera geometry changes, benchmark Full vs Lite on phone.
