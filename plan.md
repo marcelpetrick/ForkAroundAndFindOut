@@ -513,3 +513,17 @@ require consented physical sessions and must not be fabricated.
 - Validation: 49 tests, 98.2 % merged lines; E2E 4/4; Docker PASS. On the emulator the
   audio service shows the app's SoundPool player with notification-event attributes and
   no errors (audible quality needs a phone and a listener).
+
+### 0.9.25 — feat: German translation, About screen and third-party notices (plan_v2 §3.8.5, §3.14.3)
+
+- Done: complete German UI (`values-de`, 138 strings; technical format strings marked
+  non-translatable); chime wording ("Chime once", "Continuous chime"). About screen with
+  version/build, GPL statement, privacy summary, third-party components and source link;
+  `NOTICES.md` (MediaPipe Tasks Vision 1.0.0 and the Pose Landmarker Full/Lite models with
+  URLs and SHA-256, model card, CameraX, AndroidX, Kotlin; all Apache-2.0) is also served
+  by the Docker image as `NOTICES.txt` (smoke-tested).
+- CI: concurrency per commit SHA, so no commit's run is replaced by a newer queued run
+  (0.9.23's run showed "cancelled" that way); `latest` is only pushed when the commit is
+  still the tip of main, so parallel runs cannot publish an older image as latest.
+- Validation: 50 tests incl. a Robolectric German-locale flow; 98.2 % merged lines; E2E
+  4/4; Docker PASS. Remote: 0.7.21 and 0.8.22 green.

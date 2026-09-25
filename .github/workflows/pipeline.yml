@@ -8,8 +8,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# One group per commit: every commit gets its own complete run (runs never replace each other).
 concurrency:
-  group: pipeline-${{ github.ref }}
+  group: pipeline-${{ github.sha }}
   cancel-in-progress: false
 env:
   IMAGE: ghcr.io/marcelpetrick/forkaroundandfindout
@@ -84,7 +85,9 @@ jobs:
           docker build --build-arg "VERSION=${version}" -t "${IMAGE}:${version}" -t "${IMAGE}:sha-${GITHUB_SHA::12}" build/docker-dist
           docker push "${IMAGE}:${version}"
           docker push "${IMAGE}:sha-${GITHUB_SHA::12}"
-          if [ "${GITHUB_REF}" = "refs/heads/main" ] || [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+          # Parallel runs may finish out of order: only the current tip of main becomes latest.
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if { [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${tip}" = "${GITHUB_SHA}" ]; } || [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             docker tag "${IMAGE}:${version}" "${IMAGE}:latest"
             docker push "${IMAGE}:latest"
           fi

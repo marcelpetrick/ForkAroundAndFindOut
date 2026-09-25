@@ -17,6 +17,7 @@ curl -fsS "${base}/healthz" | grep -qx ok
 name="fork-around-and-find-out-$(cat VERSION).apk"
 curl -fsS "${base}/" | grep -q "${name}"
 curl -fsS "${base}/LICENSE.txt" | grep -q "GNU GENERAL PUBLIC LICENSE"
+curl -fsS "${base}/NOTICES.txt" | grep -q "MediaPipe Tasks Vision"
 type="$(curl -fsS -o /dev/null -w '%{content_type}' "${base}/${name}")"
 [[ "${type}" == "application/vnd.android.package-archive" ]] || { echo "Wrong APK content type: ${type}" >&2; exit 1; }
 tmp="$(mktemp -d)"

@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.text.util.Linkify
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -86,7 +87,7 @@ typealias SourceFactory = (
 
 /** Single-activity native UI. All state lives on the main thread. */
 class MainActivity : ComponentActivity() {
-    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS, DATA }
+    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS, DATA, ABOUT }
 
     internal lateinit var store: LocalStore
     internal var settings = Settings()
@@ -227,6 +228,7 @@ class MainActivity : ComponentActivity() {
             Screen.WELCOME -> page(welcome())
             Screen.SETTINGS -> page(settingsPage())
             Screen.DATA -> page(dataPage())
+            Screen.ABOUT -> page(aboutPage())
             Screen.DEMO -> startDemo()
             else -> {
                 if (preview == null) cameraLayout()
@@ -280,6 +282,7 @@ class MainActivity : ComponentActivity() {
             addView(action(getString(R.string.try_demo)) { begin(Screen.DEMO) })
             addView(action(getString(R.string.settings)) { begin(Screen.SETTINGS) })
             addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
+            addView(action(getString(R.string.about)) { begin(Screen.ABOUT) })
         }
 
     private fun begin(target: Screen) {
@@ -742,6 +745,17 @@ class MainActivity : ComponentActivity() {
                 },
             )
             addView(action(getString(R.string.back), primary = true) { begin(Screen.WELCOME) })
+        }
+
+    private fun aboutPage(): View =
+        column().apply {
+            addView(title(getString(R.string.about)))
+            addView(label(getString(R.string.about_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE), 19f, bold = true))
+            addView(card(label(getString(R.string.about_license)), label(getString(R.string.welcome_privacy))))
+            addView(card(label(getString(R.string.about_notices), 15f)))
+            addView(label(getString(R.string.about_source)).apply { autoLinkMask = Linkify.WEB_URLS })
+            addView(label(getString(R.string.welcome_limits), color = Palette.MUTED))
+            addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
         }
 
     private fun confirm(

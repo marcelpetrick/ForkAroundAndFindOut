@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 # Stage the Docker build context in build/docker-dist: Dockerfile, nginx config and a
-# site with the APK, its SHA-256, the license and an install page.
+# site with the APK, its SHA-256, the license, third-party notices and an install page.
 # Usage: scripts/docker-dist.sh [APK]   (default: signed release APK if present, else debug APK)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,6 +24,7 @@ cp "${apk}" "${out}/site/${name}"
 (cd "${out}/site" && sha256sum "${name}" > "${name}.sha256")
 sha="$(cut -d' ' -f1 "${out}/site/${name}.sha256")"
 cp LICENSE "${out}/site/LICENSE.txt"
+cp NOTICES.md "${out}/site/NOTICES.txt"
 sed -e "s|@APK@|${name}|g" -e "s|@VERSION@|${version}|g" -e "s|@SHA256@|${sha}|g" -e "s|@BUILD_KIND@|${kind}|g" \
     docker/index.html > "${out}/site/index.html"
 cp Dockerfile "${out}/Dockerfile"

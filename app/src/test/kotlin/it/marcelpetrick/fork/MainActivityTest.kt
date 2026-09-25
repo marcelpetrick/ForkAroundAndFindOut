@@ -141,12 +141,19 @@ class MainActivityTest {
             assertEquals(MainActivity.Screen.SETTINGS, activity.screen)
             activity.click("Decrease People")
             activity.click("Increase Sound")
-            assertTrue(activity.texts().contains("Beep once"))
+            assertTrue(activity.texts().contains("Chime once"))
             val saved = LocalStore(activity).settings()
             assertEquals(3, saved.people)
             assertEquals(activity.settings, saved)
             activity.click("Test sound") // explicit preview only; no alarm logic involved
             assertEquals(listOf(Sound.BEEP), speaker.sounds)
+            activity.click("Back")
+            activity.click("About")
+            assertEquals(MainActivity.Screen.ABOUT, activity.screen)
+            assertTrue(activity.texts().contains("Version ${BuildConfig.VERSION_NAME}"))
+            assertTrue(activity.texts().contains("GNU General Public License v3 or later"))
+            assertTrue(activity.texts().contains("MediaPipe Tasks Vision"))
+            assertTrue(activity.texts().contains("github.com/marcelpetrick/ForkAroundAndFindOut"))
             activity.click("Back")
             activity.onBackPressedDispatcher.onBackPressed()
             assertTrue(activity.isFinishing)
@@ -565,6 +572,25 @@ class EdgeToEdgeTest {
                 assertEquals(screen.name, 63, root.paddingTop)
                 assertEquals(screen.name, 48, root.paddingBottom)
             }
+        }
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "de")
+class GermanLocaleTest {
+    @Test
+    fun germanUserSeesGermanScreensAndDemo() {
+        Robolectric.buildActivity(MainActivity::class.java).setup().use { controller ->
+            val activity = controller.get()
+            assertTrue(activity.texts().contains("Kamera einrichten"))
+            assertTrue(activity.texts().contains("Es werden keine Bilder oder Videos gespeichert"))
+            activity.click("Demo ausprobieren (synthetisch)")
+            idle(6000)
+            assertTrue(activity.texts().contains("Platz 2 · Links: Ellbogen auf dem Tisch"))
+            activity.click("Zurück")
+            activity.click("Einstellungen")
+            assertTrue(activity.texts().contains("Weitwinkel") || activity.texts().contains("Automatisch"))
         }
     }
 }
