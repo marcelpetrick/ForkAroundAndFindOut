@@ -14,6 +14,8 @@ wrapper.
 | `./localPipeline.sh --report-dir DIR` | Keep per-stage logs, `environment.txt` and `summary.txt` in `DIR` (CI uploads `artifacts/pipeline`). |
 | `scripts/emulator.sh [AVD]` | Boot an emulator headless (default AVD `ForkApi34` or `$FORK_AVD`) and wait for boot completion, so the E2E stage can run locally. No-op when a device is attached. |
 | `scripts/screenshots.sh [DIR]` | Install the debug APK on an attached emulator/device and capture genuine welcome, synthetic-demo-warning and settings screenshots (default `docs/screenshots/`). The demo is generated stick figures, never camera footage. |
+| `scripts/docker-dist.sh [APK]` | Stage `build/docker-dist/` (Dockerfile, nginx config, site with APK, SHA-256, license, install page). Prefers the signed release APK, else the debug APK. See [docs/docker.md](docker.md). |
+| `scripts/docker-smoke.sh [TAG]` | Stage, build and run the distribution image, then verify health, install page, license, APK MIME type and checksum, and 404 for missing paths. The pipeline's Docker stage runs it. |
 | `python3 scripts/models.py` | Download MediaPipe Pose Landmarker Full/Lite (model version 1) into ignored `app/src/main/assets/` and verify SHA-256 from `models/checksums.json`. Idempotent; the pipeline runs it first. |
 | `python3 scripts/report.py tests DIR` / `coverage XML` | Summarize JUnit XML results or Kover line coverage for the pipeline summary. |
 | `python3 scripts/version.py patch\|minor` | Increment VERSION patch and the Android BUILD_NUMBER; `minor` also bumps the minor component for a major feature. Run once per commit. |

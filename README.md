@@ -11,9 +11,8 @@
 [![Offline: on-device](https://img.shields.io/badge/processing-on--device%2C%20offline-success.svg)](docs/detection.md)
 
 An offline Android dining-table elbow monitor, written entirely in Kotlin.
-Implementation is underway: see [the handoff plan](plan.md), [vision](vision.md),
-and [pose framework selection](docs/pose-frameworks.md). The initial foundation
-is not yet a detector.
+See [the delivery ledger](plan.md), [plan v2](plan_v2/plan_v2.md), [vision](vision.md)
+and [pose framework selection](docs/pose-frameworks.md).
 
 **Author: Marcel Petrick. License: GPLv3 or later. Built with AI assistance.**
 
@@ -29,8 +28,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Android 14/API 34 is the minimum. Compilation and target SDK are API 37.
 The pipeline formats/checks/tests/builds through pinned Gradle, runs identically
 on GitHub Actions, and enforces >=95% Kotlin line coverage. CI uploads APKs and
-reports. Debug APKs are installable development artifacts; release APKs are
-unsigned until a production signing key is configured.
+reports. Release APKs are arm64-only and signed with the project key when it is
+configured (see [Docker and signing](docs/docker.md)).
+
+```sh
+docker run --rm -p 8080:8080 ghcr.io/marcelpetrick/forkaroundandfindout:latest
+```
+
+serves the signed APK, its checksum and the license for download to a phone.
 
 See [script documentation](docs/scripts.md) and [working rules](agents.md).
-Docker delivery and a real Android UI screenshot are tracked in `plan.md`.

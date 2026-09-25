@@ -3,6 +3,7 @@ name: Pipeline
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -10,10 +11,15 @@ permissions:
 concurrency:
   group: pipeline-${{ github.ref }}
   cancel-in-progress: false
+env:
+  IMAGE: ghcr.io/marcelpetrick/forkaroundandfindout
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -25,12 +31,30 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - name: Cache pinned MediaPipe models
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/assets/*.task
+          key: mediapipe-models-${{ hashFiles('models/checksums.json') }}
+      - name: Prepare release signing key (secrets are absent for forks)
+        env:
+          KEYSTORE: ${{ secrets.FORK_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.FORK_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+            printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=fork-release\nkeyPassword=%s\n' \
+              "$RUNNER_TEMP/release.jks" "$PASSWORD" "$PASSWORD" > "$RUNNER_TEMP/signing.properties"
+            echo "FORK_SIGNING=$RUNNER_TEMP/signing.properties" >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets: the release APK stays unsigned."
+          fi
       - name: Enable KVM for the Android emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Run local pipeline on an API 34 emulator (e2e required)
+      - name: Run local pipeline on an API 34 emulator (e2e and Docker required)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -39,7 +63,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back emulated
-          script: ./localPipeline.sh --noRun --noOpen --e2e required --report-dir artifacts/pipeline
+          script: ./localPipeline.sh --noRun --noOpen --e2e required --docker required --report-dir artifacts/pipeline
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -48,3 +72,29 @@ jobs:
             app/build/outputs/apk
             app/build/reports
             artifacts/pipeline
+            build/docker-dist/site
+      - name: Publish image to GHCR
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          version="$(cat VERSION)"
+          docker build --build-arg "VERSION=${version}" -t "${IMAGE}:${version}" -t "${IMAGE}:sha-${GITHUB_SHA::12}" build/docker-dist
+          docker push "${IMAGE}:${version}"
+          docker push "${IMAGE}:sha-${GITHUB_SHA::12}"
+          if [ "${GITHUB_REF}" = "refs/heads/main" ] || [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            docker tag "${IMAGE}:${version}" "${IMAGE}:latest"
+            docker push "${IMAGE}:latest"
+          fi
+      - name: Publish GitHub release for version tags
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(cat VERSION)"
+          [ "v${version}" = "${GITHUB_REF_NAME}" ] || { echo "Tag ${GITHUB_REF_NAME} does not match VERSION ${version}"; exit 1; }
+          site=build/docker-dist/site
+          gh release create "${GITHUB_REF_NAME}" \
+            "${site}/fork-around-and-find-out-${version}.apk" \
+            "${site}/fork-around-and-find-out-${version}.apk.sha256" \
+            --title "Fork Around & Find Out ${version}" \
+            --notes-file docs/release-notes.md

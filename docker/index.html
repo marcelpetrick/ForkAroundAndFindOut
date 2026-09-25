@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fork Around &amp; Find Out</title>
+<style>
+  :root { color-scheme: light dark; --ink: #1f2a24; --green: #286552; --surface: #fff8ec; }
+  body { margin: 0; font: 18px/1.5 system-ui, sans-serif; background: var(--surface); color: var(--ink); }
+  main { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem; }
+  h1 { color: var(--green); }
+  a.button { display: inline-block; background: var(--green); color: #fff; padding: .8rem 1.4rem; border-radius: 2rem; text-decoration: none; }
+  code { word-break: break-all; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #eef3ef; --surface: #18201c; --green: #7fc4ac; } a.button { color: #18201c; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fork Around &amp; Find Out</h1>
+  <p>An offline Android helper that gently reminds a family to keep elbows off the dinner
+     table. Everything runs on the phone; no images are saved or uploaded.</p>
+  <p><a class="button" href="@APK@">Download @APK@</a></p>
+  <p>Version @VERSION@ · Android 14 or newer · @BUILD_KIND@</p>
+  <p>SHA-256: <code>@SHA256@</code> (<a href="@APK@.sha256">checksum file</a>)</p>
+  <p>Install: download on the phone, allow installing from this source when Android asks,
+     then open the app and follow “Set up camera”.</p>
+  <p>This is a conservative helper, not a validated measurement device.</p>
+  <p>Free software under the <a href="LICENSE.txt">GNU GPL v3 or later</a> ·
+     <a href="https://github.com/marcelpetrick/ForkAroundAndFindOut">source code</a></p>
+</main>
+</body>
+</html>

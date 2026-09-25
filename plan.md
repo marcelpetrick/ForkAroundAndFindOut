@@ -69,7 +69,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
 - [x] Step 07: instrumented end-to-end tests on the API 34 emulator (setup, demo,
   pause, settings, data management) wired into `localPipeline.sh` and CI via an
   emulator runner; capture genuine running-UI screenshots with `adb exec-out screencap`.
-- [ ] Step 08: Docker image that serves the release APK plus source/license links;
+- [x] Step 08: Docker image that serves the release APK plus source/license links;
   Docker smoke test in the pipeline; GitHub Actions workflow builds and publishes
   to GHCR; verify by pulling and running the published image.
 - [ ] Step 09: README (badges, setup, usage, testing, pipeline, Docker, screenshot),
@@ -381,3 +381,24 @@ require consented physical sessions and must not be fabricated.
   for successful Gradle stages so a failure never shows stale counts.
 - Validation: local pipeline green incl. 4 instrumented tests on the API 34 emulator;
   the 320×640 reproduction confirmed the root cause (not kept as a target size).
+
+### 0.7.17 — feat: sign the arm64 release and distribute it via Docker on GHCR (plan_v2 M8, decisions 9–11)
+
+- Done: release APK is arm64-v8a only (plan_v2 decision 9; debug keeps x86_64 for the
+  emulator): 74.2 MB → 38.7 MB. Release signing from a properties file
+  (`$FORK_SIGNING` or `~/.android/…release.properties`); a dedicated RSA-4096 key was
+  generated outside the repository (0600) and uploaded as `FORK_KEYSTORE_BASE64` /
+  `FORK_KEYSTORE_PASSWORD` secrets; fingerprint published in `docs/docker.md`.
+  **The owner must back up `~/.android/fork-around-and-find-out-release.{jks,properties}`**:
+  future updates need the same key.
+- Done: `Dockerfile` on digest-pinned `nginx:1.30.5-alpine` (non-default port 8080,
+  healthcheck, APK MIME type, no server tokens, CSP) serving the APK, SHA-256, license and
+  an install page (`docker/`). `scripts/docker-dist.sh` stages the context;
+  `scripts/docker-smoke.sh` builds, runs and verifies it; pipeline Docker stage (CI:
+  `--docker required`). Workflow: model cache (F14), signing from secrets, GHCR push
+  (`<version>`, `sha-<commit>`, `latest`) after a green pipeline, GitHub release on
+  `v*` tags with APK + checksum. Lint `ChromeOsAbiSupport` disabled (arm64-only by design).
+- Validation: full local pipeline green with `--docker required`: 36 unit tests, 98.3%
+  lines, 4 instrumented tests on the API 34 emulator, Docker stage PASS; `apksigner`
+  confirms the release certificate SHA-256 `aaf85804…5ae0`.
+- Pending: verify the published GHCR image by pulling it (after the remote run).
