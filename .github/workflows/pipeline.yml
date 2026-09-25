@@ -63,7 +63,10 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back emulated
-          script: ./localPipeline.sh --noRun --noOpen --e2e required --docker required --report-dir artifacts/pipeline
+          # The CI emulator's own launcher raises ANR dialogs over the app under test.
+          script: |
+            adb shell settings put global hide_error_dialogs 1
+            ./localPipeline.sh --noRun --noOpen --e2e required --docker required --report-dir artifacts/pipeline
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -450,3 +450,13 @@ require consented physical sessions and must not be fabricated.
 - Validation: full local pipeline green: 38 tests, merged line coverage 98.3 % (1436/1461;
   detection 228/228, demo 23/23), E2E 4/4 on the emulator, Docker PASS.
 - Next (M5): session landmark logs + replay tool (`:tools`) on top of `:core`.
+
+### 0.7.21 — fix(ci): hide emulator system error dialogs during e2e
+
+- Evidence: the failure screenshots now uploaded by CI (0.7.19 run) show
+  "Pixel Launcher isn't responding" over the screen in all three failing UI flows —
+  the CI emulator's own launcher, not this app.
+- Done: the emulator step sets `hide_error_dialogs=1` before running the pipeline; the
+  in-test dismissal of "isn't responding" dialogs stays as a second defence.
+- Validation: workflow change only; product code identical to 0.7.20 (local pipeline
+  green). Remote verification is the next run.
