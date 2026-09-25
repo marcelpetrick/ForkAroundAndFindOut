@@ -56,7 +56,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   geometry change, adult diagnostics (FPS, latency, scores, confidence), persisted
   settings screen for every FR-13 item, and a clearly labelled synthetic demo that
   never sounds or stores data. Robolectric flow tests plus unit tests.
-- [ ] Step 05b: rebuild `localPipeline.sh` in the style of `~/repos/myLastFmPlayer` and
+- [x] Step 05b: rebuild `localPipeline.sh` in the style of `~/repos/myLastFmPlayer` and
   `~/repos/Cullendula`: `--help` usage, numbered stages, per-stage logs, optional
   `--report-dir`, `--noRun`/`--skip-e2e` style flags, and a final stage-by-stage
   PASS/FAIL summary with details (tests, coverage %, lint counts, APK sizes). CI calls
@@ -266,3 +266,16 @@ require consented physical sessions and must not be fabricated.
   reference-style pipeline/badges, public release at the end.
 - Validation: documentation-only; product code identical to 0.4.9 (pipeline green).
 - Next: step 05b (pipeline restyle and badges), then step 06.
+
+### 0.4.11 — build: restyle pipeline with staged summary, emulator e2e and badges
+
+- Done: `localPipeline.sh` rebuilt after myLastFmPlayer/Cullendula: `--help`, numbered
+  stages, per-stage logs, `--report-dir`, `--noRun`, `--noOpen`, `--e2e`/`--docker`
+  modes, environment metadata and a final PASS/FAIL/WARN/SKIP summary with details.
+  New `scripts/report.py` (test/coverage summaries) and `scripts/emulator.sh`
+  (headless AVD boot). CI runs the same script inside an API 34 KVM emulator with
+  `--e2e required` and uploads stage logs. README badge set extended (pipeline,
+  license, Android, Kotlin, CameraX, MediaPipe, coverage, gate, offline).
+- Validation: local run — all mandatory stages PASS, E2E PASS on the API 34
+  emulator (`NativeModelTest`), 29 unit tests, 98.2% line coverage; ShellCheck clean.
+- Pending: Docker/release badges arrive with their workflows (steps 08, 11).
