@@ -17,7 +17,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runner.RunWith
 import java.util.regex.Pattern
 
@@ -29,6 +32,28 @@ class UiFlowTest {
     private val context: Context = instrumentation.targetContext
     private lateinit var scenario: ActivityScenario<MainActivity>
 
+    /** Keeps a screenshot of every failure; the pipeline pulls them into its report directory. */
+    @get:Rule
+    val screenshots =
+        object : TestWatcher() {
+            override fun failed(
+                e: Throwable,
+                description: Description,
+            ) {
+                device.executeShellCommand("screencap -p /data/local/tmp/fork-e2e-${description.methodName}.png")
+            }
+        }
+
+    /** CI emulators sometimes show "System UI isn't responding"; waiting lets the test proceed. */
+    private fun dismissSystemDialogs() {
+        repeat(3) {
+            val wait = device.findObject(By.text(Pattern.compile("Wait", Pattern.CASE_INSENSITIVE))) ?: return
+            if (!device.hasObject(By.textContains("isn't responding"))) return
+            wait.click()
+            device.waitForIdle()
+        }
+    }
+
     @Before
     fun start() {
         context
@@ -37,7 +62,10 @@ class UiFlowTest {
             .clear()
             .commit()
         context.filesDir.resolve("samples.json").delete()
+        dismissSystemDialogs()
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        device.waitForIdle()
+        dismissSystemDialogs()
     }
 
     @After
@@ -58,6 +86,7 @@ class UiFlowTest {
     }
 
     private fun tap(text: String) {
+        dismissSystemDialogs()
         scrollTo(text)
         // Dialog buttons may be rendered in capitals by the platform theme.
         val selector = By.text(Pattern.compile(Pattern.quote(text), Pattern.CASE_INSENSITIVE))

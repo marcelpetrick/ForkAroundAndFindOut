@@ -423,3 +423,16 @@ require consented physical sessions and must not be fabricated.
   instrumented tests PASS (camera flow asserts the diagnostics readout format); full
   pipeline green. Remote Actions: 0.6.16 green (8m39s) with required emulator e2e.
 - Pending (needs a phone): first phone run of Position/diagnostics per plan_v2 §7 step 1.
+
+### 0.7.19 — test(e2e): survive CI system dialogs and keep failure screenshots
+
+- Evidence: remote run for 0.7.17 failed only in E2E: all three UI flows could not find
+  welcome buttons, while the identical tests passed remotely at 0.6.16 and locally. The
+  app code was unchanged between those runs, so an emulator system dialog is the likely
+  cause; there was no screenshot to prove it.
+- Done: UiFlowTest dismisses "isn't responding" system dialogs (Wait) before launching
+  and before every tap; a JUnit rule screenshots every failing test into
+  `/data/local/tmp/fork-e2e-<test>.png`; the pipeline E2E stage clears them before the
+  run and pulls them into the report directory (uploaded by CI).
+- Validation: full local pipeline green (E2E 4/4, Docker PASS). GHCR publish for 0.7.17
+  was skipped because that run failed; the next green run publishes the image.

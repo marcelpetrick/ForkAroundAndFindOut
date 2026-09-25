@@ -146,8 +146,14 @@ stage_e2e() {
         [[ "${E2E_MODE}" == "required" ]] && return 1
         return 3
     fi
+    "${ADB}" shell rm -f '/data/local/tmp/fork-e2e-*.png'
     "${GRADLE[@]}" :app:connectedDebugAndroidTest
     local result=$?
+    # Failure screenshots taken by the instrumented tests become pipeline artifacts.
+    local shot
+    for shot in $("${ADB}" shell ls /data/local/tmp/ 2>/dev/null | tr -d '\r' | grep '^fork-e2e-.*\.png$'); do
+        "${ADB}" pull "/data/local/tmp/${shot}" "${LOG_DIR}/${shot}" >/dev/null
+    done
     # Failing instrumented runs still write results, so the counts stay informative.
     detail "$(python3 scripts/report.py tests app/build/outputs/androidTest-results/connected) on $("${ADB}" shell getprop ro.product.model | tr -d '\r')"
     return "${result}"
