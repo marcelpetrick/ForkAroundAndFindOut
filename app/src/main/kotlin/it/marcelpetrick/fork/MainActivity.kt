@@ -46,9 +46,11 @@ import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.SessionRecorder
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
+import it.marcelpetrick.fork.monitoring.VisibilityCheck
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.monitoring.sessionRecord
+import it.marcelpetrick.fork.ui.Lens
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
@@ -57,6 +59,7 @@ import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.column
 import it.marcelpetrick.fork.ui.label
+import it.marcelpetrick.fork.ui.lensLabels
 import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.settingsOptions
 import it.marcelpetrick.fork.ui.title
@@ -94,7 +97,7 @@ class MainActivity : ComponentActivity() {
     internal var sourceFactory: SourceFactory = { view, s, frame, error -> CameraSession(this, this, view, s, frame, error) }
     internal var speaker: Speaker = ToneSpeaker()
     internal var clock: () -> Long = SystemClock::uptimeMillis
-    internal var cameraIds: () -> List<String> = ::backCameras
+    internal var cameraIds: () -> List<Lens> = ::backCameras
     internal var monitor: Monitor? = null
         private set
     internal var stage: StageView? = null
@@ -109,6 +112,8 @@ class MainActivity : ComponentActivity() {
     private var seatsText: TextView? = null
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
+    private var advice: TextView? = null
+    private var visibilityCheck: VisibilityCheck? = null
     private var alarm = AlarmPolicy()
     private val taps = mutableListOf<Point>()
     private val seats = mutableListOf<Polygon>()
@@ -131,6 +136,7 @@ class MainActivity : ComponentActivity() {
     private var missedViolations = 0
     private var training = false
     private var trainingSeat = 1
+    private var snoozedUntil = 0L
     internal var recorder: SessionRecorder? = null
         private set
     private var exportLog: File? = null
@@ -226,6 +232,7 @@ class MainActivity : ComponentActivity() {
                 if (preview == null) cameraLayout()
                 panel!!.removeAllViews()
                 stage!!.onTap = null
+                stage!!.onDrag = null
                 stage!!.taps = emptyList()
                 stage!!.results = emptyList()
                 stage!!.warning = VisualMode.OFF
@@ -366,13 +373,45 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    /** Vision §19 as a gate: the table is marked once everyone's arms are reliably visible. */
     private fun positionPanel() {
+        visibilityCheck = VisibilityCheck(settings.people)
         panel!!.apply {
             addView(title(getString(R.string.position_title)))
             addView(label(getString(R.string.position_help)))
             status = label(getString(R.string.people_detected, 0), bold = true).also(::addView)
-            addView(action(getString(R.string.mark_table), primary = true) { show(Screen.TABLE) })
+            advice = label(getString(R.string.visibility_tips), color = Palette.MUTED).also(::addView)
+            addView(
+                action(getString(R.string.mark_table), primary = true) {
+                    if (visibilityCheck?.result()?.passed == true) show(Screen.TABLE)
+                }.apply {
+                    tag = CONTINUE_TAG
+                    isEnabled = false
+                    alpha = 0.5f
+                },
+            )
+            addView(action(getString(R.string.continue_anyway)) { show(Screen.TABLE) })
             addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
+        }
+    }
+
+    private fun refreshVisibility(poses: List<Pose>) {
+        val check = visibilityCheck ?: return
+        check.add(poses, lastFrame)
+        val result = check.result()
+        status?.text =
+            getString(
+                R.string.visibility_status,
+                result.detected,
+                settings.people,
+                (result.armsVisible * 100).toInt(),
+                fps,
+                result.seconds,
+            )
+        advice?.text = getString(if (result.passed) R.string.visibility_passed else R.string.visibility_tips)
+        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
+            isEnabled = result.passed
+            alpha = if (result.passed) 1f else 0.5f
         }
     }
 
@@ -401,6 +440,7 @@ class MainActivity : ComponentActivity() {
             if (!cameraReady) status?.text = getString(R.string.waiting_for_image) else edit { onPoint(point) }
         }
         stage!!.onRejectedTap = { status?.text = getString(R.string.tap_inside_image) }
+        stage!!.onDrag = { index, point -> edit { taps[index] = point } }
     }
 
     private fun edit(change: () -> Unit) {
@@ -497,6 +537,7 @@ class MainActivity : ComponentActivity() {
         diagnosticsOpen = false // adult tools start collapsed in every session
         falseAlarms = 0
         missedViolations = 0
+        snoozedUntil = 0L
         resumedAt = clock()
         alarm = AlarmPolicy()
         show(Screen.MONITOR)
@@ -525,6 +566,7 @@ class MainActivity : ComponentActivity() {
         } else {
             active.start(now)
             resumedAt = now
+            snoozedUntil = 0L // an explicit resume means "watch again now"
         }
         refreshMonitorPanel()
     }
@@ -546,6 +588,7 @@ class MainActivity : ComponentActivity() {
                 !active.active -> getString(R.string.paused)
                 now - resumedAt < settings.graceMs -> getString(R.string.grace, (settings.graceMs - (now - resumedAt) + 999) / 1000)
                 active.health == Health.TOO_SLOW -> getString(R.string.too_slow, fps)
+                now < snoozedUntil -> getString(R.string.snoozed, (snoozedUntil - now + 999) / 1000)
                 active.results.isEmpty() -> getString(R.string.waiting)
                 active.health == Health.SLOW -> getString(R.string.slow_processing, fps)
                 stage?.warning != VisualMode.OFF -> getString(R.string.warning_text)
@@ -622,6 +665,11 @@ class MainActivity : ComponentActivity() {
 
     private fun feedback(label: String) {
         val active = monitor ?: return
+        if (label == "FALSE_ALARM") {
+            // The adult corrected a wrong reminder: stop it now and give the table a short rest.
+            snoozedUntil = clock() + SNOOZE_MS
+            silence()
+        }
         recorder?.label(SessionLog.label(clock(), label, 0))
         if (persist(listOf(sampleRecord(session, clock(), label, active.results, 0)), label)) {
             if (label == "FALSE_ALARM") falseAlarms++ else missedViolations++
@@ -830,7 +878,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         val active = monitor ?: return
-        val alarming = active.tick(now)
+        val alarming = active.tick(now) && now >= snoozedUntil
         if (active.calibrationInvalid) {
             notice = getString(R.string.calibration_changed)
             show(Screen.WELCOME)
@@ -863,7 +911,7 @@ class MainActivity : ComponentActivity() {
                 if (active.active) recorder?.frame(SessionLog.frame(time, info.aspect, poses, active.results))
             }
         }
-        if (screen == Screen.POSITION) status?.text = getString(R.string.people_detected, poses.size)
+        if (screen == Screen.POSITION) refreshVisibility(poses)
         stage?.refresh()
     }
 
@@ -916,12 +964,17 @@ class MainActivity : ComponentActivity() {
     private fun thermal(): String =
         thermalLabel(getSystemService(PowerManager::class.java)?.currentThermalStatus ?: PowerManager.THERMAL_STATUS_NONE)
 
-    private fun backCameras(): List<String> =
+    private fun backCameras(): List<Lens> =
         try {
             val manager = getSystemService(CameraManager::class.java)
-            manager.cameraIdList.filter {
-                manager.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
-            }
+            lensLabels(
+                manager.cameraIdList
+                    .map { it to manager.getCameraCharacteristics(it) }
+                    .filter { (_, info) -> info.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+                    .associate { (id, info) ->
+                        id to (info.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.minOrNull() ?: 0f)
+                    },
+            )
         } catch (_: Exception) {
             emptyList()
         }
@@ -933,6 +986,8 @@ class MainActivity : ComponentActivity() {
         const val PAUSE_TAG = "pause"
         const val DIAGNOSTICS_TAG = "diagnostics"
         const val TRAINING_TAG = "training"
+        const val CONTINUE_TAG = "continue"
+        const val SNOOZE_MS = 30_000L
         const val SEAT_TAG = "seat"
         const val LABELS_TAG = "labels"
     }

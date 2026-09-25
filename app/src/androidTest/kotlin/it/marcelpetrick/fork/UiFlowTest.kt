@@ -158,7 +158,7 @@ class UiFlowTest {
             if (!ready) Thread.sleep(250)
         }
         assertTrue("camera delivered no analysed frame within 30 s", ready)
-        tap("Mark table")
+        tap("Mark table without the check") // the emulator scene contains no people
         waitFor("Corners marked: 0 of 4")
         val location = IntArray(2)
         var size = 0 to 0

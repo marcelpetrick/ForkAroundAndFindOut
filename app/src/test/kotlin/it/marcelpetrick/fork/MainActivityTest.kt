@@ -174,9 +174,11 @@ class MainActivityTest {
             assertEquals(MainActivity.Screen.POSITION, activity.screen)
             assertEquals(1, sources.single().started)
             frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
-            assertTrue(activity.texts().contains("People detected: 1"))
+            assertTrue(activity.texts().contains("People: 1 of 4"))
+            activity.click("Mark table") // disabled: the visibility check has not passed
+            assertEquals(MainActivity.Screen.POSITION, activity.screen)
 
-            activity.click("Mark table")
+            activity.click("Mark table without the check")
             assertEquals(1, sources.size) // camera stays open between setup steps
             val stage = activity.stage!!
             assertTrue(stage.width > 0 && stage.height > 0)
@@ -236,6 +238,18 @@ class MainActivityTest {
             activity.click("Adult diagnostics")
             assertTrue(activity.texts().contains("FPS"))
             assertTrue(activity.texts().contains("Seat 1 left: score 0.95"))
+            // An adult marks it as a false alarm: silence now, and a 30 s rest for the table.
+            activity.click("False alarm")
+            assertEquals(Sound.STOP, speaker.sounds.last())
+            assertEquals(VisualMode.OFF, activity.stage!!.warning)
+            repeat(20) {
+                frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(aspect, 90, 5))
+                idle(100)
+            }
+            val rest = Regex("""Reminders rest for (\d+) s""").find(activity.texts())!!.groupValues[1].toInt()
+            assertTrue("rest $rest s", rest in 27..29)
+            assertEquals(VisualMode.OFF, activity.stage!!.warning)
+            assertEquals(1, speaker.sounds.count { it == Sound.BEEP })
             activity.click("Hide diagnostics")
 
             activity.click("Pause")
@@ -331,7 +345,7 @@ class MainActivityTest {
             activity.click("Increase Save session statistics")
             activity.click("Back")
             activity.click("Set up camera")
-            activity.click("Mark table")
+            activity.click("Mark table without the check")
             activity.tap(corners.first())
             activity.click("Save table")
             // Before the first frame the image geometry is unknown: taps and saving are refused.
@@ -466,6 +480,57 @@ class MainActivityTest {
             activity.click("Adult diagnostics")
             activity.click("False alarm")
             assertTrue(activity.texts().contains("Not saved: Sample limit reached"))
+        }
+    }
+
+    @Test
+    fun visibilityCheckGatesTableMarkingAndCornersCanBeDragged() {
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
+        launch().use { controller ->
+            val activity = controller.get()
+            lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
+            activity.sourceFactory = { view, _, f, _ ->
+                frame = f
+                FakeSource(view)
+            }
+            activity.click("Settings")
+            repeat(3) { activity.click("Decrease People") }
+            activity.click("Back")
+            activity.click("Set up camera")
+            assertTrue(activity.texts().contains("Checking for 10 seconds"))
+            repeat(95) {
+                frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
+                idle(100)
+            }
+            assertTrue(activity.texts().contains("People: 1 of 1 · all arms visible in 100 % of frames"))
+            assertTrue(activity.texts().contains("Everyone is visible."))
+            activity.click("Mark table")
+            assertEquals(MainActivity.Screen.TABLE, activity.screen)
+
+            val stage = activity.stage!!
+            listOf(Point(0.1, 0.5), Point(0.9, 0.5), Point(0.9, 0.9), Point(0.1, 0.9)).forEach { activity.tap(it) }
+
+            fun touch(
+                action: Int,
+                x: Double,
+                y: Double,
+            ) = stage.dispatchTouchEvent(MotionEvent.obtain(0, 0, action, (x * stage.width).toFloat(), (y * stage.height).toFloat(), 0))
+            // Drag corner 1 from (0.1, 0.5) to (0.2, 0.45); dragging never adds a corner.
+            touch(MotionEvent.ACTION_DOWN, 0.1, 0.5)
+            touch(MotionEvent.ACTION_MOVE, 0.2, 0.45)
+            touch(MotionEvent.ACTION_MOVE, 2.0, 2.0) // outside the image: ignored
+            touch(MotionEvent.ACTION_UP, 0.2, 0.45)
+            assertEquals(0.2, stage.taps[0].x, 0.01)
+            assertEquals(0.45, stage.taps[0].y, 0.01)
+            assertEquals(4, stage.taps.size)
+            activity.click("Save table")
+            assertEquals(
+                0.2,
+                activity.settings.table!!
+                    .points[0]
+                    .x,
+                0.01,
+            )
         }
     }
 }

@@ -481,3 +481,21 @@ require consented physical sessions and must not be fabricated.
   session: 2 reminders, 2/2 labels, 100 % agreement; activity test replays a log recorded
   through the UI with 100 % agreement; E2E 4/4 on the emulator; Docker PASS.
 - Remote: 0.7.20 run green (9m18s) → first GHCR publish expected from it.
+
+### 0.9.23 — feat: visibility check, false-alarm snooze, lens labels and corner dragging (plan_v2 M3/M4 residuals)
+
+- Done: Position screen runs the vision §19 check as a product step — over 10 s it shows
+  people detected vs. configured, the share of frames with every shoulder/elbow/wrist
+  visible, FPS and seconds checked; "Mark table" is enabled only when detected == people
+  and ≥80 % of frames show all arms, otherwise placement tips are shown. Decision: a
+  secondary "Mark table without the check" remains, because a table is often set up
+  while nobody is seated; it is visually secondary and documented.
+- Done: "False alarm" silences immediately and rests reminders for 30 s (status shows the
+  countdown; an explicit Resume ends the rest). Settings list rear lenses as Wide/Main/
+  Tele (by focal length) with camera id. Table/seat corners can be dragged after placing
+  (28 dp grab radius); a drag never adds a corner.
+- Validation: 49 tests, 98.2 % merged lines; Robolectric tests for the passing and
+  failing visibility gate, dragging, snooze and lens labels; E2E 4/4 on the emulator
+  (uses the secondary button: the emulator scene has no people); Docker PASS.
+- Not done from plan_v2 M3: loupe while tapping and auto-proposed seat zones (optional
+  polish; seats remain manual, overlap-checked).

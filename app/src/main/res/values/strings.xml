@@ -21,6 +21,10 @@
     <string name="position_help">Check that shoulders, elbows and wrists of everyone, and the whole tabletop, are visible. Lines appear on detected people.</string>
     <string name="mark_table">Mark table</string>
     <string name="people_detected">People detected: %1$d</string>
+    <string name="visibility_status">People: %1$d of %2$d · all arms visible in %3$d %% of frames · %4$.0f FPS · checked %5$.0f of 10 s</string>
+    <string name="visibility_passed">Everyone is visible. Continue with the table.</string>
+    <string name="visibility_tips">Checking for 10 seconds with everyone seated. If this does not pass, raise the phone or move it further away so every shoulder, elbow and wrist stays visible, avoid backlight, and keep bowls from hiding elbows.</string>
+    <string name="continue_anyway">Mark table without the check</string>
 
     <string name="table_title">Mark the table</string>
     <string name="table_help">Tap the four tabletop corners in order around the table. Only the visible camera image counts.</string>
@@ -47,6 +51,7 @@
     <string name="resume">Resume</string>
     <string name="stop">Stop</string>
     <string name="paused">Paused. No warnings until you resume.</string>
+    <string name="snoozed">False alarm noted. Reminders rest for %1$d s.</string>
     <string name="waiting">Waiting for a clear camera view. No warnings without fresh evidence.</string>
     <string name="grace">Starting. Warnings begin in %1$d s.</string>
     <string name="seat_status">Seat %1$d · Left: %2$s · Right: %3$s</string>
@@ -87,6 +92,10 @@
     <string name="option_statistics">Save session statistics</string>
     <string name="camera_automatic">Automatic</string>
     <string name="camera_id">Camera %1$s</string>
+    <string name="camera_lens">%1$s (camera %2$s)</string>
+    <string name="lens_wide">Wide</string>
+    <string name="lens_main">Main</string>
+    <string name="lens_tele">Tele</string>
     <string name="value_seconds">%1$.2f s</string>
     <string name="value_percent">%1$d %%</string>
     <string name="value_number">%1$s</string>

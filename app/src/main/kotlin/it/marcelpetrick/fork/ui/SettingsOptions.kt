@@ -51,15 +51,43 @@ private val audioNames =
 /** Rule evidence is currently 0.05/0.95; thresholds matter once a learned score exists. */
 val TRIGGER_LEVELS = listOf(0.6, 0.75, 0.9)
 
-fun settingsOptions(cameras: List<String>): List<Option> {
-    val choices = listOf("") + cameras
+/** A rear camera and a human label derived from its focal length. */
+data class Lens(
+    val id: String,
+    val label: Int,
+)
+
+/**
+ * Labels rear cameras by shortest focal length: the widest is "Wide" when there are
+ * several, the longest "Tele" when there are three or more, the rest "Main".
+ */
+fun lensLabels(focalLengths: Map<String, Float>): List<Lens> {
+    val sorted = focalLengths.entries.sortedWith(compareBy({ it.value }, { it.key }))
+    return sorted.mapIndexed { index, (id, _) ->
+        val label =
+            when {
+                sorted.size > 1 && index == 0 -> R.string.lens_wide
+                sorted.size > 2 && index == sorted.lastIndex -> R.string.lens_tele
+                else -> R.string.lens_main
+            }
+        Lens(id, label)
+    }
+}
+
+fun settingsOptions(cameras: List<Lens>): List<Option> {
+    val choices = listOf("") + cameras.map { it.id }
     return listOf(
         Option(R.string.option_people, { c, s -> c.getString(R.string.value_number, s.people.toString()) }) { s, d ->
             val people = (s.people + d).coerceIn(1, 4)
             s.copy(people = people, seats = if (s.seats.size > people) emptyList() else s.seats)
         },
         Option(R.string.option_camera, { c, s ->
-            if (s.camera.isEmpty()) c.getString(R.string.camera_automatic) else c.getString(R.string.camera_id, s.camera)
+            val lens = cameras.firstOrNull { it.id == s.camera }
+            when {
+                s.camera.isEmpty() -> c.getString(R.string.camera_automatic)
+                lens != null -> c.getString(R.string.camera_lens, c.getString(lens.label), s.camera)
+                else -> c.getString(R.string.camera_id, s.camera)
+            }
         }) { s, d ->
             // A different camera has different geometry: the old table outline is meaningless.
             val camera = cycle(choices, s.camera, d)

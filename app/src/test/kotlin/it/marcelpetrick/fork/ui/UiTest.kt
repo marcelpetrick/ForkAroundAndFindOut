@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.media.ToneGenerator
 import android.view.MotionEvent
 import android.view.View
+import it.marcelpetrick.fork.R
 import it.marcelpetrick.fork.detection.ArmResult
 import it.marcelpetrick.fork.detection.ElbowState
 import it.marcelpetrick.fork.detection.Point
@@ -104,6 +105,21 @@ class UiTest {
     }
 
     @Test
+    fun lensesAreLabelledByFocalLength() {
+        assertEquals(emptyList<Lens>(), lensLabels(emptyMap()))
+        assertEquals(listOf(Lens("0", R.string.lens_main)), lensLabels(mapOf("0" to 4.4f)))
+        assertEquals(
+            listOf(
+                Lens("3", R.string.lens_wide),
+                Lens("0", R.string.lens_main),
+                Lens("2", R.string.lens_main),
+                Lens("4", R.string.lens_tele),
+            ),
+            lensLabels(mapOf("0" to 4.4f, "2" to 4.4f, "3" to 2.2f, "4" to 9.0f)),
+        )
+    }
+
+    @Test
     fun thermalStatusesHaveReadableLabels() {
         val labels = (0..6).map(::thermalLabel)
         assertEquals(listOf("none", "light", "moderate", "severe", "critical", "critical", "critical"), labels)
@@ -111,7 +127,7 @@ class UiTest {
 
     @Test
     fun everySettingStepsWithinValidBoundsAndCameraChangeInvalidatesCalibration() {
-        val options = settingsOptions(listOf("0", "2"))
+        val options = settingsOptions(lensLabels(mapOf("0" to 4.2f, "2" to 2.1f)))
         var settings =
             Settings(
                 people = 2,
@@ -138,9 +154,10 @@ class UiTest {
         val calibrated = Settings(table = table, calibrationAspect = 1.5)
         assertEquals("Automatic", camera.display(context, calibrated))
         val moved = camera.change(calibrated, 1)
-        assertEquals("0", moved.camera)
         assertNull(moved.table)
-        assertEquals("Camera 0", camera.display(context, moved))
+        assertEquals("2", moved.camera) // the widest lens is offered first
+        assertEquals("Wide (camera 2)", camera.display(context, moved))
+        assertEquals("Camera 9", camera.display(context, moved.copy(camera = "9"))) // no longer present
         assertEquals(calibrated, settingsOptions(emptyList())[1].change(calibrated, 1)) // single choice keeps calibration
         assertEquals(PoseModel.LITE, options[2].change(calibrated, 1).model)
         assertEquals("Lite (faster)", options[2].display(context, options[2].change(calibrated, 1)))

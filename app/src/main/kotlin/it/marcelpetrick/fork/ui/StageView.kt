@@ -43,6 +43,10 @@ class StageView(
     var onTap: ((Point) -> Unit)? = null
     var onRejectedTap: (() -> Unit)? = null
 
+    /** Called while an existing corner (by index) is dragged to a new image point. */
+    var onDrag: ((Int, Point) -> Unit)? = null
+    private var dragging: Int? = null
+
     private val stroke =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -61,20 +65,37 @@ class StageView(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (onTap == null || width == 0 || height == 0) return false
-        if (event.action == MotionEvent.ACTION_UP) {
-            val inverse = Matrix()
-            val xy = floatArrayOf(event.x, event.y)
-            val point =
-                if (matrix().invert(inverse)) {
-                    inverse.mapPoints(xy)
-                    Point(xy[0].toDouble(), xy[1].toDouble())
-                } else {
-                    null
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                // Pressing on an existing corner starts adjusting it instead of adding one.
+                val grab = context.dp(GRAB_DP).toFloat()
+                dragging =
+                    taps.indices
+                        .map { it to view(taps[it]) }
+                        .filter { (_, xy) -> kotlin.math.hypot(xy[0] - event.x, xy[1] - event.y) <= grab }
+                        .minByOrNull { (_, xy) -> kotlin.math.hypot(xy[0] - event.x, xy[1] - event.y) }
+                        ?.first
+                        ?.takeIf { onDrag != null }
+            }
+            MotionEvent.ACTION_MOVE -> dragging?.let { index -> image(event)?.takeIf { it.inImage() }?.let { onDrag?.invoke(index, it) } }
+            MotionEvent.ACTION_UP -> {
+                if (dragging == null) {
+                    val point = image(event)
+                    if (point == null || !point.inImage()) onRejectedTap?.invoke() else onTap?.invoke(point)
                 }
-            if (point == null || !point.inImage()) onRejectedTap?.invoke() else onTap?.invoke(point)
-            performClick()
+                dragging = null
+                performClick()
+            }
         }
         return true
+    }
+
+    /** Normalized image coordinates of a touch, or null if the mapping cannot be inverted. */
+    private fun image(event: MotionEvent): Point? {
+        val inverse = Matrix()
+        if (!matrix().invert(inverse)) return null
+        val xy = floatArrayOf(event.x, event.y).also { inverse.mapPoints(it) }
+        return Point(xy[0].toDouble(), xy[1].toDouble())
     }
 
     override fun performClick(): Boolean = super.performClick()
@@ -213,6 +234,7 @@ class StageView(
     }
 
     private companion object {
+        const val GRAB_DP = 28
         val BONES = listOf(11 to 12, 11 to 13, 13 to 15, 12 to 14, 14 to 16, 11 to 23, 12 to 24, 23 to 24)
     }
 }
