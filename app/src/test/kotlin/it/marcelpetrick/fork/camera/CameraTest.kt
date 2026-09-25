@@ -7,11 +7,15 @@ import android.graphics.Rect
 import android.os.Looper
 import android.util.Size
 import androidx.activity.ComponentActivity
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraInfo
+import androidx.camera.core.CameraState
 import androidx.camera.core.ImageInfo
 import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.camera.view.transform.OutputTransform
+import androidx.lifecycle.MutableLiveData
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -33,6 +37,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.Mockito.RETURNS_DEFAULTS
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -181,8 +186,8 @@ class CameraTest {
             var calls = 0
             var errors = 0
             val session =
-                CameraSession(activity, activity, preview, Settings(), { p, _, aspect, _ ->
-                    assertEquals(2.0, aspect, 0.001)
+                CameraSession(activity, activity, preview, Settings(), { p, _, info ->
+                    assertEquals(FrameInfo(2.0, 0, info.latencyMs), info)
                     assertEquals(33, p.single().landmarks.size)
                     calls++
                 }, { errors++ }, { Futures.immediateFuture(provider) }, MoreExecutors.newDirectExecutorService(), { _, _, r, e ->
@@ -195,12 +200,13 @@ class CameraTest {
             shadowOf(Looper.getMainLooper()).idle()
             assertNotNull(session.analyzer)
             session.analyzer!!.analyze(image())
-            assertEquals(null, session.bounds)
+            assertEquals(null, session.mapping)
             callback(listOf(pose()), 100)
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(1, calls)
-            val bounds = session.bounds!!
-            assertTrue(bounds.left < bounds.right && bounds.top < bounds.bottom)
+            // Landmarks stay in image space; the mapping carries image (0..1) into view pixels.
+            val corner = floatArrayOf(1f, 1f).also { session.mapping!!.mapPoints(it) }
+            assertTrue(corner[0] > 0f && corner[1] > 0f)
             error(IllegalStateException("lost camera"))
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(1, errors)
@@ -224,7 +230,7 @@ class CameraTest {
             val preview = PreviewView(activity)
             var errors = 0
             val failure =
-                CameraSession(activity, activity, preview, Settings(), { _, _, _, _ -> }, {
+                CameraSession(activity, activity, preview, Settings(), { _, _, _ -> }, {
                     errors++
                 }, executor = MoreExecutors.newDirectExecutorService(), engineFactory = {
                     _,
@@ -240,7 +246,7 @@ class CameraTest {
             failure.close()
             val engine = mock(PoseEngine::class.java)
             val failedProvider =
-                CameraSession(activity, activity, preview, Settings(camera = "2"), { _, _, _, _ -> }, {
+                CameraSession(activity, activity, preview, Settings(camera = "2"), { _, _, _ -> }, {
                     errors++
                 }, {
                     Futures.immediateFailedFuture(IllegalStateException("camera absent"))
@@ -251,7 +257,7 @@ class CameraTest {
             failedProvider.close()
             val pending = QueuedExecutor()
             val closed =
-                CameraSession(activity, activity, preview, Settings(), { _, _, _, _ ->
+                CameraSession(activity, activity, preview, Settings(), { _, _, _ ->
                 }, { errors++ }, executor = pending, engineFactory = {
                     _,
                     _,
@@ -265,6 +271,72 @@ class CameraTest {
             pending.tasks.forEach { it.run() }
             assertTrue(pending.isShutdown)
             verify(engine, times(2)).close()
+        }
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
+class CameraFailureTest {
+    @Test
+    fun nativeLinkFailuresBecomeMessagesButProgrammingErrorsPropagate() {
+        val link = UnsatisfiedLinkError("no libmediapipe")
+        val memory = OutOfMemoryError("frame")
+        val exception = IllegalStateException("x")
+        assertTrue(recoverable(link) === link)
+        assertTrue(recoverable(memory) === memory)
+        assertTrue(recoverable(exception) === exception)
+        assertThrows(AssertionError::class.java) { recoverable(AssertionError("bug")) }
+        Robolectric.buildActivity(ComponentActivity::class.java).setup().use { c ->
+            val activity = c.get()
+            val messages = mutableListOf<String>()
+            CameraSession(activity, activity, PreviewView(activity), Settings(), { _, _, _ -> }, {
+                messages += it
+            }, executor = MoreExecutors.newDirectExecutorService(), engineFactory = {
+                _,
+                _,
+                _,
+                _,
+                ->
+                throw link
+            }).start()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(messages.single().contains("no libmediapipe"))
+        }
+    }
+
+    @Test
+    fun cameraTakenByAnotherAppPausesWithMessage() {
+        Robolectric.buildActivity(ComponentActivity::class.java).setup().use { c ->
+            val activity = c.get()
+            val camera = mock(Camera::class.java)
+            val provider =
+                mock(ProcessCameraProvider::class.java) { call ->
+                    if (call.method.name == "bindToLifecycle") camera else RETURNS_DEFAULTS.answer(call)
+                }
+            val info = mock(CameraInfo::class.java)
+            val state = MutableLiveData<CameraState>()
+            `when`(camera.cameraInfo).thenReturn(info)
+            `when`(info.cameraState).thenReturn(state)
+            val messages = mutableListOf<String>()
+            val session =
+                CameraSession(activity, activity, PreviewView(activity), Settings(), { _, _, _ -> }, {
+                    messages += it
+                }, {
+                    Futures.immediateFuture(
+                        provider,
+                    )
+                }, MoreExecutors.newDirectExecutorService(), { _, _, _, _ -> mock(PoseEngine::class.java) })
+            session.start()
+            shadowOf(Looper.getMainLooper()).idle()
+            state.value = CameraState.create(CameraState.Type.OPEN)
+            state.value = CameraState.create(CameraState.Type.CLOSED, CameraState.StateError.create(CameraState.ERROR_CAMERA_IN_USE))
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(messages.single().contains("in use by another app"))
+            state.value = CameraState.create(CameraState.Type.CLOSED, CameraState.StateError.create(CameraState.ERROR_CAMERA_FATAL_ERROR))
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(messages.last().contains("camera error"))
+            session.close()
         }
     }
 }

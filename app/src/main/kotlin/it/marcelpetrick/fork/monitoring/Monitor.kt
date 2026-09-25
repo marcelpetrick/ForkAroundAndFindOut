@@ -7,7 +7,15 @@ import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.SeatResult
 import kotlin.math.abs
 
-/** Main-thread state owner. Caller ticks regularly even if the camera stops producing. */
+/** How well the phone keeps up; derived from the median interval between accepted frames. */
+enum class Health { MEASURING, OK, SLOW, TOO_SLOW }
+
+/**
+ * Main-thread state owner. Caller ticks regularly even if the camera stops producing.
+ * Freshness (how old a result may be on arrival) and continuity (how sparse the stream
+ * may be) are separate budgets, both widened from the measured inference period so a
+ * slow phone degrades to an explained state instead of a silent permanent UNKNOWN.
+ */
 class Monitor(
     val settings: Settings,
 ) {
@@ -29,12 +37,35 @@ class Monitor(
     private var started = 0L
     private var lastFrame: Long? = null
     private var previouslyViolating = emptySet<Pair<Int, Boolean>>()
+    private val periods = ArrayDeque<Long>()
+
+    /** Median interval between accepted frames over the last [WINDOW] frames, if known. */
+    val medianPeriodMs: Long?
+        get() = if (periods.size < 3) null else periods.sorted()[periods.size / 2]
+
+    val health: Health
+        get() =
+            when (val period = medianPeriodMs) {
+                null -> Health.MEASURING
+                in 0..SLOW_MS -> Health.OK
+                in SLOW_MS..TOO_SLOW_MS -> Health.SLOW
+                else -> Health.TOO_SLOW
+            }
+
+    /** Continuity budget: never below the configured floor. */
+    val gapMs: Long
+        get() = maxOf(settings.timing.maxGapMs, 3 * (medianPeriodMs ?: 0))
+
+    /** Freshness budget for a result's age on arrival. */
+    val freshnessMs: Long
+        get() = maxOf(FRESHNESS_FLOOR_MS, 3 * (medianPeriodMs ?: 0))
 
     fun start(now: Long): Boolean {
         val table = settings.table ?: return false
         detector = Detector(table, settings.people, settings.seats, settings.timing)
         results = emptyList()
         previouslyViolating = emptySet()
+        periods.clear()
         started = now
         lastFrame = null
         active = true
@@ -55,16 +86,23 @@ class Monitor(
         captured: Long,
         now: Long,
         aspect: Double,
+        rotation: Int = settings.calibrationRotation,
     ) {
         if (!active) return
-        if (!aspect.isFinite() || aspect <= 0 || (settings.calibrationAspect > 0 && abs(aspect - settings.calibrationAspect) > 0.03)) {
+        val aspectChanged = settings.calibrationAspect > 0 && abs(aspect - settings.calibrationAspect) > 0.03
+        val rotationChanged = settings.calibrationRotation >= 0 && rotation != settings.calibrationRotation
+        if (!aspect.isFinite() || aspect <= 0 || aspectChanged || rotationChanged) {
             calibrationInvalid = true
             pause(now)
             return
         }
-        if (captured > now || now - captured > settings.timing.maxGapMs || (lastFrame != null && captured <= lastFrame!!)) return
+        if (captured > now || now - captured > freshnessMs || (lastFrame != null && captured <= lastFrame!!)) return
+        lastFrame?.let {
+            periods.addLast(captured - it)
+            if (periods.size > WINDOW) periods.removeFirst()
+        }
         lastFrame = captured
-        results = detector!!.process(poses, captured, aspect)
+        results = detector!!.process(poses, captured, aspect, gapMs)
         val current = mutableSetOf<Pair<Int, Boolean>>()
         for (seat in results) {
             for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
@@ -82,14 +120,23 @@ class Monitor(
     fun tick(now: Long): Boolean {
         if (!active) return false
         val last = lastFrame
-        if (last == null || now - last > settings.timing.maxGapMs) {
+        if (last == null || now - last > gapMs) {
             detector = Detector(settings.table!!, settings.people, settings.seats, settings.timing)
             results = emptyList()
             previouslyViolating = emptySet()
             return false
         }
+        // Evidence this sparse is not trustworthy enough to warn anyone.
+        if (health == Health.TOO_SLOW) return false
         return now - started >= settings.graceMs &&
             results.any { it.left.state == ElbowState.VIOLATION || it.right.state == ElbowState.VIOLATION }
+    }
+
+    companion object {
+        const val WINDOW = 15
+        const val SLOW_MS = 200L
+        const val TOO_SLOW_MS = 700L
+        const val FRESHNESS_FLOOR_MS = 1500L
     }
 }
 

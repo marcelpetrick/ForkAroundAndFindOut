@@ -32,12 +32,16 @@ data class Settings(
     val graceMs: Long = 3000,
     val debug: Boolean = true,
     val statistics: Boolean = false,
+    /** Upright analysis-image aspect (w/h) at calibration; 0 = not calibrated. */
     val calibrationAspect: Double = 0.0,
+    /** Sensor rotation in degrees at calibration; -1 = unknown. */
+    val calibrationRotation: Int = -1,
 ) {
     init {
         require(people in 1..4 && seats.size <= people)
         require(volume in 0..100 && repeatMs >= 1000 && graceMs >= 0)
         require(calibrationAspect.isFinite() && calibrationAspect >= 0)
+        require(calibrationRotation in setOf(-1, 0, 90, 180, 270))
     }
 
     fun encode(): String =
@@ -54,6 +58,7 @@ data class Settings(
                 put("triggerMs", timing.triggerMs)
                 put("clearMs", timing.clearMs)
                 put("cooldownMs", timing.cooldownMs)
+                put("maxGapMs", timing.maxGapMs)
                 put("visual", visual.name)
                 put("audio", audio.name)
                 put("volume", volume)
@@ -62,18 +67,28 @@ data class Settings(
                 put("debug", debug)
                 put("statistics", statistics)
                 put("aspect", calibrationAspect)
+                put("rotation", calibrationRotation)
             }.toString()
 
     companion object {
         fun decode(text: String): Settings {
             val j = JSONObject(text)
             require(j.getInt("schema") == 1)
+            // Before 0.5.15 calibration was stored in preview-view space; it cannot be converted.
+            val imageSpace = j.has("rotation")
             return Settings(
                 people = j.getInt("people"),
                 camera = j.getString("camera"),
                 model = PoseModel.valueOf(j.getString("model")),
-                table = j.optJSONArray("table")?.polygon(),
-                seats = j.getJSONArray("seats").let { a -> (0 until a.length()).map { a.getJSONArray(it).polygon() } },
+                table = if (imageSpace) j.optJSONArray("table")?.polygon() else null,
+                seats =
+                    if (imageSpace) {
+                        j.getJSONArray("seats").let { a ->
+                            (0 until a.length()).map { a.getJSONArray(it).polygon() }
+                        }
+                    } else {
+                        emptyList()
+                    },
                 timing =
                     Timing(
                         j.getDouble("trigger"),
@@ -81,6 +96,7 @@ data class Settings(
                         j.getLong("triggerMs"),
                         j.getLong("clearMs"),
                         j.getLong("cooldownMs"),
+                        j.optLong("maxGapMs", Timing().maxGapMs),
                     ),
                 visual = VisualMode.valueOf(j.getString("visual")),
                 audio = AudioMode.valueOf(j.getString("audio")),
@@ -89,7 +105,8 @@ data class Settings(
                 graceMs = j.getLong("graceMs"),
                 debug = j.getBoolean("debug"),
                 statistics = j.getBoolean("statistics"),
-                calibrationAspect = j.getDouble("aspect"),
+                calibrationAspect = if (imageSpace) j.getDouble("aspect") else 0.0,
+                calibrationRotation = j.optInt("rotation", -1),
             )
         }
     }

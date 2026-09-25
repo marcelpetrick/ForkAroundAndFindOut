@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 @androidx.annotation.OptIn(markerClass = [TransformExperimental::class])
 class FrameAnalyzer(
     private val engine: PoseEngine,
-    private val onInput: (Int, Int, OutputTransform, Long) -> Unit,
-    private val onError: (Exception) -> Unit,
+    private val onInput: (Int, Int, Int, OutputTransform) -> Unit,
+    private val onError: (Throwable) -> Unit,
     private val clock: () -> Long = SystemClock::uptimeMillis,
 ) : ImageAnalysis.Analyzer {
     private val busy = AtomicBoolean(false)
@@ -43,11 +43,11 @@ class FrameAnalyzer(
                 }
             val transform = ImageProxyTransformFactory().apply { isUsingRotationDegrees = true }.getOutputTransform(image)
             timestamp = maxOf(clock(), timestamp + 1)
-            onInput(rotated.width, rotated.height, transform, timestamp)
+            onInput(rotated.width, rotated.height, degrees, transform)
             engine.submit(rotated, timestamp)
-        } catch (error: Exception) {
+        } catch (error: Throwable) {
             completed()
-            onError(error)
+            onError(recoverable(error))
         } finally {
             image.close()
         }

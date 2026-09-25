@@ -3,7 +3,7 @@ package it.marcelpetrick.fork.ui
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.RectF
+import android.graphics.Matrix
 import android.media.ToneGenerator
 import android.view.MotionEvent
 import android.view.View
@@ -56,7 +56,12 @@ class UiTest {
         assertFalse(touch(stage, 1f, 1f)) // not laid out yet
         stage.layout(0, 0, 200, 100)
         stage.onRejectedTap = { rejected++ }
-        stage.bounds = RectF(0.25f, 0f, 0.75f, 1f)
+        stage.mapping =
+            Matrix().apply {
+                // image occupies the middle half of a 200×100 view
+                setScale(100f, 100f)
+                postTranslate(50f, 0f)
+            }
         assertTrue(touch(stage, 10f, 50f))
         assertTrue(touch(stage, 100f, 50f))
         assertEquals(1, rejected)
@@ -83,7 +88,7 @@ class UiTest {
             stage.draw(canvas)
         }
         stage.skeleton = false
-        stage.bounds = null
+        stage.mapping = null
         stage.taps = emptyList()
         stage.refresh()
         stage.draw(canvas)

@@ -104,6 +104,13 @@ class UiFlowTest {
         }
         waitFor("Position the phone")
         waitFor("People detected")
+        var ready = false
+        val deadline = System.currentTimeMillis() + 30_000
+        while (!ready && System.currentTimeMillis() < deadline) {
+            scenario.onActivity { ready = it.cameraReady }
+            if (!ready) Thread.sleep(250)
+        }
+        assertTrue("camera delivered no analysed frame within 30 s", ready)
         tap("Mark table")
         waitFor("Corners marked: 0 of 4")
         val location = IntArray(2)

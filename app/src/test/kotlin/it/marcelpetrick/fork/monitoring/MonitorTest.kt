@@ -69,4 +69,42 @@ class MonitorTest {
         assertEquals(Sound.START, alarm.update(true, AudioMode.CONTINUOUS, 3800, 1000))
         assertEquals(Sound.STOP, alarm.update(false, AudioMode.CONTINUOUS, 3900, 1000))
     }
+
+    @Test
+    fun slowPhonesStillWarnWhileTooSlowPhonesExplainInsteadOfGuessing() {
+        val settings = Settings(table = table, people = 1, graceMs = 0, calibrationAspect = 1.0, calibrationRotation = 90)
+        val monitor = Monitor(settings)
+        assertTrue(monitor.start(0))
+        assertEquals(Health.MEASURING, monitor.health)
+        assertEquals(500, monitor.gapMs)
+        assertEquals(1500, monitor.freshnessMs)
+        // 2.5 FPS with 600 ms latency: every result is older than the old 500 ms bound.
+        var alarmed = false
+        for (captured in 0L..6000L step 400) {
+            monitor.frame(listOf(pose()), captured, captured + 600, 1.0, 90)
+            alarmed = alarmed || monitor.tick(captured + 600)
+        }
+        assertEquals(Health.SLOW, monitor.health)
+        assertEquals(400L, monitor.medianPeriodMs)
+        assertEquals(1200, monitor.gapMs)
+        assertTrue("sustained resting elbow must warn on a slow phone", alarmed)
+        // 1.25 FPS: too sparse to trust; never warns, even with violating evidence.
+        for (captured in 6800L..14000L step 800) {
+            monitor.frame(listOf(pose()), captured, captured + 100, 1.0, 90)
+            assertFalse(monitor.tick(captured + 100))
+        }
+        assertEquals(Health.TOO_SLOW, monitor.health)
+        assertEquals(
+            Health.OK,
+            Monitor(settings)
+                .apply {
+                    start(0)
+                    for (t in 0L..400L step 100) frame(emptyList(), t, t, 1.0, 90)
+                }.health,
+        )
+        // Rotating the phone changes geometry even when the aspect ratio matches.
+        monitor.frame(listOf(pose()), 14_100, 14_100, 1.0, 270)
+        assertTrue(monitor.calibrationInvalid)
+        assertFalse(monitor.active)
+    }
 }

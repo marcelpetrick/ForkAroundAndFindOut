@@ -2,12 +2,13 @@
 package it.marcelpetrick.fork.camera
 
 import android.content.Context
-import android.graphics.RectF
+import android.graphics.Matrix
 import android.os.SystemClock
 import android.util.Size
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraState
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -19,18 +20,32 @@ import androidx.camera.view.transform.CoordinateTransform
 import androidx.camera.view.transform.OutputTransform
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.monitoring.Settings
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** A running pose source; [bounds] is the visible image within the preview, normalized. */
+/** Geometry of one analysed frame: rotated-image aspect (w/h), sensor rotation, latency. */
+data class FrameInfo(
+    val aspect: Double,
+    val rotation: Int,
+    val latencyMs: Long,
+)
+
+/**
+ * A running pose source. Poses are delivered in the canonical coordinate system:
+ * normalized coordinates of the upright (rotated) analysis image. [mapping] converts
+ * that space to preview-view pixels for drawing and, inverted, for calibration taps.
+ */
 interface FrameSource : AutoCloseable {
-    val bounds: RectF?
+    val mapping: Matrix?
 
     fun start()
 }
+
+/** Only exceptions and recoverable native failures become a message; anything else is rethrown. */
+internal fun recoverable(error: Throwable): Throwable =
+    if (error is Exception || error is LinkageError || error is OutOfMemoryError) error else throw error
 
 /** Preview and inference remain native. Start/close are called on the main thread. */
 @androidx.annotation.OptIn(markerClass = [TransformExperimental::class, ExperimentalCamera2Interop::class])
@@ -39,7 +54,7 @@ class CameraSession(
     private val owner: LifecycleOwner,
     private val previewView: PreviewView,
     private val settings: Settings,
-    private val onFrame: (List<Pose>, Long, Double, Long) -> Unit,
+    private val onFrame: (List<Pose>, Long, FrameInfo) -> Unit,
     private val onError: (String) -> Unit,
     private val providerFactory: (
         Context,
@@ -63,12 +78,13 @@ class CameraSession(
     private data class Input(
         val width: Int,
         val height: Int,
+        val rotation: Int,
         val transform: OutputTransform,
     )
 
     @Volatile private var input: Input? = null
 
-    override var bounds: RectF? = null
+    override var mapping: Matrix? = null
         private set
 
     override fun start() {
@@ -79,8 +95,8 @@ class CameraSession(
                 engine = engineFactory(context, settings, ::result, ::failed)
                 if (closed) return@execute
                 main.execute { if (!closed) bind() }
-            } catch (error: Exception) {
-                failed(error)
+            } catch (error: Throwable) {
+                failed(recoverable(error))
             }
         }
     }
@@ -121,11 +137,12 @@ class CameraSession(
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
                     analyzer =
-                        FrameAnalyzer(engine!!, { width, height, transform, _ ->
-                            input = Input(width, height, transform)
+                        FrameAnalyzer(engine!!, { width, height, rotation, transform ->
+                            input = Input(width, height, rotation, transform)
                         }, ::failed)
                     analysis.setAnalyzer(executor, analyzer!!)
-                    provider!!.bindToLifecycle(owner, selector, preview, analysis)
+                    val camera = provider!!.bindToLifecycle(owner, selector, preview, analysis)
+                    camera?.cameraInfo?.cameraState?.observe(owner) { state -> state.error?.let { cameraFailed(it.code) } }
                 } catch (error: Exception) {
                     failed(error)
                 }
@@ -133,49 +150,45 @@ class CameraSession(
         }, main)
     }
 
+    private fun cameraFailed(code: Int) {
+        val inUse = code == CameraState.ERROR_CAMERA_IN_USE || code == CameraState.ERROR_MAX_CAMERAS_IN_USE
+        failed(IllegalStateException(if (inUse) "the camera is in use by another app" else "camera error $code"))
+    }
+
     private fun result(
         poses: List<Pose>,
         time: Long,
     ) {
-        val snapshot = input
-        val inputTransform = snapshot?.transform
-        val width = snapshot?.width ?: 0
-        val height = snapshot?.height ?: 0
+        // Free the analyzer on the callback thread so UI work never lengthens the inference period.
+        analyzer?.completed()
+        val snapshot = input ?: return
         main.execute {
             try {
-                val target = previewView.outputTransform
-                if (!closed && target != null && inputTransform != null && previewView.width > 0 && previewView.height > 0) {
-                    val transform = CoordinateTransform(inputTransform, target)
-                    val corners = floatArrayOf(0f, 0f, width.toFloat(), height.toFloat())
-                    transform.mapPoints(corners)
-                    bounds =
-                        RectF(
-                            minOf(corners[0], corners[2]) / previewView.width,
-                            minOf(corners[1], corners[3]) / previewView.height,
-                            maxOf(corners[0], corners[2]) / previewView.width,
-                            maxOf(corners[1], corners[3]) / previewView.height,
-                        )
-                    val mapped =
-                        poses.map { pose ->
-                            Pose(
-                                pose.landmarks.map { joint ->
-                                    val xy = floatArrayOf((joint.point.x * width).toFloat(), (joint.point.y * height).toFloat())
-                                    transform.mapPoints(xy)
-                                    joint.copy(point = Point(xy[0].toDouble() / previewView.width, xy[1].toDouble() / previewView.height))
-                                },
-                            )
-                        }
-                    onFrame(mapped, time, previewView.width.toDouble() / previewView.height, SystemClock.uptimeMillis() - time)
+                if (!closed) {
+                    mapping = viewMapping(snapshot)
+                    onFrame(
+                        poses,
+                        time,
+                        FrameInfo(snapshot.width.toDouble() / snapshot.height, snapshot.rotation, SystemClock.uptimeMillis() - time),
+                    )
                 }
             } catch (error: Exception) {
                 failed(error)
-            } finally {
-                analyzer?.completed()
             }
         }
     }
 
-    private fun failed(error: Exception) {
+    /** Normalized upright-image coordinates to preview-view pixels, or null before layout. */
+    private fun viewMapping(snapshot: Input): Matrix? {
+        val target = previewView.outputTransform ?: return null
+        if (previewView.width <= 0 || previewView.height <= 0) return null
+        return Matrix().also {
+            CoordinateTransform(snapshot.transform, target).transform(it)
+            it.preScale(snapshot.width.toFloat(), snapshot.height.toFloat())
+        }
+    }
+
+    private fun failed(error: Throwable) {
         analyzer?.completed()
         main.execute { if (!closed) onError("Camera or model unavailable: ${error.message}. Retry setup or choose Lite.") }
     }

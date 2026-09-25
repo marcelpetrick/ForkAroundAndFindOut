@@ -3,6 +3,7 @@ package it.marcelpetrick.fork
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.hardware.camera2.CameraCharacteristics
@@ -14,6 +15,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -24,6 +26,7 @@ import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import it.marcelpetrick.fork.camera.CameraSession
+import it.marcelpetrick.fork.camera.FrameInfo
 import it.marcelpetrick.fork.camera.FrameSource
 import it.marcelpetrick.fork.demo.SyntheticDemo
 import it.marcelpetrick.fork.detection.ArmResult
@@ -33,6 +36,7 @@ import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.SeatResult
 import it.marcelpetrick.fork.monitoring.AlarmPolicy
+import it.marcelpetrick.fork.monitoring.Health
 import it.marcelpetrick.fork.monitoring.LocalStore
 import it.marcelpetrick.fork.monitoring.Monitor
 import it.marcelpetrick.fork.monitoring.Settings
@@ -57,7 +61,7 @@ import java.util.UUID
 typealias SourceFactory = (
     PreviewView,
     Settings,
-    (List<Pose>, Long, Double, Long) -> Unit,
+    (List<Pose>, Long, FrameInfo) -> Unit,
     (String) -> Unit,
 ) -> FrameSource
 
@@ -95,6 +99,11 @@ class MainActivity : ComponentActivity() {
     private var lastFrame = 0L
     private var fps = 0.0
     private var latency = 0L
+    private var frameInfo: FrameInfo? = null
+
+    /** True once a frame (and with it the image geometry and view mapping) has arrived. */
+    internal val cameraReady: Boolean
+        get() = frameInfo != null && stage?.mapping != null
     private var resumedAt = 0L
     private var demoMonitor: Monitor? = null
     private var demoStart = 0L
@@ -180,6 +189,9 @@ class MainActivity : ComponentActivity() {
         taps.clear()
         screen = target
         val keepAwake = target in CAMERA_SCREENS || target == Screen.DEMO
+        // A propped-up phone must not rotate mid-setup or mid-meal: that would change geometry.
+        requestedOrientation =
+            if (target in CAMERA_SCREENS) ActivityInfo.SCREEN_ORIENTATION_LOCKED else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         if (keepAwake) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
@@ -216,7 +228,7 @@ class MainActivity : ComponentActivity() {
         stage = null
         preview = null
         panel = null
-        setContentView(ScrollView(this).apply { setBackgroundColor(Palette.SURFACE) }.also { it.addView(content) })
+        setContentView(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.SURFACE) }.also { it.addView(content) }))
     }
 
     private fun welcome(): View =
@@ -321,8 +333,18 @@ class MainActivity : ComponentActivity() {
                 )
             }
         panel = controls
-        setContentView(root)
+        setContentView(insetAware(root))
     }
+
+    /** Keeps content clear of system bars and cutouts (edge-to-edge is enforced from API 35). */
+    private fun insetAware(root: View): View =
+        root.apply {
+            setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                insets
+            }
+        }
 
     private fun positionPanel() {
         panel!!.apply {
@@ -354,7 +376,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun tapInput(onPoint: (Point) -> Unit) {
-        stage!!.onTap = { point -> edit { onPoint(point) } }
+        stage!!.onTap = { point ->
+            // Until the first frame the image-to-view mapping is unknown; a tap cannot be placed.
+            if (!cameraReady) status?.text = getString(R.string.waiting_for_image) else edit { onPoint(point) }
+        }
         stage!!.onRejectedTap = { status?.text = getString(R.string.tap_inside_image) }
     }
 
@@ -372,6 +397,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun saveTable() {
+        // Calibration is stored in image space together with the geometry it depends on.
+        val geometry = frameInfo
+        if (geometry == null) {
+            status?.text = getString(R.string.waiting_for_image)
+            return
+        }
         val table =
             try {
                 Polygon(taps.toList())
@@ -379,9 +410,9 @@ class MainActivity : ComponentActivity() {
                 status?.text = error.message
                 return
             }
-        val view = stage!!
-        val aspect = if (view.width > 0 && view.height > 0) view.width.toDouble() / view.height else 0.0
-        updateSettings(settings.copy(table = table, seats = emptyList(), calibrationAspect = aspect))
+        updateSettings(
+            settings.copy(table = table, seats = emptyList(), calibrationAspect = geometry.aspect, calibrationRotation = geometry.rotation),
+        )
         show(Screen.SEATS)
     }
 
@@ -495,7 +526,9 @@ class MainActivity : ComponentActivity() {
             when {
                 !active.active -> getString(R.string.paused)
                 now - resumedAt < settings.graceMs -> getString(R.string.grace, (settings.graceMs - (now - resumedAt) + 999) / 1000)
+                active.health == Health.TOO_SLOW -> getString(R.string.too_slow, fps)
                 active.results.isEmpty() -> getString(R.string.waiting)
+                active.health == Health.SLOW -> getString(R.string.slow_processing, fps)
                 stage?.warning != VisualMode.OFF -> getString(R.string.warning_text)
                 else -> getString(R.string.monitor_title)
             }
@@ -735,18 +768,18 @@ class MainActivity : ComponentActivity() {
     private fun onFrame(
         poses: List<Pose>,
         time: Long,
-        aspect: Double,
-        delay: Long,
+        info: FrameInfo,
     ) {
         val now = clock()
         if (lastFrame in 1 until time) fps = if (fps == 0.0) 1000.0 / (time - lastFrame) else fps * 0.8 + 200.0 / (time - lastFrame)
         lastFrame = time
-        latency = delay
-        stage?.bounds = source?.bounds
+        latency = info.latencyMs
+        frameInfo = info
+        stage?.mapping = source?.mapping
         stage?.poses = poses
         if (screen == Screen.MONITOR) {
             monitor?.let { active ->
-                active.frame(poses, time, now, aspect)
+                active.frame(poses, time, now, info.aspect, info.rotation)
                 recording?.takeIf { now < it.until && active.results.isNotEmpty() }?.let {
                     it.samples += sampleRecord(session, time, it.label, active.results, it.seat)
                 }
@@ -772,6 +805,7 @@ class MainActivity : ComponentActivity() {
     private fun closeCamera() {
         source?.close()
         source = null
+        frameInfo = null
         lastFrame = 0L
         fps = 0.0
     }

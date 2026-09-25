@@ -6,7 +6,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.RectF
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Looper
 import android.os.SystemClock
@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import it.marcelpetrick.fork.camera.FrameInfo
 import it.marcelpetrick.fork.camera.FrameSource
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Pose
@@ -42,8 +43,12 @@ import org.robolectric.shadows.ShadowAlertDialog
 import java.io.ByteArrayOutputStream
 import java.time.Duration
 
-class FakeSource : FrameSource {
-    override var bounds: RectF? = null
+/** A source whose camera image exactly fills [view] (no letterbox). */
+class FakeSource(
+    private val view: View? = null,
+) : FrameSource {
+    override val mapping: Matrix?
+        get() = view?.let { Matrix().apply { setScale(it.width.toFloat(), it.height.toFloat()) } }
     var started = 0
     var closed = 0
 
@@ -150,13 +155,13 @@ class MainActivityTest {
             val activity = controller.get()
             val speaker = RecordingSpeaker()
             val sources = mutableListOf<FakeSource>()
-            lateinit var frame: (List<Pose>, Long, Double, Long) -> Unit
+            lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
             lateinit var error: (String) -> Unit
             activity.speaker = speaker
-            activity.sourceFactory = { _, _, f, e ->
+            activity.sourceFactory = { view, _, f, e ->
                 frame = f
                 error = e
-                FakeSource().also { sources += it }
+                FakeSource(view).also { sources += it }
             }
             activity.click("Settings")
             activity.click("Increase Sound")
@@ -165,19 +170,24 @@ class MainActivityTest {
             activity.click("Set up camera")
             assertEquals(MainActivity.Screen.POSITION, activity.screen)
             assertEquals(1, sources.single().started)
-            frame(listOf(pose()), SystemClock.uptimeMillis(), 1.0, 5)
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
             assertTrue(activity.texts().contains("People detected: 1"))
 
             activity.click("Mark table")
             assertEquals(1, sources.size) // camera stays open between setup steps
             val stage = activity.stage!!
             assertTrue(stage.width > 0 && stage.height > 0)
-            stage.bounds = RectF(0.2f, 0f, 0.8f, 1f)
+            // The camera image fills only the middle 60 % of the view (letterboxed left and right).
+            stage.mapping =
+                Matrix().apply {
+                    setScale(stage.width * 0.6f, stage.height.toFloat())
+                    postTranslate(stage.width * 0.2f, 0f)
+                }
             for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
                 stage.dispatchTouchEvent(MotionEvent.obtain(0, 0, action, 1f, 1f, 0))
             }
             assertTrue(activity.texts().contains("Tap inside the camera image"))
-            stage.bounds = null
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5)) // restores the full-view mapping
             corners.take(3).forEach { activity.tap(it) }
             activity.click("Save table")
             assertTrue(activity.texts().contains("Tap four corners"))
@@ -213,7 +223,7 @@ class MainActivityTest {
             assertEquals(MainActivity.Screen.MONITOR, activity.screen)
             assertTrue(activity.texts().contains("Warnings begin in 3 s"))
             repeat(50) {
-                frame(listOf(pose()), SystemClock.uptimeMillis(), aspect, 5)
+                frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(aspect, 90, 5))
                 idle(100)
             }
             assertEquals(VisualMode.BORDER, activity.stage!!.warning)
@@ -229,7 +239,7 @@ class MainActivityTest {
             assertEquals(Sound.STOP, speaker.sounds.last())
             assertEquals(VisualMode.OFF, activity.stage!!.warning)
             assertTrue(activity.texts().contains("Paused"))
-            frame(listOf(pose()), SystemClock.uptimeMillis(), aspect, 5)
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(aspect, 90, 5))
             idle(2000)
             assertEquals(VisualMode.OFF, activity.stage!!.warning)
             activity.click("Resume")
@@ -245,7 +255,7 @@ class MainActivityTest {
             assertEquals(3, sources.size)
             activity.click("Resume")
 
-            frame(listOf(pose()), SystemClock.uptimeMillis(), aspect + 0.5, 5)
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(aspect + 0.5, 90, 5))
             idle(100)
             assertEquals(MainActivity.Screen.WELCOME, activity.screen)
             assertTrue(activity.texts().contains("Recalibrate the table"))
@@ -308,26 +318,34 @@ class MainActivityTest {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
         launch().use { controller ->
             val activity = controller.get()
-            lateinit var frame: (List<Pose>, Long, Double, Long) -> Unit
+            lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
             activity.speaker = RecordingSpeaker()
-            activity.sourceFactory = { _, _, f, _ ->
+            activity.sourceFactory = { view, _, f, _ ->
                 frame = f
-                FakeSource()
+                FakeSource(view)
             }
             activity.click("Settings")
             activity.click("Increase Save session statistics")
             activity.click("Back")
             activity.click("Set up camera")
             activity.click("Mark table")
+            activity.tap(corners.first())
+            activity.click("Save table")
+            // Before the first frame the image geometry is unknown: taps and saving are refused.
+            assertTrue(activity.texts().contains("Waiting for the camera image"))
+            assertEquals(MainActivity.Screen.TABLE, activity.screen)
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(0.75, 90, 5))
             corners.forEach { activity.tap(it) }
             activity.click("Save table")
+            assertEquals(0.75, activity.settings.calibrationAspect, 0.0)
+            assertEquals(90, activity.settings.calibrationRotation)
             activity.click("Finish setup")
             activity.click("Start monitoring")
             val aspect = activity.settings.calibrationAspect
 
             fun feed(ms: Long) =
                 repeat((ms / 100).toInt()) {
-                    frame(listOf(pose()), SystemClock.uptimeMillis(), aspect, 5)
+                    frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(aspect, 90, 5))
                     idle(100)
                 }
             feed(1000)
@@ -412,6 +430,38 @@ class MainActivityTest {
             activity.click("Adult diagnostics")
             activity.click("False alarm")
             assertTrue(activity.texts().contains("Not saved: Sample limit reached"))
+        }
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34, 35]) // Robolectric 4.17 cannot run API 36 on this JDK (FileDescriptor internals)
+class EdgeToEdgeTest {
+    @Test
+    fun contentStaysClearOfSystemBarsOnEveryScreen() {
+        Robolectric.buildActivity(MainActivity::class.java).setup().use { controller ->
+            val activity = controller.get()
+            val bars = android.graphics.Insets.of(0, 63, 0, 48)
+            val insets =
+                android.view.WindowInsets
+                    .Builder()
+                    .setInsets(
+                        android.view.WindowInsets.Type
+                            .systemBars(),
+                        bars,
+                    ).build()
+            for (screen in listOf(
+                MainActivity.Screen.WELCOME,
+                MainActivity.Screen.DEMO,
+                MainActivity.Screen.SETTINGS,
+                MainActivity.Screen.DATA,
+            )) {
+                activity.show(screen)
+                val root = activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+                root.dispatchApplyWindowInsets(insets)
+                assertEquals(screen.name, 63, root.paddingTop)
+                assertEquals(screen.name, 48, root.paddingBottom)
+            }
         }
     }
 }

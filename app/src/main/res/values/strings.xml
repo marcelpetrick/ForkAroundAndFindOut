@@ -28,6 +28,9 @@
     <string name="undo">Undo</string>
     <string name="reset">Reset</string>
     <string name="save_table">Save table</string>
+    <string name="waiting_for_image">Waiting for the camera image. Try again in a moment.</string>
+    <string name="slow_processing">Processing is slow (%1$.0f FPS). The Lite model in Settings may help.</string>
+    <string name="too_slow">This phone is too slow to monitor reliably right now (%1$.0f FPS). No warnings until it speeds up; try the Lite model in Settings.</string>
     <string name="tap_inside_image">Tap inside the camera image, not the empty margin.</string>
 
     <string name="seats_title">Seats (optional)</string>

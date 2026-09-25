@@ -28,14 +28,16 @@ class TemporalFilter(
     private var clearing: Long? = null
     private var cooldownUntil = 0L
 
+    /** [maxGapMs] may exceed the configured floor when the measured frame period is long. */
     fun update(
         timeMs: Long,
         score: Double?,
+        maxGapMs: Long = timing.maxGapMs,
     ): ElbowState {
         val previous = last
         last = timeMs
         if (score == null || !score.isFinite() || score !in 0.0..1.0 || timeMs < 0 ||
-            (previous != null && (timeMs <= previous || timeMs - previous > timing.maxGapMs))
+            (previous != null && (timeMs <= previous || timeMs - previous > maxGapMs))
         ) {
             state = ElbowState.UNKNOWN
             clearing = null

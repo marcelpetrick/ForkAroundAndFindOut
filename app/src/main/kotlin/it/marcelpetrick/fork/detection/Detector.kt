@@ -28,6 +28,7 @@ class Detector(
         poses: List<Pose>,
         timeMs: Long,
         aspect: Double = 1.0,
+        maxGapMs: Long = timing.maxGapMs,
     ): List<SeatResult> {
         val assigned = tracker.assign(poses)
         return (0 until people).map { seat ->
@@ -40,8 +41,8 @@ class Detector(
                     filters.remove(key)
                     return ArmResult(ElbowState.UNKNOWN, null, null)
                 }
-                val evidence = classifiers.getOrPut(key) { ArmClassifier() }.evaluate(pose, left, table, timeMs, aspect)
-                val state = filters.getOrPut(key) { TemporalFilter(timing) }.update(timeMs, evidence.score)
+                val evidence = classifiers.getOrPut(key) { ArmClassifier() }.evaluate(pose, left, table, timeMs, aspect, maxGapMs)
+                val state = filters.getOrPut(key) { TemporalFilter(timing) }.update(timeMs, evidence.score, maxGapMs)
                 return ArmResult(state, evidence.score, evidence.features)
             }
             SeatResult(seat + 1, pose, arm(true), arm(false))

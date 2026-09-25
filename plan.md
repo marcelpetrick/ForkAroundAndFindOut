@@ -338,3 +338,32 @@ require consented physical sessions and must not be fabricated.
   M5 landmark session logs + replay harness + module split, M6 guards, M7 docs,
   M8 signing + Docker/GHCR + release, M9 gate. Physical-phone evidence (§7) cannot be
   produced by this agent and stays recorded as pending, never fabricated.
+
+### 0.6.15 — fix: move geometry to image space and separate latency budgets (plan_v2 M1)
+
+- Done (plan_v2 F2): landmarks, table, seats and taps share one canonical space —
+  normalized upright analysis-image coordinates. `CameraSession` no longer remaps
+  landmarks into the view; it exposes an image→view `mapping` matrix used by the
+  overlay and, inverted, by calibration taps (letterbox taps rejected in image space).
+  Calibration stores the image aspect and sensor rotation; a change of either
+  invalidates it. Pre-0.6.15 view-space calibrations are dropped on load (migration).
+  Taps and saving are refused until the first frame fixes the geometry (found by the
+  real-camera emulator e2e test: taps before the first frame were stored in view space).
+- Done (F1): freshness bound max(1.5 s, 3× median period) and continuity bound
+  max(floor, 3× median period) replace the single 500 ms constant; `Monitor.health`
+  MEASURING/OK/SLOW/TOO_SLOW with UI messages; TOO_SLOW never warns. `maxGapMs`
+  persisted (F7). Gap budget threaded through classifier, filter and detector.
+- Done (F5, F8, F10): `Throwable` handling (LinkageError/OOM become the recovery
+  message, programming errors still crash); camera-in-use / camera errors observed via
+  `CameraInfo.cameraState`; `completed()` runs on the MediaPipe callback thread;
+  orientation locked on camera screens; system-bar/cutout insets applied to every
+  screen; `enableOnBackInvokedCallback` for predictive back.
+- Validation: 36 unit tests (98.3% lines) incl. slow-phone (2.5 FPS, 600 ms latency → still warns),
+  too-slow (1.25 FPS → never warns), rotation invalidation, migration, insets on API
+  34/35; 4 instrumented tests PASS on the API 34 emulator including the real-camera
+  calibration flow. Full local pipeline green.
+- Not done from M1: `MonitorPresenter`/`UiState` extraction (Activity still owns screen
+  state — tracked for the module-split work in M5); Robolectric API 36/37 (this
+  Robolectric/JDK cannot run API 36; needs an API 36+ emulator image, planned for M6);
+  NativeModelTest rotation assertion needs a consented or synthetic *person* image —
+  none is committed, so it is recorded as pending rather than faked.

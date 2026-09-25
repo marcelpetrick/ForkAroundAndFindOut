@@ -4,6 +4,7 @@ package it.marcelpetrick.fork.ui
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -20,8 +21,9 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * Transparent layer over the camera preview. Coordinates are normalized to this view,
- * which has exactly the preview's size, so taps and landmarks share one space.
+ * Transparent layer over the camera preview. Every model coordinate (landmarks, table,
+ * seats, taps) is normalized to the upright camera image; [mapping] converts it to view
+ * pixels. Without a mapping (synthetic demo) the image fills this view.
  */
 class StageView(
     context: Context,
@@ -35,8 +37,8 @@ class StageView(
     var skeleton = true
     var synthetic = false
 
-    /** Visible image within this view; taps outside it (letterbox margins) are rejected. */
-    var bounds: RectF? = null
+    /** Normalized image → view pixels; taps outside the image (letterbox margins) are rejected. */
+    var mapping: Matrix? = null
     var warning = VisualMode.OFF
     var onTap: ((Point) -> Unit)? = null
     var onRejectedTap: (() -> Unit)? = null
@@ -60,13 +62,16 @@ class StageView(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (onTap == null || width == 0 || height == 0) return false
         if (event.action == MotionEvent.ACTION_UP) {
-            val point = Point(event.x.toDouble() / width, event.y.toDouble() / height)
-            val visible = bounds
-            if (visible != null && !visible.contains(point.x.toFloat(), point.y.toFloat())) {
-                onRejectedTap?.invoke()
-            } else {
-                onTap?.invoke(point)
-            }
+            val inverse = Matrix()
+            val xy = floatArrayOf(event.x, event.y)
+            val point =
+                if (matrix().invert(inverse)) {
+                    inverse.mapPoints(xy)
+                    Point(xy[0].toDouble(), xy[1].toDouble())
+                } else {
+                    null
+                }
+            if (point == null || !point.inImage()) onRejectedTap?.invoke() else onTap?.invoke(point)
             performClick()
         }
         return true
@@ -77,7 +82,7 @@ class StageView(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (synthetic) canvas.drawColor(Palette.STAGE)
-        bounds?.let(::shadeMargins)?.let { canvas.drawPath(it, fill.apply { color = Color.argb(150, 0, 0, 0) }) }
+        mapping?.let { canvas.drawPath(shadeMargins(it), fill.apply { color = Color.argb(150, 0, 0, 0) }) }
         table?.let { polygon(canvas, it.points, Color.argb(60, 255, 214, 102), Color.rgb(255, 214, 102)) }
         seats.forEachIndexed { index, seat ->
             polygon(canvas, seat.points, Color.argb(30, 120, 200, 255), Color.rgb(120, 200, 255))
@@ -86,8 +91,7 @@ class StageView(
         if (taps.isNotEmpty()) {
             polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
             taps.forEachIndexed { index, tap ->
-                val x = tap.x.toFloat() * width
-                val y = tap.y.toFloat() * height
+                val (x, y) = view(tap)
                 canvas.drawCircle(x, y, context.dp(14).toFloat(), fill.apply { color = Palette.GREEN })
                 text.color = Color.WHITE
                 canvas.drawText((index + 1).toString(), x - context.dp(5), y + context.dp(6), text)
@@ -101,9 +105,10 @@ class StageView(
                 bones(canvas, pose)
                 for ((index, arm) in listOf(13 to seat.left, 14 to seat.right)) {
                     val elbow = pose.landmarks.getOrNull(index)?.point ?: continue
+                    val (x, y) = view(elbow)
                     canvas.drawCircle(
-                        elbow.x.toFloat() * width,
-                        elbow.y.toFloat() * height,
+                        x,
+                        y,
                         context.dp(12).toFloat(),
                         fill.apply { color = Palette.of(arm.state) },
                     )
@@ -146,12 +151,19 @@ class StageView(
         }
     }
 
-    private fun shadeMargins(visible: RectF): Path =
-        Path().apply {
+    private fun matrix(): Matrix = mapping ?: Matrix().apply { setScale(width.toFloat(), height.toFloat()) }
+
+    /** View pixel position of a normalized image point. */
+    private fun view(point: Point): FloatArray = floatArrayOf(point.x.toFloat(), point.y.toFloat()).also { matrix().mapPoints(it) }
+
+    private fun shadeMargins(mapping: Matrix): Path {
+        val image = RectF(0f, 0f, 1f, 1f).also { mapping.mapRect(it) }
+        return Path().apply {
             fillType = Path.FillType.EVEN_ODD
             addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
-            addRect(visible.left * width, visible.top * height, visible.right * width, visible.bottom * height, Path.Direction.CW)
+            addRect(image, Path.Direction.CW)
         }
+    }
 
     private fun polygon(
         canvas: Canvas,
@@ -162,8 +174,7 @@ class StageView(
     ) {
         val path = Path()
         points.forEachIndexed { index, point ->
-            val x = point.x.toFloat() * width
-            val y = point.y.toFloat() * height
+            val (x, y) = view(point)
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         if (closed) {
@@ -184,13 +195,9 @@ class StageView(
             val from = pose.joint(a) ?: continue
             val to = pose.joint(b) ?: continue
             stroke.color = Color.argb((255 * minOf(from.confidence, to.confidence)).toInt(), 255, 255, 255)
-            canvas.drawLine(
-                from.point.x.toFloat() * width,
-                from.point.y.toFloat() * height,
-                to.point.x.toFloat() * width,
-                to.point.y.toFloat() * height,
-                stroke,
-            )
+            val (x1, y1) = view(from.point)
+            val (x2, y2) = view(to.point)
+            canvas.drawLine(x1, y1, x2, y2, stroke)
         }
     }
 
@@ -201,7 +208,8 @@ class StageView(
         color: Int,
     ) {
         text.color = color
-        canvas.drawText(value, at.x.toFloat() * width - text.measureText(value) / 2, at.y.toFloat() * height - context.dp(18), text)
+        val (x, y) = view(at)
+        canvas.drawText(value, x - text.measureText(value) / 2, y - context.dp(18), text)
     }
 
     private companion object {

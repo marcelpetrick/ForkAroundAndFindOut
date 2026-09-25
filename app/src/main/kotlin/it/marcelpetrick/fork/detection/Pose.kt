@@ -62,6 +62,7 @@ class ArmClassifier {
         table: Polygon,
         timeMs: Long,
         aspect: Double,
+        maxGapMs: Long = 500,
     ): Evidence {
         val shoulder = pose.joint(if (left) 11 else 12)
         val elbow = pose.joint(if (left) 13 else 14)
@@ -75,7 +76,7 @@ class ArmClassifier {
         val e = elbow.point.metric(aspect)
         val w = wrist.point.metric(aspect)
         val scale = max(s.distance(opposite.point.metric(aspect)), 0.05)
-        if (history.isNotEmpty() && (timeMs <= history.last().time || timeMs - history.last().time > 500)) history.clear()
+        if (history.isNotEmpty() && (timeMs <= history.last().time || timeMs - history.last().time > maxGapMs)) history.clear()
         history.addLast(Sample(timeMs, e))
         while (history.size > 1 && timeMs - history.first().time > 1000) history.removeFirst()
         val mean = Point(history.sumOf { it.point.x } / history.size, history.sumOf { it.point.y } / history.size)

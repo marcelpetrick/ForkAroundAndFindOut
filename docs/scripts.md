@@ -13,6 +13,7 @@ wrapper.
 | `./localPipeline.sh --e2e auto\|required\|skip` | `auto` (default) runs E2E when a device is attached and otherwise marks WARN; `required` fails without a device (CI); `skip` skips. `--docker` accepts the same modes. |
 | `./localPipeline.sh --report-dir DIR` | Keep per-stage logs, `environment.txt` and `summary.txt` in `DIR` (CI uploads `artifacts/pipeline`). |
 | `scripts/emulator.sh [AVD]` | Boot an emulator headless (default AVD `ForkApi34` or `$FORK_AVD`) and wait for boot completion, so the E2E stage can run locally. No-op when a device is attached. |
+| `scripts/screenshots.sh [DIR]` | Install the debug APK on an attached emulator/device and capture genuine welcome, synthetic-demo-warning and settings screenshots (default `docs/screenshots/`). The demo is generated stick figures, never camera footage. |
 | `python3 scripts/models.py` | Download MediaPipe Pose Landmarker Full/Lite (model version 1) into ignored `app/src/main/assets/` and verify SHA-256 from `models/checksums.json`. Idempotent; the pipeline runs it first. |
 | `python3 scripts/report.py tests DIR` / `coverage XML` | Summarize JUnit XML results or Kover line coverage for the pipeline summary. |
 | `python3 scripts/version.py patch\|minor` | Increment VERSION patch and the Android BUILD_NUMBER; `minor` also bumps the minor component for a major feature. Run once per commit. |

@@ -4,6 +4,7 @@ package it.marcelpetrick.fork.monitoring
 import android.content.Context
 import it.marcelpetrick.fork.detection.Detector
 import it.marcelpetrick.fork.detection.Pose
+import it.marcelpetrick.fork.detection.Timing
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.detection.table
 import org.json.JSONArray
@@ -47,6 +48,22 @@ class StorageTest {
         assertThrows(IllegalArgumentException::class.java) { Settings(volume = 101) }
         assertThrows(IllegalArgumentException::class.java) { Settings(calibrationAspect = Double.NaN) }
         assertThrows(IllegalArgumentException::class.java) { Settings.decode("{\"schema\":2}") }
+        assertThrows(IllegalArgumentException::class.java) { Settings(calibrationRotation = 45) }
+        val rotated = Settings(table = table, calibrationAspect = 0.75, calibrationRotation = 270, timing = Timing(maxGapMs = 800))
+        assertEquals(rotated, Settings.decode(rotated.encode()).let { it.copy(table = rotated.table, seats = rotated.seats) })
+        assertEquals(800, Settings.decode(rotated.encode()).timing.maxGapMs)
+        // Calibrations from before 0.5.15 were in preview-view space and must be redone.
+        val legacy =
+            JSONObject(rotated.encode())
+                .apply {
+                    remove("rotation")
+                    remove("maxGapMs")
+                }.toString()
+        val migrated = Settings.decode(legacy)
+        assertEquals(null, migrated.table)
+        assertEquals(0.0, migrated.calibrationAspect, 0.0)
+        assertEquals(-1, migrated.calibrationRotation)
+        assertEquals(Timing().maxGapMs, migrated.timing.maxGapMs)
         context
             .getSharedPreferences("settings", Context.MODE_PRIVATE)
             .edit()
