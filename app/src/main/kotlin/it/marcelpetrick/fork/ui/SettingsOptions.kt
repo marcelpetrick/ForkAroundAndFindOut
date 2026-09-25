@@ -1,0 +1,107 @@
+// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+package it.marcelpetrick.fork.ui
+
+import android.content.Context
+import it.marcelpetrick.fork.R
+import it.marcelpetrick.fork.monitoring.AudioMode
+import it.marcelpetrick.fork.monitoring.PoseModel
+import it.marcelpetrick.fork.monitoring.Settings
+import it.marcelpetrick.fork.monitoring.VisualMode
+
+/** One adjustable setting; [change] steps by -1/+1 and always returns valid settings. */
+class Option(
+    val label: Int,
+    val display: (Context, Settings) -> String,
+    val change: (Settings, Int) -> Settings,
+)
+
+private fun <T> cycle(
+    values: List<T>,
+    current: T,
+    delta: Int,
+): T = values[Math.floorMod(values.indexOf(current).coerceAtLeast(0) + delta, values.size)]
+
+private fun step(
+    value: Long,
+    delta: Int,
+    by: Long,
+    range: LongRange,
+): Long = (value + delta * by).coerceIn(range)
+
+private fun Context.seconds(ms: Long) = getString(R.string.value_seconds, ms / 1000.0)
+
+private fun Context.toggle(on: Boolean) = getString(if (on) R.string.on else R.string.off)
+
+private val visualNames =
+    mapOf(
+        VisualMode.OFF to R.string.visual_off,
+        VisualMode.BORDER to R.string.visual_border,
+        VisualMode.ICON to R.string.visual_icon,
+        VisualMode.FULL to R.string.visual_full,
+        VisualMode.PULSE to R.string.visual_pulse,
+    )
+private val audioNames =
+    mapOf(
+        AudioMode.OFF to R.string.audio_off,
+        AudioMode.ONCE to R.string.audio_once,
+        AudioMode.REPEAT to R.string.audio_repeat,
+        AudioMode.CONTINUOUS to R.string.audio_continuous,
+    )
+
+/** Rule evidence is currently 0.05/0.95; thresholds matter once a learned score exists. */
+val TRIGGER_LEVELS = listOf(0.6, 0.75, 0.9)
+
+fun settingsOptions(cameras: List<String>): List<Option> {
+    val choices = listOf("") + cameras
+    return listOf(
+        Option(R.string.option_people, { c, s -> c.getString(R.string.value_number, s.people.toString()) }) { s, d ->
+            val people = (s.people + d).coerceIn(1, 4)
+            s.copy(people = people, seats = if (s.seats.size > people) emptyList() else s.seats)
+        },
+        Option(R.string.option_camera, { c, s ->
+            if (s.camera.isEmpty()) c.getString(R.string.camera_automatic) else c.getString(R.string.camera_id, s.camera)
+        }) { s, d ->
+            // A different camera has different geometry: the old table outline is meaningless.
+            val camera = cycle(choices, s.camera, d)
+            if (camera == s.camera) s else s.copy(camera = camera, table = null, seats = emptyList(), calibrationAspect = 0.0)
+        },
+        Option(R.string.option_model, { c, s ->
+            c.getString(if (s.model == PoseModel.FULL) R.string.model_full else R.string.model_lite)
+        }) { s, d -> s.copy(model = cycle(PoseModel.entries, s.model, d)) },
+        Option(R.string.option_trigger, { c, s -> c.getString(R.string.value_percent, (s.timing.trigger * 100).toInt()) }) { s, d ->
+            s.copy(timing = s.timing.copy(trigger = TRIGGER_LEVELS[(TRIGGER_LEVELS.indexOf(s.timing.trigger) + d).coerceIn(0, 2)]))
+        },
+        Option(R.string.option_trigger_delay, { c, s -> c.seconds(s.timing.triggerMs) }) { s, d ->
+            s.copy(timing = s.timing.copy(triggerMs = step(s.timing.triggerMs, d, 250, 500L..5000L)))
+        },
+        Option(R.string.option_clear_delay, { c, s -> c.seconds(s.timing.clearMs) }) { s, d ->
+            s.copy(timing = s.timing.copy(clearMs = step(s.timing.clearMs, d, 250, 250L..3000L)))
+        },
+        Option(R.string.option_cooldown, { c, s -> c.seconds(s.timing.cooldownMs) }) { s, d ->
+            s.copy(timing = s.timing.copy(cooldownMs = step(s.timing.cooldownMs, d, 500, 0L..10_000L)))
+        },
+        Option(R.string.option_grace, { c, s -> c.seconds(s.graceMs) }) { s, d -> s.copy(graceMs = step(s.graceMs, d, 1000, 0L..30_000L)) },
+        Option(R.string.option_visual, { c, s -> c.getString(visualNames.getValue(s.visual)) }) { s, d ->
+            s.copy(visual = cycle(VisualMode.entries, s.visual, d))
+        },
+        Option(R.string.option_audio, { c, s -> c.getString(audioNames.getValue(s.audio)) }) { s, d ->
+            s.copy(audio = cycle(AudioMode.entries, s.audio, d))
+        },
+        Option(R.string.option_volume, { c, s -> c.getString(R.string.value_percent, s.volume) }) { s, d ->
+            s.copy(volume = (s.volume + d * 10).coerceIn(0, 100))
+        },
+        Option(R.string.option_repeat, { c, s -> c.seconds(s.repeatMs) }) { s, d ->
+            s.copy(
+                repeatMs =
+                    step(
+                        s.repeatMs,
+                        d,
+                        1000,
+                        1000L..30_000L,
+                    ),
+            )
+        },
+        Option(R.string.option_debug, { c, s -> c.toggle(s.debug) }) { s, _ -> s.copy(debug = !s.debug) },
+        Option(R.string.option_statistics, { c, s -> c.toggle(s.statistics) }) { s, _ -> s.copy(statistics = !s.statistics) },
+    )
+}

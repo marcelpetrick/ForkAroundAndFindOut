@@ -21,7 +21,7 @@ color. Use a scrollable layout on small screens and at large system font sizes.
    their role in stable assignment and that seat numbers do not identify people.
 5. **Monitor:** preview plus per-seat left/right statuses. Primary control becomes
    Pause, always available without opening a menu. Uncertainty reads “Not visible”
-   rather than “Good posture”. Setup, settings and demo never produce alarms.
+   rather than “Good posture”. Setup and settings never produce alarms; the demo previews the visual warning only, never sound or storage.
 6. **Warning:** static perimeter and a plain-language elbow reminder by default.
    Audio and all alternate visual modes are configurable. Clear automatically on
    correction; silence immediately on pause, backgrounding, lost camera or stale data.

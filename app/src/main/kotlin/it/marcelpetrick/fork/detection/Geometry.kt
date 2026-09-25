@@ -51,6 +51,18 @@ class Polygon(
     }
 
     fun center(): Point = Point(points.sumOf { it.x } / 4, points.sumOf { it.y } / 4)
+
+    /** Separating-axis test for convex regions; touching edges count as overlap. */
+    fun overlaps(other: Polygon): Boolean =
+        (edges() + other.edges()).none { (a, b) ->
+            val nx = a.y - b.y
+            val ny = b.x - a.x
+            val mine = points.map { it.x * nx + it.y * ny }
+            val theirs = other.points.map { it.x * nx + it.y * ny }
+            mine.max() < theirs.min() || theirs.max() < mine.min()
+        }
+
+    private fun edges(): List<Pair<Point, Point>> = points.indices.map { points[it] to points[(it + 1) % points.size] }
 }
 
 private fun cross(

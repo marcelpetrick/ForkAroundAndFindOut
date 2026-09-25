@@ -35,6 +35,8 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   checkout and writes the plan (`plan_v2/`); this agent implements. **Commit only files
   this agent changed** (explicit paths, never `git add -A`). Document everything in
   `plan.md` — update the plan first, then continue. Check remote CI and fix failures.
+  `localPipeline.sh` and README badges must follow Cullendula / myLastFmPlayer.
+  Work step by step and do not stop until the whole project is done.
 
 ## Tasks
 
@@ -45,7 +47,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   per-arm state machine, configuration and deterministic acceptance fixtures.
 - [x] Step 04: implement native rear-camera selection, permission/lifecycle handling,
   720p latest-frame analysis, MediaPipe multi-pose inference, preview and event bridge.
-- [ ] Step 05 (in progress): native monitoring UI — welcome, camera positioning with
+- [x] Step 05: native monitoring UI — welcome, camera positioning with
   live skeleton, four-corner table calibration (letterbox taps rejected), optional
   non-overlapping seat regions, monitor with per-seat left/right status words,
   always-visible Pause, grace period, watchdog tick that expires stale evidence,
@@ -54,6 +56,12 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   geometry change, adult diagnostics (FPS, latency, scores, confidence), persisted
   settings screen for every FR-13 item, and a clearly labelled synthetic demo that
   never sounds or stores data. Robolectric flow tests plus unit tests.
+- [ ] Step 05b: rebuild `localPipeline.sh` in the style of `~/repos/myLastFmPlayer` and
+  `~/repos/Cullendula`: `--help` usage, numbered stages, per-stage logs, optional
+  `--report-dir`, `--noRun`/`--skip-e2e` style flags, and a final stage-by-stage
+  PASS/FAIL summary with details (tests, coverage %, lint counts, APK sizes). CI calls
+  the same script. README gets the full badge set like those repos (pipeline, Docker
+  publish, latest release, license, Android, Kotlin, MediaPipe, CameraX, coverage).
 - [ ] Step 06: explicit training mode (NORMAL / LEFT / RIGHT / BOTH labels, per seat,
   feature vectors only, session IDs), false-alarm / missed-violation feedback,
   opt-in session statistics (duration, violations, corrections, mean confidence),
@@ -225,3 +233,27 @@ require consented physical sessions and must not be fabricated.
 - Pending: steps 05–11 and physical-camera/household evidence.
 - New ideas: demo scenario doubles as README screenshot source (labelled synthetic);
   seat overlap uses a separating-axis test so diagonal regions are not falsely rejected.
+
+### 0.4.9 — feat: add native monitoring, calibration, settings and synthetic demo UI
+
+- Done: single-activity Kotlin UI (warm ivory/deep green, large text, status words):
+  welcome with privacy/placement copy; camera positioning with live skeleton and
+  people count; four-corner table marking with numbered taps, undo/reset, crossing
+  rejection and letterbox-tap rejection (`CameraSession.bounds`); optional seats with
+  separating-axis overlap rejection; monitor with per-seat left/right words ("Not
+  visible" for UNKNOWN), always-visible Pause/Resume, grace countdown, 100 ms watchdog
+  tick, border/icon/tint/0.5 Hz pulse warnings, once/repeat/continuous tones with
+  volume; silence and camera release on pause, background, camera loss or stale data;
+  recalibration notice when geometry changes; adult diagnostics (FPS, latency, model,
+  violations, confidence, per-arm score/distance/angle); persisted settings for every
+  FR-13 item (camera change clears calibration); synthetic two-seat demo that previews
+  the visual warning but never sounds or stores data.
+- Validation: full local pipeline green; 1198/1220 Kotlin lines covered (98.2%).
+  Robolectric flow tests cover setup, calibration, seats, monitoring, alarm, pause,
+  stale data, backgrounding, geometry change, camera error, permission denial/grant.
+  Debug APK installed on the API 34 emulator: welcome and demo render; the demo shows
+  seat 2's resting elbow in red with the border warning (screenshots captured).
+- Pending: training/feedback/statistics/data screen (06), pipeline restyle and badges
+  (05b), e2e in pipeline, Docker/GHCR, docs, review, release.
+- Decision: the demo shows the configured *visual* warning so adults can preview it,
+  but no sound or storage; `docs/ux.md` wording updated accordingly.

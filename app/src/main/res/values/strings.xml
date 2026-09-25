@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<resources>
+    <string name="app_name">Fork Around &amp; Find Out</string>
+    <string name="welcome_intro">A gentle elbows-off-the-table reminder for family meals.</string>
+    <string name="welcome_privacy">Everything runs on this phone. No images or video are saved, nothing is uploaded, and nobody is identified.</string>
+    <string name="welcome_placement">Place the phone above head height at one corner of the table, looking down so every shoulder, elbow, wrist and the tabletop are visible.</string>
+    <string name="welcome_limits">This is a conservative helper, not a validated measurement. When it cannot see an elbow it stays quiet.</string>
+    <string name="start_monitoring">Start monitoring</string>
+    <string name="setup_camera">Set up camera</string>
+    <string name="recalibrate">Recalibrate camera</string>
+    <string name="try_demo">Try demo (synthetic)</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="needs_setup">Set up the camera and mark the table once before monitoring.</string>
+    <string name="permission_needed">Camera permission is needed to watch the table. Grant it when asked, or allow it in Android settings for this app.</string>
+    <string name="camera_error">%1$s</string>
+    <string name="calibration_changed">The camera view changed, so the table outline no longer fits. Recalibrate the table, and do so whenever the phone is moved.</string>
+
+    <string name="position_title">Position the phone</string>
+    <string name="position_help">Check that shoulders, elbows and wrists of everyone, and the whole tabletop, are visible. Lines appear on detected people.</string>
+    <string name="mark_table">Mark table</string>
+    <string name="people_detected">People detected: %1$d</string>
+
+    <string name="table_title">Mark the table</string>
+    <string name="table_help">Tap the four tabletop corners in order around the table. Only the visible camera image counts.</string>
+    <string name="table_progress">Corners marked: %1$d of 4</string>
+    <string name="undo">Undo</string>
+    <string name="reset">Reset</string>
+    <string name="save_table">Save table</string>
+    <string name="tap_inside_image">Tap inside the camera image, not the empty margin.</string>
+
+    <string name="seats_title">Seats (optional)</string>
+    <string name="seats_help">Seat regions allowed: %1$d. Draw one around each place, four taps per seat. Seats keep assignments stable when people lean; seat numbers never identify anyone.</string>
+    <string name="seats_progress">Seats: %1$d of %2$d. Corners of next seat: %3$d of 4</string>
+    <string name="add_seat">Add seat</string>
+    <string name="clear_seats">Clear seats</string>
+    <string name="finish_setup">Finish setup</string>
+    <string name="seat_overlap">Seats must not overlap. Tap again.</string>
+    <string name="seats_full">All seats are marked.</string>
+
+    <string name="monitor_title">Monitoring</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="stop">Stop</string>
+    <string name="paused">Paused. No warnings until you resume.</string>
+    <string name="waiting">Waiting for a clear camera view. No warnings without fresh evidence.</string>
+    <string name="grace">Starting. Warnings begin in %1$d s.</string>
+    <string name="seat_status">Seat %1$d · Left: %2$s · Right: %3$s</string>
+    <string name="seat_empty">Seat %1$d · nobody detected</string>
+    <string name="state_unknown">Not visible</string>
+    <string name="state_clear">Clear</string>
+    <string name="state_suspect">Checking</string>
+    <string name="state_violation">Elbow on table</string>
+    <string name="warning_text">Elbows off the table, please</string>
+    <string name="show_diagnostics">Adult diagnostics</string>
+    <string name="hide_diagnostics">Hide diagnostics</string>
+    <string name="diagnostics">%1$.1f FPS · latency %2$d ms · model %3$s · violations %4$d · mean joint confidence %5$.2f</string>
+    <string name="arm_score">Seat %1$d %2$s: score %3$s, elbow distance %4$s, angle %5$s</string>
+    <string name="left">left</string>
+    <string name="right">right</string>
+    <string name="none">–</string>
+
+    <string name="demo_title">Synthetic demo</string>
+    <string name="demo_banner">SYNTHETIC DEMO · generated stick figures, not camera data. Sound and storage are off.</string>
+    <string name="demo_help">Seat 1 eats, reaches across and briefly hides an arm. Seat 2 rests an elbow for a few seconds, then corrects it.</string>
+    <string name="restart">Restart</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_help">Changing the camera clears the table outline. Changes apply to the next monitoring session.</string>
+    <string name="option_people">People</string>
+    <string name="option_camera">Rear camera</string>
+    <string name="option_model">Pose model</string>
+    <string name="option_trigger">Evidence threshold</string>
+    <string name="option_trigger_delay">Warning delay</string>
+    <string name="option_clear_delay">Clearing delay</string>
+    <string name="option_cooldown">Cooldown after clearing</string>
+    <string name="option_grace">Start grace period</string>
+    <string name="option_visual">Visual warning</string>
+    <string name="option_audio">Sound</string>
+    <string name="option_volume">Volume</string>
+    <string name="option_repeat">Repeat sound every</string>
+    <string name="option_debug">Skeleton overlay</string>
+    <string name="option_statistics">Save session statistics</string>
+    <string name="camera_automatic">Automatic</string>
+    <string name="camera_id">Camera %1$s</string>
+    <string name="value_seconds">%1$.2f s</string>
+    <string name="value_percent">%1$d %%</string>
+    <string name="value_number">%1$s</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="model_full">Full (accurate)</string>
+    <string name="model_lite">Lite (faster)</string>
+    <string name="visual_off">Off</string>
+    <string name="visual_border">Red border</string>
+    <string name="visual_icon">Warning sign</string>
+    <string name="visual_full">Tinted screen</string>
+    <string name="visual_pulse">Slow pulse</string>
+    <string name="audio_off">Off</string>
+    <string name="audio_once">Beep once</string>
+    <string name="audio_repeat">Repeat</string>
+    <string name="audio_continuous">Continuous tone</string>
+    <string name="decrease">Decrease %1$s</string>
+    <string name="increase">Increase %1$s</string>
+</resources>

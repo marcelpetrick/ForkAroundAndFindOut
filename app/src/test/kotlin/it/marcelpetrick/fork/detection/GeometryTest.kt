@@ -29,6 +29,21 @@ fun pose(
 
 class GeometryTest {
     @Test
+    fun seatRegionsMustNotOverlap() {
+        fun square(
+            x: Double,
+            y: Double,
+            size: Double = 0.2,
+        ) = Polygon(listOf(Point(x, y), Point(x + size, y), Point(x + size, y + size), Point(x, y + size)))
+        assertTrue(square(0.1, 0.1).overlaps(square(0.2, 0.2)))
+        assertTrue(square(0.1, 0.1).overlaps(square(0.3, 0.1))) // shared edge
+        assertTrue(square(0.1, 0.1, 0.6).overlaps(square(0.3, 0.3))) // containment
+        assertFalse(square(0.1, 0.1).overlaps(square(0.5, 0.1)))
+        val diamond = Polygon(listOf(Point(0.5, 0.3), Point(0.7, 0.5), Point(0.5, 0.7), Point(0.3, 0.5)))
+        assertFalse(diamond.overlaps(square(0.1, 0.1, 0.25))) // bounding boxes overlap, shapes do not
+    }
+
+    @Test
     fun distanceAndCalibration() {
         assertEquals(5.0, Point(0.0, 0.0).distance(Point(3.0, 4.0)), 1e-8)
         assertEquals(Point(0.5, 0.7), table.center())

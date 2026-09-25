@@ -5,5 +5,4 @@
         <item name="android:colorAccent">#286552</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
-    <string name="app_name">Fork Around &amp; Find Out</string>
 </resources>

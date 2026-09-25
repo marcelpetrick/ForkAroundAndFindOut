@@ -195,9 +195,12 @@ class CameraTest {
             shadowOf(Looper.getMainLooper()).idle()
             assertNotNull(session.analyzer)
             session.analyzer!!.analyze(image())
+            assertEquals(null, session.bounds)
             callback(listOf(pose()), 100)
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(1, calls)
+            val bounds = session.bounds!!
+            assertTrue(bounds.left < bounds.right && bounds.top < bounds.bottom)
             error(IllegalStateException("lost camera"))
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(1, errors)

@@ -2,6 +2,7 @@
 package it.marcelpetrick.fork.camera
 
 import android.content.Context
+import android.graphics.RectF
 import android.os.SystemClock
 import android.util.Size
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -24,6 +25,13 @@ import it.marcelpetrick.fork.monitoring.Settings
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+/** A running pose source; [bounds] is the visible image within the preview, normalized. */
+interface FrameSource : AutoCloseable {
+    val bounds: RectF?
+
+    fun start()
+}
+
 /** Preview and inference remain native. Start/close are called on the main thread. */
 @androidx.annotation.OptIn(markerClass = [TransformExperimental::class, ExperimentalCamera2Interop::class])
 class CameraSession(
@@ -43,7 +51,7 @@ class CameraSession(
         (List<Pose>, Long) -> Unit,
         (Exception) -> Unit,
     ) -> PoseEngine = { c, s, r, e -> MediaPipeEngine(c, s, r, e) },
-) : AutoCloseable {
+) : FrameSource {
     private val main = ContextCompat.getMainExecutor(context)
 
     @Volatile private var closed = false
@@ -60,7 +68,10 @@ class CameraSession(
 
     @Volatile private var input: Input? = null
 
-    fun start() {
+    override var bounds: RectF? = null
+        private set
+
+    override fun start() {
         previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         executor.execute {
@@ -135,6 +146,15 @@ class CameraSession(
                 val target = previewView.outputTransform
                 if (!closed && target != null && inputTransform != null && previewView.width > 0 && previewView.height > 0) {
                     val transform = CoordinateTransform(inputTransform, target)
+                    val corners = floatArrayOf(0f, 0f, width.toFloat(), height.toFloat())
+                    transform.mapPoints(corners)
+                    bounds =
+                        RectF(
+                            minOf(corners[0], corners[2]) / previewView.width,
+                            minOf(corners[1], corners[3]) / previewView.height,
+                            maxOf(corners[0], corners[2]) / previewView.width,
+                            maxOf(corners[1], corners[3]) / previewView.height,
+                        )
                     val mapped =
                         poses.map { pose ->
                             Pose(
