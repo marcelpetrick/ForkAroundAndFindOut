@@ -99,4 +99,28 @@ class StorageTest {
         store.delete()
         assertEquals("[]", store.export())
     }
+
+    @Test
+    fun batchesAreAtomicAndFeedbackCoversEverySeat() {
+        val store = LocalStore(RuntimeEnvironment.getApplication())
+        val detector = Detector(table, 2)
+        var seats = detector.process(listOf(pose(), pose(offset = 0.3)), 0)
+        for (time in 100L..1500L step 100) seats = detector.process(listOf(pose(), pose(offset = 0.3)), time)
+        val all = sampleRecord("meal-b", 1500, "FALSE_ALARM", seats, 0)
+        assertEquals("sample", all.getString("type"))
+        assertEquals(4, all.getJSONArray("arms").length())
+        assertEquals(setOf(1, 2), (0 until 4).map { all.getJSONArray("arms").getJSONObject(it).getInt("seat") }.toSet())
+        store.addAll(List(4999) { JSONObject() })
+        assertThrows(IllegalStateException::class.java) { store.addAll(listOf(all, all)) }
+        assertEquals(4999, store.records().length()) // nothing partially written
+        store.add(all)
+        assertEquals(LocalStore.LIMIT, store.records().length())
+        store.delete()
+        val stats = sessionRecord("meal-b", 60_000, 3, 1, 2, 0.9)
+        val unknown = sessionRecord("meal-c", 1, 0, 0, 0, null)
+        assertEquals("session", stats.getString("type"))
+        assertEquals(0.9, stats.getDouble("meanConfidence"), 0.0)
+        assertTrue(unknown.isNull("meanConfidence"))
+        assertFalse(stats.getBoolean("imageRecorded"))
+    }
 }

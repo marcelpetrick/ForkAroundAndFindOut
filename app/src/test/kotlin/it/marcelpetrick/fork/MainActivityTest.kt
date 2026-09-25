@@ -3,8 +3,11 @@ package it.marcelpetrick.fork
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
@@ -20,6 +23,8 @@ import it.marcelpetrick.fork.monitoring.LocalStore
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.ui.Speaker
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -33,6 +38,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAlertDialog
+import java.io.ByteArrayOutputStream
 import java.time.Duration
 
 class FakeSource : FrameSource {
@@ -67,7 +74,13 @@ class RecordingSpeaker : Speaker {
 
 fun idle(ms: Long = 0) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
-fun View.all(): List<View> = listOf(this) + if (this is ViewGroup) (0 until childCount).flatMap { getChildAt(it).all() } else emptyList()
+/** Visible views only, as a user would see them. */
+fun View.all(): List<View> =
+    if (visibility != View.VISIBLE) {
+        emptyList()
+    } else {
+        listOf(this) + if (this is ViewGroup) (0 until childCount).flatMap { getChildAt(it).all() } else emptyList()
+    }
 
 fun Activity.root(): View = window.decorView
 
@@ -287,6 +300,118 @@ class MainActivityTest {
             shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
             activity.answerPermission(PackageManager.PERMISSION_GRANTED)
             assertEquals(MainActivity.Screen.POSITION, activity.screen)
+        }
+    }
+
+    @Test
+    fun feedbackTrainingStatisticsExportAndDeleteAreExplicitAndLocal() {
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
+        launch().use { controller ->
+            val activity = controller.get()
+            lateinit var frame: (List<Pose>, Long, Double, Long) -> Unit
+            activity.speaker = RecordingSpeaker()
+            activity.sourceFactory = { _, _, f, _ ->
+                frame = f
+                FakeSource()
+            }
+            activity.click("Settings")
+            activity.click("Increase Save session statistics")
+            activity.click("Back")
+            activity.click("Set up camera")
+            activity.click("Mark table")
+            corners.forEach { activity.tap(it) }
+            activity.click("Save table")
+            activity.click("Finish setup")
+            activity.click("Start monitoring")
+            val aspect = activity.settings.calibrationAspect
+
+            fun feed(ms: Long) =
+                repeat((ms / 100).toInt()) {
+                    frame(listOf(pose()), SystemClock.uptimeMillis(), aspect, 5)
+                    idle(100)
+                }
+            feed(1000)
+            activity.click("Adult diagnostics")
+            activity.click("False alarm")
+            activity.click("Missed violation")
+            assertTrue(activity.texts().contains("Only feature numbers were stored"))
+            assertFalse(activity.texts().contains("LEFT ELBOW")) // hidden until training is enabled
+            activity.click("Training mode: off")
+            assertTrue(activity.texts().contains("LEFT ELBOW"))
+            activity.click("Seat to record: 1")
+            assertTrue(activity.texts().contains("Seat to record: 2"))
+            repeat(3) {
+                activity.click(
+                    "Seat to record: ${if (it == 0) {
+                        2
+                    } else if (it == 1) {
+                        3
+                    } else {
+                        4
+                    }}",
+                )
+            }
+            activity.click("LEFT ELBOW")
+            assertTrue(activity.texts().contains("Recording LEFT for seat 1"))
+            feed(5200)
+            assertTrue(activity.texts().contains("Saved: LEFT ×"))
+            activity.click("RIGHT ELBOW")
+            activity.click("Training mode: on") // turning training off discards the capture
+            feed(5200)
+            activity.click("Stop")
+
+            val records = LocalStore(activity).records()
+            val types = (0 until records.length()).map { records.getJSONObject(it).getString("type") }
+            val labels = (0 until records.length()).mapNotNull { records.getJSONObject(it).optString("label").ifEmpty { null } }
+            assertEquals("session", types.last())
+            assertTrue(labels.containsAll(listOf("FALSE_ALARM", "MISSED_VIOLATION", "LEFT")))
+            assertFalse(labels.contains("RIGHT"))
+            assertTrue(labels.count { it == "LEFT" } in 30..60)
+            val stats = records.getJSONObject(records.length() - 1)
+            assertEquals(1, stats.getInt("falseAlarms"))
+            assertEquals(1, stats.getInt("missedViolations"))
+            assertTrue(stats.getLong("durationMs") > 10_000)
+
+            activity.click("Local data")
+            assertEquals(MainActivity.Screen.DATA, activity.screen)
+            assertTrue(activity.texts().contains("Stored records: ${records.length()}"))
+            val target = Uri.parse("content://test/export.json")
+            val exported = ByteArrayOutputStream()
+            shadowOf(activity.contentResolver).registerOutputStream(target, exported)
+            activity.click("Export JSON")
+            val request = shadowOf(activity).nextStartedActivityForResult
+            assertEquals(Intent.ACTION_CREATE_DOCUMENT, request.intent.action)
+            shadowOf(activity).receiveResult(request.intent, Activity.RESULT_OK, Intent().setData(target))
+            idle()
+            assertEquals(records.length(), JSONArray(exported.toString()).length())
+            assertTrue(activity.texts().contains("Exported."))
+            activity.click("Export JSON")
+            val failing = shadowOf(activity).nextStartedActivityForResult
+            shadowOf(activity).receiveResult(failing.intent, Activity.RESULT_OK, Intent().setData(Uri.parse("content://missing/x")))
+            idle()
+            assertTrue(activity.texts().contains("Export failed"))
+            activity.click("Export JSON")
+            shadowOf(activity).receiveResult(shadowOf(activity).nextStartedActivityForResult.intent, Activity.RESULT_CANCELED, null)
+            idle()
+
+            activity.click("Delete all")
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+            idle()
+            assertEquals(records.length(), LocalStore(activity).records().length())
+            activity.click("Delete all")
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            idle()
+            assertEquals(0, LocalStore(activity).records().length())
+            assertTrue(activity.texts().contains("All local records deleted."))
+            assertTrue(activity.texts().contains("Stored records: 0"))
+
+            // A full store reports the problem instead of pretending to save.
+            LocalStore(activity).addAll(List(LocalStore.LIMIT) { JSONObject() })
+            activity.click("Back")
+            activity.click("Start monitoring")
+            activity.click("Adult diagnostics")
+            activity.click("False alarm")
+            assertTrue(activity.texts().contains("Not saved: Sample limit reached"))
         }
     }
 }

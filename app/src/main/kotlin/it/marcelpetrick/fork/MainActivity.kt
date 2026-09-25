@@ -2,10 +2,12 @@
 package it.marcelpetrick.fork
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -36,6 +38,8 @@ import it.marcelpetrick.fork.monitoring.Monitor
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
+import it.marcelpetrick.fork.monitoring.sampleRecord
+import it.marcelpetrick.fork.monitoring.sessionRecord
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
@@ -47,6 +51,8 @@ import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.settingsOptions
 import it.marcelpetrick.fork.ui.title
+import org.json.JSONObject
+import java.util.UUID
 
 typealias SourceFactory = (
     PreviewView,
@@ -57,7 +63,7 @@ typealias SourceFactory = (
 
 /** Single-activity native UI. All state lives on the main thread. */
 class MainActivity : ComponentActivity() {
-    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS }
+    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS, DATA }
 
     internal lateinit var store: LocalStore
     internal var settings = Settings()
@@ -82,6 +88,7 @@ class MainActivity : ComponentActivity() {
     private var status: TextView? = null
     private var seatsText: TextView? = null
     private var diagnosticsText: TextView? = null
+    private var trainingStatus: TextView? = null
     private var alarm = AlarmPolicy()
     private val taps = mutableListOf<Point>()
     private val seats = mutableListOf<Polygon>()
@@ -93,6 +100,26 @@ class MainActivity : ComponentActivity() {
     private var demoStart = 0L
     private var diagnosticsOpen = false
     private var pendingCamera: Screen? = null
+    private var adult: LinearLayout? = null
+    private var session = ""
+    private var falseAlarms = 0
+    private var missedViolations = 0
+    private var training = false
+    private var trainingSeat = 1
+    private var recording: Recording? = null
+
+    /** An explicit, time-boxed labelled capture of feature vectors for one seat. */
+    private class Recording(
+        val label: String,
+        val seat: Int,
+        val until: Long,
+        val samples: MutableList<JSONObject> = mutableListOf(),
+    )
+
+    private val exporter =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) exportTo(uri)
+        }
 
     private val permission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -161,6 +188,7 @@ class MainActivity : ComponentActivity() {
         when (target) {
             Screen.WELCOME -> page(welcome())
             Screen.SETTINGS -> page(settingsPage())
+            Screen.DATA -> page(dataPage())
             Screen.DEMO -> startDemo()
             else -> {
                 if (preview == null) cameraLayout()
@@ -212,6 +240,7 @@ class MainActivity : ComponentActivity() {
             }
             addView(action(getString(R.string.try_demo)) { begin(Screen.DEMO) })
             addView(action(getString(R.string.settings)) { begin(Screen.SETTINGS) })
+            addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
         }
 
     private fun begin(target: Screen) {
@@ -413,6 +442,11 @@ class MainActivity : ComponentActivity() {
     private fun startMonitoring() {
         notice = null
         monitor = Monitor(settings).also { it.start(clock()) }
+        session = UUID.randomUUID().toString()
+        diagnosticsOpen = false // adult tools start collapsed in every session
+        falseAlarms = 0
+        missedViolations = 0
+        recording = null
         resumedAt = clock()
         alarm = AlarmPolicy()
         show(Screen.MONITOR)
@@ -426,7 +460,7 @@ class MainActivity : ComponentActivity() {
             addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
             addView(action(getString(R.string.stop)) { show(Screen.WELCOME) })
             addView(action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG })
-            diagnosticsText = label("", 14f, color = Palette.MUTED).also(::addView)
+            adult = adultPanel().also(::addView)
         }
         refreshMonitorPanel()
         schedule()
@@ -466,8 +500,123 @@ class MainActivity : ComponentActivity() {
                 else -> getString(R.string.monitor_title)
             }
         seatsText?.text = seatLines(active.results)
-        diagnosticsText?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
+        adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
         diagnosticsText?.text = diagnostics(active)
+        adult?.findViewWithTag<TextView>(TRAINING_TAG)?.text = getString(if (training) R.string.training_on else R.string.training_off)
+        adult?.findViewWithTag<TextView>(SEAT_TAG)?.text = getString(R.string.training_seat, trainingSeat)
+        adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
+    }
+
+    /** Adult-only tools, collapsed by default: diagnostics, feedback, explicit training. */
+    private fun adultPanel(): LinearLayout =
+        column(0).apply {
+            diagnosticsText = label("", 14f, color = Palette.MUTED).also(::addView)
+            addView(
+                row(
+                    action(getString(R.string.false_alarm)) { feedback("FALSE_ALARM") },
+                    action(getString(R.string.missed_violation)) { feedback("MISSED_VIOLATION") },
+                ),
+            )
+            addView(action(getString(R.string.training_off)) { toggleTraining() }.apply { tag = TRAINING_TAG })
+            addView(
+                column(0).apply {
+                    tag = LABELS_TAG
+                    addView(label(getString(R.string.training_help), 14f, color = Palette.MUTED))
+                    addView(
+                        action(getString(R.string.training_seat, 1)) {
+                            trainingSeat = trainingSeat % settings.people + 1
+                            refreshMonitorPanel()
+                        }.apply { tag = SEAT_TAG },
+                    )
+                    addView(
+                        row(
+                            action(getString(R.string.label_normal)) { record("NORMAL") },
+                            action(getString(R.string.label_left)) { record("LEFT") },
+                        ),
+                    )
+                    addView(
+                        row(
+                            action(getString(R.string.label_right)) { record("RIGHT") },
+                            action(getString(R.string.label_both)) { record("BOTH") },
+                        ),
+                    )
+                },
+            )
+            trainingStatus = label("", 15f, bold = true).also(::addView)
+        }
+
+    private fun toggleTraining() {
+        training = !training
+        if (!training) recording = null
+        refreshMonitorPanel()
+    }
+
+    private fun feedback(label: String) {
+        val active = monitor ?: return
+        if (persist(listOf(sampleRecord(session, clock(), label, active.results, 0)), label)) {
+            if (label == "FALSE_ALARM") falseAlarms++ else missedViolations++
+        }
+    }
+
+    private fun record(label: String) {
+        recording = Recording(label, trainingSeat, clock() + RECORD_MS)
+        trainingStatus?.text = getString(R.string.recording, label, trainingSeat)
+    }
+
+    private fun persist(
+        records: List<JSONObject>,
+        label: String,
+    ): Boolean =
+        try {
+            store.addAll(records)
+            trainingStatus?.text = getString(R.string.feedback_saved, "$label ×${records.size}")
+            true
+        } catch (error: IllegalStateException) {
+            trainingStatus?.text = getString(R.string.storage_failed, error.message)
+            false
+        }
+
+    private fun finishRecording(now: Long) {
+        val capture = recording ?: return
+        if (now < capture.until) return
+        recording = null
+        persist(capture.samples, capture.label)
+    }
+
+    private fun dataPage(): View =
+        column().apply {
+            addView(title(getString(R.string.data_title)))
+            addView(label(getString(R.string.data_help)))
+            val count = store.records().length()
+            store.notice?.let { addView(card(label(it, color = Palette.RED))) }
+            notice?.let { addView(label(it, bold = true)) }
+            addView(label(getString(R.string.data_count, count), 19f, bold = true))
+            addView(action(getString(R.string.export)) { exporter.launch("fork-around-samples.json") })
+            addView(
+                action(getString(R.string.delete)) {
+                    AlertDialog
+                        .Builder(this@MainActivity)
+                        .setMessage(R.string.delete_confirm)
+                        .setPositiveButton(R.string.delete) { _, _ ->
+                            store.delete()
+                            notice = getString(R.string.deleted)
+                            show(Screen.DATA)
+                        }.setNegativeButton(R.string.cancel, null)
+                        .show()
+                },
+            )
+            addView(action(getString(R.string.back), primary = true) { begin(Screen.WELCOME) })
+        }
+
+    private fun exportTo(uri: Uri) {
+        notice =
+            try {
+                contentResolver.openOutputStream(uri, "wt")!!.use { it.write(store.export().toByteArray()) }
+                getString(R.string.exported)
+            } catch (error: Exception) {
+                getString(R.string.export_failed, error.message)
+            }
+        show(Screen.DATA)
     }
 
     private fun seatLines(results: List<SeatResult>): String =
@@ -574,6 +723,7 @@ class MainActivity : ComponentActivity() {
             show(Screen.WELCOME)
             return
         }
+        finishRecording(now)
         view.results = active.results
         view.warning = if (alarming) settings.visual else VisualMode.OFF
         speaker.play(alarm.update(alarming, settings.audio, now, settings.repeatMs), settings.volume)
@@ -594,7 +744,14 @@ class MainActivity : ComponentActivity() {
         latency = delay
         stage?.bounds = source?.bounds
         stage?.poses = poses
-        if (screen == Screen.MONITOR) monitor?.frame(poses, time, now, aspect)
+        if (screen == Screen.MONITOR) {
+            monitor?.let { active ->
+                active.frame(poses, time, now, aspect)
+                recording?.takeIf { now < it.until && active.results.isNotEmpty() }?.let {
+                    it.samples += sampleRecord(session, time, it.label, active.results, it.seat)
+                }
+            }
+        }
         if (screen == Screen.POSITION) status?.text = getString(R.string.people_detected, poses.size)
         stage?.refresh()
     }
@@ -631,6 +788,15 @@ class MainActivity : ComponentActivity() {
         active.pause(clock())
         silence()
         monitor = null
+        recording = null
+        training = false
+        if (settings.statistics && active.elapsedMs > 0) {
+            val confidence = if (active.confidenceCount == 0) null else active.confidenceTotal / active.confidenceCount
+            persist(
+                listOf(sessionRecord(session, active.elapsedMs, active.violations, falseAlarms, missedViolations, confidence)),
+                "session",
+            )
+        }
     }
 
     private fun backCameras(): List<String> =
@@ -649,5 +815,9 @@ class MainActivity : ComponentActivity() {
         const val DEMO_FRAME_MS = 66L
         const val PAUSE_TAG = "pause"
         const val DIAGNOSTICS_TAG = "diagnostics"
+        const val TRAINING_TAG = "training"
+        const val SEAT_TAG = "seat"
+        const val LABELS_TAG = "labels"
+        const val RECORD_MS = 5000L
     }
 }

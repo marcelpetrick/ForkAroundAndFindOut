@@ -40,11 +40,14 @@ class LocalStore(
             JSONArray()
         }
 
-    fun add(record: JSONObject) {
+    fun add(record: JSONObject) = addAll(listOf(record))
+
+    /** Writes a batch atomically: either every record is stored or none is. */
+    fun addAll(batch: List<JSONObject>) {
         val existing = records()
         check(notice == null) { notice!! }
-        check(existing.length() < 5000) { "Sample limit reached. Export and delete samples before recording more." }
-        existing.put(record)
+        check(existing.length() + batch.size <= LIMIT) { "Sample limit reached. Export and delete samples before recording more." }
+        batch.forEach(existing::put)
         val stream = recordsFile.startWrite()
         try {
             stream.write(existing.toString().toByteArray())
@@ -61,9 +64,16 @@ class LocalStore(
         recordsFile.delete()
         notice = null
     }
+
+    companion object {
+        const val LIMIT = 5000
+    }
 }
 
-/** Session boundaries are retained so future model evaluation cannot leak adjacent frames. */
+/**
+ * Session boundaries are retained so future model evaluation cannot leak adjacent frames.
+ * [selectedSeat] 0 records every seat (used for false-alarm/missed-violation feedback).
+ */
 fun sampleRecord(
     session: String,
     time: Long,
@@ -73,6 +83,7 @@ fun sampleRecord(
 ): JSONObject =
     JSONObject().apply {
         put("schema", 1)
+        put("type", "sample")
         put("session", session)
         put("timeMs", time)
         put("label", label)
@@ -81,9 +92,10 @@ fun sampleRecord(
         put(
             "arms",
             JSONArray(
-                seats.filter { it.seat == selectedSeat }.flatMap { seat ->
+                seats.filter { selectedSeat == 0 || it.seat == selectedSeat }.flatMap { seat ->
                     listOf("left" to seat.left, "right" to seat.right).map { (name, arm) ->
                         JSONObject().apply {
+                            put("seat", seat.seat)
                             put("side", name)
                             put("state", arm.state.name)
                             put("score", arm.score ?: JSONObject.NULL)
@@ -114,4 +126,25 @@ fun sampleRecord(
                 },
             ),
         )
+    }
+
+/** Optional non-image statistics for one monitoring session (FR-16). */
+fun sessionRecord(
+    session: String,
+    durationMs: Long,
+    violations: Int,
+    falseAlarms: Int,
+    missedViolations: Int,
+    meanConfidence: Double?,
+): JSONObject =
+    JSONObject().apply {
+        put("schema", 1)
+        put("type", "session")
+        put("session", session)
+        put("durationMs", durationMs)
+        put("violations", violations)
+        put("falseAlarms", falseAlarms)
+        put("missedViolations", missedViolations)
+        put("meanConfidence", meanConfidence ?: JSONObject.NULL)
+        put("imageRecorded", false)
     }

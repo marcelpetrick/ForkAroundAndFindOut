@@ -62,7 +62,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   PASS/FAIL summary with details (tests, coverage %, lint counts, APK sizes). CI calls
   the same script. README gets the full badge set like those repos (pipeline, Docker
   publish, latest release, license, Android, Kotlin, MediaPipe, CameraX, coverage).
-- [ ] Step 06: explicit training mode (NORMAL / LEFT / RIGHT / BOTH labels, per seat,
+- [x] Step 06: explicit training mode (NORMAL / LEFT / RIGHT / BOTH labels, per seat,
   feature vectors only, session IDs), false-alarm / missed-violation feedback,
   opt-in session statistics (duration, violations, corrections, mean confidence),
   local data screen with record count, JSON export via system file picker, delete.
@@ -279,3 +279,22 @@ require consented physical sessions and must not be fabricated.
 - Validation: local run — all mandatory stages PASS, E2E PASS on the API 34
   emulator (`NativeModelTest`), 29 unit tests, 98.2% line coverage; ShellCheck clean.
 - Pending: Docker/release badges arrive with their workflows (steps 08, 11).
+
+### 0.5.12 — feat: add explicit training, feedback, session statistics and data management
+
+- Done: adult tools inside collapsed monitor diagnostics (reset every session):
+  False alarm / Missed violation store feature vectors of all seats with session ID;
+  explicit training mode (off by default, never persisted) with seat selector and
+  NORMAL / LEFT / RIGHT / BOTH labels capturing 5 s of per-frame feature vectors for
+  one seat, written as one atomic batch (turning training off discards a capture);
+  opt-in session statistics on stop (duration, violations, false alarms, missed
+  violations, mean joint confidence). Local data screen: record count, corruption
+  notice, JSON export through the system file picker, confirmed delete-all.
+  `LocalStore.addAll` is all-or-nothing within the 5000-record cap; records carry
+  `type` and per-arm `seat`; `imageRecorded` is always false.
+- Validation: full local pipeline green: 31 tests, 98.4% line coverage (1314/1336),
+  E2E PASS on the API 34 emulator, lint 0 issues.
+- Pending: e2e UI flows on device (07), Docker/GHCR (08), docs (09), review (10),
+  release (11). Remote run for 0.4.11 (first emulator CI) was still running at commit.
+- New ideas: export filename could carry the date; a training-session summary per
+  label would help check class balance before any learned classifier.
