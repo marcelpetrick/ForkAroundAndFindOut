@@ -47,9 +47,17 @@ class UiFlowTest {
     private fun waitFor(
         text: String,
         timeoutMs: Long = 10_000,
-    ) = assertNotNull("'$text' did not appear", device.wait(Until.findObject(By.textContains(text)), timeoutMs))
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            scrollTo(text)
+            if (device.hasObject(By.textContains(text))) return
+        }
+        throw AssertionError("'$text' did not appear")
+    }
 
     private fun tap(text: String) {
+        scrollTo(text)
         // Dialog buttons may be rendered in capitals by the platform theme.
         val selector = By.text(Pattern.compile(Pattern.quote(text), Pattern.CASE_INSENSITIVE))
         val target = device.wait(Until.findObject(selector), 10_000) ?: device.findObject(By.desc(text))
@@ -58,10 +66,19 @@ class UiFlowTest {
         device.waitForIdle()
     }
 
+    /**
+     * Small screens keep controls below the fold; swipe the panel until the target shows.
+     * Swipes stay in the middle half of the panel, away from system gesture zones.
+     */
     private fun scrollTo(text: String) {
-        repeat(8) {
-            if (device.hasObject(By.text(text))) return
-            device.swipe(device.displayWidth / 2, device.displayHeight * 4 / 5, device.displayWidth / 2, device.displayHeight / 3, 20)
+        for (down in listOf(true, false)) {
+            repeat(10) {
+                if (device.wait(Until.hasObject(By.textContains(text)), 300)) return
+                val area = device.findObject(By.scrollable(true))?.visibleBounds ?: return
+                val (low, high) = area.centerY() + area.height() / 4 to area.centerY() - area.height() / 4
+                device.swipe(area.centerX(), if (down) low else high, area.centerX(), if (down) high else low, 30)
+                device.waitForIdle()
+            }
         }
     }
 

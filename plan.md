@@ -367,3 +367,17 @@ require consented physical sessions and must not be fabricated.
   Robolectric/JDK cannot run API 36; needs an API 36+ emulator image, planned for M6);
   NativeModelTest rotation assertion needs a consented or synthetic *person* image —
   none is committed, so it is recorded as pending rather than faked.
+
+### 0.6.16 — fix(ci): make the remote emulator pipeline pass
+
+- Evidence: runs for 0.5.13/0.5.14 failed remotely. Causes: (1) the runner's older
+  ShellCheck reports indirectly invoked stage functions as SC2317 (local 0.11 uses
+  SC2329); (2) the default CI emulator skin is 320×640 mdpi, so buttons were below the
+  fold and UiAutomator never scrolled.
+- Done: disable SC2317 alongside SC2329; CI emulator uses the `pixel_6` profile (a
+  realistic Android 14 phone); UiFlowTest scrolls targets into view with swipes kept in
+  the middle of the panel (edge swipes triggered the system home gesture/notification
+  shade when reproduced locally at 320×640); pipeline stage details are printed only
+  for successful Gradle stages so a failure never shows stale counts.
+- Validation: local pipeline green incl. 4 instrumented tests on the API 34 emulator;
+  the 320×640 reproduction confirmed the root cause (not kept as a target size).

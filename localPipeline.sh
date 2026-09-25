@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 # Local quality pipeline; GitHub Actions runs this same script.
 # Stage functions are invoked indirectly through stage():
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 set -u
 set -o pipefail
 
@@ -122,18 +122,13 @@ stage_format() {
 }
 
 stage_lint() {
-    "${GRADLE[@]}" :app:lintDebug
-    local result=$?
-    local report="app/build/reports/lint-results-debug.xml"
-    [[ -f "${report}" ]] && detail "$(grep -c '<issue$' "${report}") issue(s), warnings are errors"
-    return "${result}"
+    "${GRADLE[@]}" :app:lintDebug || return 1
+    detail "$(grep -c '<issue$' app/build/reports/lint-results-debug.xml) issue(s), warnings are errors"
 }
 
 stage_tests() {
-    "${GRADLE[@]}" :app:testDebugUnitTest :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug
-    local result=$?
+    "${GRADLE[@]}" :app:testDebugUnitTest :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug || return 1
     detail "$(python3 scripts/report.py tests app/build/test-results/testDebugUnitTest) · $(python3 scripts/report.py coverage app/build/reports/kover/reportDebug.xml)"
-    return "${result}"
 }
 
 stage_apk() {
@@ -153,6 +148,7 @@ stage_e2e() {
     fi
     "${GRADLE[@]}" :app:connectedDebugAndroidTest
     local result=$?
+    # Failing instrumented runs still write results, so the counts stay informative.
     detail "$(python3 scripts/report.py tests app/build/outputs/androidTest-results/connected) on $("${ADB}" shell getprop ro.product.model | tr -d '\r')"
     return "${result}"
 }
