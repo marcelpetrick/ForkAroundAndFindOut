@@ -16,7 +16,8 @@ MARKDOWNLINT="davidanson/markdownlint-cli2:v0.23.3@sha256:d5f3f3f04b2e285dcbcdcd
 
 toolbox() { docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "${PWD}:/work" -w /work "${LINT_IMAGE}" "$@"; }
 
-lint_reuse() { toolbox reuse lint --quiet; }
+# Quiet when compliant; the full report (which files, which tags) when not.
+lint_reuse() { toolbox reuse lint --quiet || { toolbox reuse lint; return 1; }; }
 lint_ruff() { toolbox ruff check scripts && toolbox ruff format --check scripts; }
 lint_yaml() { toolbox yamllint --strict .github .yamllint.yaml .markdownlint-cli2.yaml; }
 lint_xml() {

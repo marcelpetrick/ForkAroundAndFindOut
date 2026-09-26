@@ -4,7 +4,7 @@
 # Capture genuine screenshots of the running app from an attached emulator/device.
 # Usage: scripts/screenshots.sh [OUTPUT_DIR]   (default: docs/screenshots)
 # Installs the debug APK, then captures welcome, synthetic demo (with its warning),
-# settings, camera setup with the visibility check (emulator: its virtual scene), and the
+# settings, About (legal notices), camera setup with the visibility check (emulator: its virtual scene), and the
 # demo again in dark mode and in landscape. Display settings are restored at the end.
 # The demo shows generated stick figures, never camera footage.
 set -euo pipefail
@@ -48,6 +48,11 @@ sleep 1
 tap_text "Settings"
 sleep 1
 "${adb}" exec-out screencap -p > "${out}/settings.png"
+"${adb}" shell input keyevent KEYCODE_BACK
+sleep 1
+tap_text "About"
+sleep 2
+"${adb}" exec-out screencap -p > "${out}/about.png"
 "${adb}" shell input keyevent KEYCODE_BACK
 sleep 1
 tap_text "Set up camera"

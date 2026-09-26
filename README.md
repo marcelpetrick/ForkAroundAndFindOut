@@ -49,9 +49,9 @@ stick figures, never camera footage; the setup screen shows the emulator's virtu
 | --- | --- | --- | --- |
 | ![Welcome screen](docs/screenshots/welcome.png) | ![Synthetic demo: seat 2 rests the left elbow, red border warning](docs/screenshots/demo-synthetic-warning.png) | ![Position screen with placement picture and the ten-second visibility check](docs/screenshots/setup-visibility-check.png) | ![Grouped settings screen](docs/screenshots/settings.png) |
 
-| Dark ("dim room") theme | Landscape |
-| --- | --- |
-| ![Synthetic demo in the dark theme with the reminder card](docs/screenshots/demo-dark.png) | ![Synthetic demo in landscape: preview left, seat cards right](docs/screenshots/demo-landscape.png) |
+| Dark ("dim room") theme | Landscape | About: author, GPL notice, every component and licence |
+| --- | --- | --- |
+| ![Synthetic demo in the dark theme with the reminder card](docs/screenshots/demo-dark.png) | ![Synthetic demo in landscape: preview left, seat cards right](docs/screenshots/demo-landscape.png) | ![About screen with the GPL notice and the third-party list](docs/screenshots/about.png) |
 
 ## How it works
 

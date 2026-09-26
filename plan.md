@@ -123,7 +123,7 @@ least 95 %, part of the pipeline"; "get all done, make a plan, then public relea
   release procedure).
 - [ ] L9 Backlog: split `MainActivity` (single-activity UI, excluded from detekt's LargeClass)
   into per-screen classes.
-- [ ] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
+- [x] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
   full pipeline, green CI, public release.
 
 ## Owner input log
@@ -1038,3 +1038,17 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: full local pipeline (all stages green except Format, then fixed by adopting
   ktlint 1.8 and re-verified: format, detekt, all unit/Robolectric tests, Android lint,
   coverage 97.8 %).
+
+### 0.13.51 — chore(release): public release v0.13.51 (plans v4 and v5)
+
+- Gate: `/updateDependencies` done (0.13.50); `/githubAbout` decisions applied — About text now
+  names the set-table handling, REUSE compliance and the per-release SBOM; topic `camerax`
+  (stack detail, low search intent) replaced by `parenting` (what families search for);
+  genuine screenshots refreshed on the API 36 emulator, including the new About screen;
+  release notes for 0.13.51; vision audit unchanged (real-meal targets still not measured);
+  `plan_v2/` unchanged since 0.5.13.
+- CI note: the run for 7d4f287 failed its Lint Suite (`reuse lint`): `agents.md` still had the
+  old one-line header in that commit, because the file was committed separately in 73600ae
+  (whose run is green). The local check had seen the working tree, not the commit. `lint.sh`
+  now prints reuse's full report on failure.
+- Release: tag `v0.13.51` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
