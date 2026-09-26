@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.detection.ElbowState
@@ -182,8 +183,8 @@ class MonitorSession(
             }
         val countdown =
             when (status) {
-                Status.GRACE -> (graceLeft + 999) / 1000
-                Status.RESTING -> (restUntil - now + 999) / 1000
+                Status.GRACE -> secondsLeft(graceLeft)
+                Status.RESTING -> secondsLeft(restUntil - now)
                 else -> 0
             }
         return MonitorUiState(
@@ -200,6 +201,9 @@ class MonitorSession(
             hiddenArm = if (monitor.active) hiddenArm() else null,
         )
     }
+
+    /** Whole seconds left, rounded up, so a countdown never shows 0 while it still runs. */
+    private fun secondsLeft(ms: Long) = (ms + MS_PER_SECOND - 1) / MS_PER_SECOND
 
     /** Pause silences at once; resume restarts the grace period and ends any rest. */
     fun togglePause(now: Long): Sound {
@@ -260,6 +264,7 @@ class MonitorSession(
         const val REST_MS = 30_000L
         const val THANKS_MS = 2_000L
         const val NOBODY_MS = 20_000L
+        const val MS_PER_SECOND = 1000L
 
         /** An arm hidden in this share of recent in-view frames is reported. */
         const val HIDDEN_SHARE = 0.7

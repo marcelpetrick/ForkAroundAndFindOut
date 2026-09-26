@@ -1,8 +1,15 @@
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Fork Around & Find Out
 
 [![Pipeline](https://github.com/marcelpetrick/ForkAroundAndFindOut/actions/workflows/pipeline.yml/badge.svg?branch=main)](https://github.com/marcelpetrick/ForkAroundAndFindOut/actions/workflows/pipeline.yml)
 [![Latest Release](https://img.shields.io/github/v/release/marcelpetrick/ForkAroundAndFindOut?sort=semver&include_prereleases)](https://github.com/marcelpetrick/ForkAroundAndFindOut/releases/latest)
 [![License: GPL v3 or later](https://img.shields.io/badge/license-GPLv3%20or%20later-blue.svg)](LICENSE)
+[![REUSE compliant](https://img.shields.io/badge/REUSE-compliant-green.svg)](docs/licensing.md#1-every-file-is-tagged-reuse-33)
+[![SBOM: CycloneDX](https://img.shields.io/badge/SBOM-CycloneDX%201.6-blueviolet.svg)](docs/licensing.md#2-the-software-bill-of-materials)
+[![Static analysis: detekt](https://img.shields.io/badge/static%20analysis-detekt-orange.svg)](detekt.yml)
+[![Code style: ktlint](https://img.shields.io/badge/code%20style-ktlint-7f52ff.svg)](build.gradle.kts)
 [![Android 14+](https://img.shields.io/badge/Android-14%2B%20%28API%2034%29-3ddc84.svg)](https://developer.android.com/about/versions/14)
 [![Kotlin 2.2](https://img.shields.io/badge/Kotlin-2.2-7f52ff.svg)](https://kotlinlang.org/)
 [![CameraX 1.6.2](https://img.shields.io/badge/CameraX-1.6.2-4285f4.svg)](https://developer.android.com/media/camera/camerax)
@@ -48,7 +55,7 @@ stick figures, never camera footage; the setup screen shows the emulator's virtu
 
 ## How it works
 
-```
+```text
 camera (CameraX, 640×360 analysis) → MediaPipe Pose Landmarker (≤ 4 people, 33 landmarks)
   → seat tracking (no faces, no identity) → table-relative arm geometry + motion
   → conservative rule: stationary, bent, supported elbow on the table
@@ -156,13 +163,15 @@ Release APKs are arm64-only and signed with the project key when it is configure
 ## Pipeline and CI
 
 `./localPipeline.sh` runs numbered stages — models, ShellCheck, Python and chime check,
-whitespace, ktlint, Android lint (warnings are errors), unit tests with merged coverage,
-APK builds, end-to-end tests, Docker smoke test, coverage report, app launch — and prints
-a PASS/FAIL/WARN/SKIP summary. `--help` lists the options (`--noRun`, `--noOpen`,
+whitespace, the **lint suite** (REUSE/SPDX, ruff, yamllint, xmllint, hadolint, actionlint,
+markdownlint in pinned containers), ktlint, **detekt**, Android lint (warnings are errors),
+unit tests with merged coverage (**gate ≥ 95 % lines**), APK builds, **SBOM**, end-to-end
+tests, Docker smoke test, coverage report, app launch — and prints a PASS/FAIL/WARN/SKIP
+summary. `--help` lists the options (`--noRun`, `--noOpen`,
 `--e2e auto|required|skip`, `--docker …`, `--report-dir`). GitHub Actions runs the same
 script inside an API 34 emulator with end-to-end and Docker required, signs the release
 from repository secrets, uploads APKs and reports, publishes the image to GHCR and, for
-`v*` tags, creates a GitHub release. All scripts: [docs/scripts.md](docs/scripts.md).
+`v*` tags, creates a GitHub release with the APK, its SHA-256 and the CycloneDX SBOM. All scripts: [docs/scripts.md](docs/scripts.md).
 
 ## Docker and GHCR
 
@@ -187,8 +196,9 @@ Not planned, ever: a Raspberry Pi or multi-camera appliance (owner decision).
 
 ## License and notices
 
-GPL-3.0-or-later ([LICENSE](LICENSE)). Third-party components (MediaPipe Tasks and
-models, AndroidX/CameraX, Kotlin — all Apache-2.0) are listed in [NOTICES.md](NOTICES.md)
-and on the in-app About screen. Planning history: [plan.md](plan.md) (ledger) and
+GPL-3.0-or-later ([LICENSE](LICENSE)). Every file carries SPDX tags (REUSE 3.3, checked in
+CI). The release SBOM lists every bundled component; the in-app About screen shows the same
+list with licences, the required notices and the full licence texts. Summary:
+[NOTICES.md](NOTICES.md); details and the GPLv3 review: [docs/licensing.md](docs/licensing.md). Planning history: [plan.md](plan.md) (ledger) and
 [plan_v2](plan_v2/plan_v2.md) (review and plan of record); original [vision](vision.md);
 [working rules](agents.md).

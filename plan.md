@@ -1,6 +1,7 @@
-# Implementation plan and delivery ledger
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Implementation plan and delivery ledger
 
 ## Goal and interpretation
 
@@ -93,30 +94,35 @@ and what dependencies are used, with their license"; "make sure everything is SP
 create an SBOM as part of the release pipeline"; "everything tested and covered, coverage at
 least 95 %, part of the pipeline"; "get all done, make a plan, then public release again".
 
-- [ ] L1 SPDX everywhere: every authored text file carries `SPDX-License-Identifier`; binary
+- [x] L1 SPDX everywhere: every authored text file carries `SPDX-License-Identifier`; binary
   and generated files (PNG, WAV, models, wrapper JAR) are annotated in `REUSE.toml`;
   `scripts/spdx.py` checks it and runs in the pipeline (Python stage), so a new untagged file
   fails CI.
-- [ ] L2 SBOM: CycloneDX JSON for the release runtime classpath (`org.cyclonedx.bom` Gradle
+- [x] L2 SBOM: CycloneDX JSON for the release runtime classpath (`org.cyclonedx.bom` Gradle
   plugin, pinned), plus the bundled models as components; built by the pipeline, attached to
   every GitHub release, served by the Docker image and uploaded as a CI artifact.
-- [ ] L3 About screen: author and copyright, GPL notice with warranty disclaimer (GPLv3 §§ 0,
+- [x] L3 About screen: author and copyright, GPL notice with warranty disclaimer (GPLv3 §§ 0,
   15–16 "appropriate legal notices" for an interactive program), then every bundled
   third-party component with version, license and link — generated from the SBOM into a
   checked-in asset (`scripts/licenses.py`, `--check` in the pipeline, so the screen can never
   drift from what is shipped); full license texts (GPL-3.0, Apache-2.0) readable in the app.
-- [ ] L4 GPLv3 audit: `LICENSE` (full text), `LICENSES/` (GPL-3.0-or-later, Apache-2.0), headers,
+- [x] L4 GPLv3 audit: `LICENSE` (full text), `LICENSES/` (GPL-3.0-or-later, Apache-2.0), headers,
   corresponding source for every binary (release notes and Docker install page link the exact
   tag), third-party license texts shipped with the APK and the image, Apache-2.0 compatibility
   recorded in `NOTICES.md`, and `docs/licensing.md` explaining it.
-- [ ] L5 Coverage: keep the merged Kover gate (≥ 95 % lines, `koverVerifyAll`, already a
+- [x] L5 Coverage: keep the merged Kover gate (≥ 95 % lines, `koverVerifyAll`, already a
   pipeline stage and CI gate); cover all new code; publish the coverage figure in the summary
   and the release notes.
-- [ ] L7 Linters for the whole stack in the pipeline and CI, before the release (owner
+- [x] L7 Linters for the whole stack in the pipeline and CI, before the release (owner
   request): detekt (Kotlin static analysis, alongside ktlint and Android lint), ruff (Python),
   ShellCheck (kept), actionlint (GitHub workflow), hadolint (Dockerfile), yamllint, xmllint
   (well-formed XML resources), markdownlint (docs) — each pinned, each a numbered stage or
   part of one, failures fail the pipeline.
+- [ ] L8 Owner request: collect all of today's guidelines in `agents.md` as a real working guide
+  (plan first, reviews into the plan, product principles, quality gates, licensing, docs,
+  release procedure).
+- [ ] L9 Backlog: split `MainActivity` (single-activity UI, excluded from detekt's LargeClass)
+  into per-screen classes.
 - [ ] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
   full pipeline, green CI, public release.
 
@@ -159,6 +165,8 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   "everything SPDX tagged, and create an SBOM as part of the release pipeline"; "everything
   tested and covered, at least 95 %, coverage part of the pipeline"; "get all done, make a
   plan"; "then public release, again".
+- 2026-09-26: "yes, REUSE is a good thing, make sure we have a badge for the README"; "also mark
+  all the guidelines I gave today in agents.md, so that we collect some really good guide".
 - 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
   release"; "big plan, then iterate and get it done".
 
@@ -975,3 +983,31 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: TemporalFilter (hold, no hold for SUSPECT/gaps/sparse history, zero hold),
   Detector (brief occlusion, hidden hand bridge, moved elbow, expiry, hidden from start),
   MonitorSession and Robolectric hint, replay option; full local pipeline.
+
+### 0.13.48 — feat: REUSE/SPDX everywhere, full linter suite, SBOM in the release and a licence-complete About screen (plan v5)
+
+- L1/L7 lint and licensing gates: every file REUSE 3.3 compliant (canonical
+  `SPDX-FileCopyrightText`/`SPDX-License-Identifier` headers, `REUSE.toml` for binaries, JSON,
+  wrapper, `plan_v2/`, models and verbatim notices, `LICENSES/`); new pipeline stages *Lint
+  Suite* (`scripts/lint.sh`: reuse, ruff, yamllint, xmllint, hadolint, actionlint,
+  markdownlint in pinned images; `docker/lint/Dockerfile`, `ruff.toml`, `.yamllint.yaml`,
+  `.markdownlint-cli2.yaml`) and *Detekt* (`detekt.yml`); all findings fixed: magic numbers
+  named (MediaPipe `Joint` indices, the arm rule's thresholds, tolerances), long functions
+  split (arm rule, temporal filter, monitor, alarm policy, replay, seat tracker, overlay,
+  settings, activity), intended boundary catches annotated with reasons; `MainActivity`
+  size recorded as backlog L9. REUSE badge (backed by the CI gate) plus SBOM/detekt/ktlint
+  badges in the README.
+- L2 SBOM: CycloneDX plugin 3.4.1 over the release runtime classpath; `scripts/sbom.py build`
+  adds the app, the models and licence choices → `build/sbom/*.cdx.json` (pipeline stage
+  *SBOM*, CI artifact, GitHub release asset, served by the Docker image).
+- L3/L4 About and GPLv3: author, copyright, GPL notice with the warranty disclaimer and the
+  full GPL text, the exact source tag, all 93 bundled components with version and SPDX
+  licence (from the SBOM; `notices --check` in the pipeline), the Apache-2.0/BSD-3-Clause/MIT
+  texts, MediaPipe's and jakarta.inject's Apache NOTICE files (paged) and the protobuf and
+  Checker Framework copyright notices; `NOTICES.md` rewritten; `docs/licensing.md` records
+  the compatibility review, the MIT choice for checker-compat-qual, the scan of MediaPipe's
+  187 native-library notices and one honest open question (OpenCV's generic 4-clause
+  template). Docker page links SBOM, licences and the source tag; smoke test checks them.
+- L5 coverage: gate unchanged (≥ 95 % lines, `koverVerifyAll`); new code covered.
+- Validation: `reuse lint` compliant (all files), all 7 container linters clean, detekt 0
+  findings, full local pipeline.

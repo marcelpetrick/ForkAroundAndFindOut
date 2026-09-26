@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.camera
 
 import android.graphics.Bitmap
@@ -222,7 +223,7 @@ class CameraTest {
         val fallback =
             MediaPipeEngine(context, gpu, { _, _ -> }, { }, { _, _, processor ->
                 requested += processor
-                if (processor == Processor.GPU) throw IllegalStateException("no GPU delegate")
+                check(processor != Processor.GPU) { "no GPU delegate" }
                 native
             })
         assertEquals(Processor.CPU, fallback.processor)
@@ -437,6 +438,7 @@ class QueuedExecutor : AbstractExecutorService() {
 
 /** JVM cannot load Android JNI. Instrumentation separately runs the real native model. */
 @Implements(value = PoseLandmarker::class, isInAndroidSdk = false)
+@Suppress("UtilityClassWithPublicConstructor") // Robolectric instantiates shadow classes
 class ShadowLandmarker {
     companion object {
         @JvmStatic

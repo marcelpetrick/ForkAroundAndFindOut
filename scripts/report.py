@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Summarize JUnit XML results or Kover line coverage for the pipeline summary.
 
 Usage: scripts/report.py tests DIR...  -> "N tests, F failed, S skipped"
        scripts/report.py coverage XML  -> "line coverage 98.2% (1198/1220)"
 """
+
 import sys
-import xml.etree.ElementTree as ElementTree
 from pathlib import Path
+from xml.etree import ElementTree
 
 
 def tests(*directories: Path) -> str:

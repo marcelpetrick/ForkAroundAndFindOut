@@ -1,6 +1,7 @@
-# Architecture
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Architecture
 
 > MediaPipe determines where the body is. Our own lightweight temporal classifier
 > determines whether an elbow is resting on the table. (vision §34)
@@ -18,7 +19,7 @@ Kover merges all four modules into one report; the 95 % line gate applies to the
 
 ## Runtime pipeline
 
-```
+```text
  CameraX Preview (720p) ─────────────────────────────► PreviewView (FIT_CENTER)
  CameraX ImageAnalysis (640×360 RGBA, KEEP_ONLY_LATEST)
    │ analysis thread

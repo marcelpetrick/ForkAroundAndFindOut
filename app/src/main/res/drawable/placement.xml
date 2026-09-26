@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Camera placement, side view: phone above head height at a table corner, tilted down so
      every shoulder, elbow and wrist and the whole tabletop are in view. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"

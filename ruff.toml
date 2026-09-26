@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Python helper scripts (scripts/*.py): lint and format rules for `ruff` (scripts/lint.sh).
+line-length = 120
+target-version = "py311"
+
+[lint]
+# pycodestyle, pyflakes, imports, upgrades, bugbear, simplify, naming, pylint, executables, ruff.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "N", "PL", "EXE", "RUF"]
+# Small CLI scripts: argv parsing branches and literal thresholds are fine here.
+ignore = ["PLR2004", "PLR0912", "PLR0915"]

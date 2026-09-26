@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Evaluate recorded training sessions on the desktop (see docs/data.md).
 # Usage: scripts/replay.sh replay [--trigger-ms N] [--clear-ms N] [--cooldown-ms N] [--window-ms N] LOG...
 #        scripts/replay.sh demo-log OUT.jsonl.gz [LOOPS]

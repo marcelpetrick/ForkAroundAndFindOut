@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.detection.ElbowState
@@ -79,6 +80,7 @@ object SessionLog {
     private fun polygon(polygon: Polygon): String = polygon.points.joinToString(",", "[", "]") { "[${n(it.x)},${n(it.y)}]" }
 
     /** Parses lines of a session log. A truncated last line (app killed mid-write) is ignored. */
+    @Suppress("TooGenericExceptionCaught") // a malformed line is reported with its line number
     fun read(lines: Sequence<String>): Recording {
         var header: Map<*, *>? = null
         val frames = mutableListOf<Frame>()
@@ -198,7 +200,7 @@ data class ReplayReport(
                 "positive labels detected %d/%d, UNKNOWN %.1f%%, live/replay agreement %.1f%%",
             session,
             frames,
-            durationMs / 60_000.0,
+            durationMs / MS_PER_MINUTE,
             reminders,
             remindersNearNegativeLabels,
             positiveDetected,
@@ -227,36 +229,18 @@ object Replay {
         val settings = recording.settings.copy(timing = timing, graceMs = 0)
         val monitor = Monitor(settings)
         monitor.start(recording.frames.firstOrNull()?.timeMs ?: 0)
-        val onsets = mutableListOf<Triple<Long, Int, Boolean>>()
-        val violating = mutableMapOf<Pair<Int, Boolean>, MutableList<Long>>()
-        var previous = emptySet<Pair<Int, Boolean>>()
-        var armFrames = 0
-        var unknown = 0
-        var compared = 0
-        var agreed = 0
+        val tally = Tally(recording.frames.firstOrNull()?.timeMs ?: 0, warmupMs)
         for (frame in recording.frames) {
             // The phone's 100 ms watchdog would have expired stale evidence before this frame.
             monitor.tick(frame.timeMs)
-            if (!monitor.frame(frame.poses, frame.timeMs, frame.timeMs, frame.aspect)) continue
-            val current = mutableSetOf<Pair<Int, Boolean>>()
-            for (seat in monitor.results) {
-                for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
-                    val key = seat.seat to left
-                    armFrames++
-                    if (arm.state == ElbowState.UNKNOWN) unknown++
-                    frame.live[key]?.takeIf { frame.timeMs - recording.frames.first().timeMs >= warmupMs }?.let {
-                        compared++
-                        if (it == arm.state) agreed++
-                    }
-                    if (arm.state == ElbowState.VIOLATION) {
-                        current += key
-                        violating.getOrPut(key) { mutableListOf() } += frame.timeMs
-                    }
-                }
-            }
-            (current - previous).forEach { onsets += Triple(frame.timeMs, it.first, it.second) }
-            previous = current
+            if (monitor.frame(frame.poses, frame.timeMs, frame.timeMs, frame.aspect)) tally.add(frame, monitor.results)
         }
+        val onsets = tally.onsets
+        val violating = tally.violating
+        val armFrames = tally.armFrames
+        val unknown = tally.unknown
+        val compared = tally.compared
+        val agreed = tally.agreed
 
         fun near(
             label: Label,
@@ -285,5 +269,54 @@ object Replay {
             unknownFraction = if (armFrames == 0) 0.0 else unknown.toDouble() / armFrames,
             agreement = if (compared == 0) 1.0 else agreed.toDouble() / compared,
         )
+    }
+}
+
+private const val MS_PER_MINUTE = 60_000.0
+
+/** Per-frame counts of one replay: reminder onsets, violating times, UNKNOWN share, agreement. */
+private class Tally(
+    private val start: Long,
+    private val warmupMs: Long,
+) {
+    val onsets = mutableListOf<Triple<Long, Int, Boolean>>()
+    val violating = mutableMapOf<Pair<Int, Boolean>, MutableList<Long>>()
+    var armFrames = 0
+    var unknown = 0
+    var compared = 0
+    var agreed = 0
+    private var previous = emptySet<Pair<Int, Boolean>>()
+
+    fun add(
+        frame: Frame,
+        results: List<SeatResult>,
+    ) {
+        val current = mutableSetOf<Pair<Int, Boolean>>()
+        for (seat in results) {
+            for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
+                val key = seat.seat to left
+                armFrames++
+                if (arm.state == ElbowState.UNKNOWN) unknown++
+                compare(frame, key, arm.state)
+                if (arm.state == ElbowState.VIOLATION) {
+                    current += key
+                    violating.getOrPut(key) { mutableListOf() } += frame.timeMs
+                }
+            }
+        }
+        (current - previous).forEach { onsets += Triple(frame.timeMs, it.first, it.second) }
+        previous = current
+    }
+
+    /** After the warm-up, the replayed state must equal what the phone decided live. */
+    private fun compare(
+        frame: Frame,
+        key: Pair<Int, Boolean>,
+        state: ElbowState,
+    ) {
+        val live = frame.live[key] ?: return
+        if (frame.timeMs - start < warmupMs) return
+        compared++
+        if (live == state) agreed++
     }
 }

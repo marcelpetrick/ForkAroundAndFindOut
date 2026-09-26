@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
+# REUSE 3.x annotations for files that cannot carry a comment header.
+# `reuse lint` (scripts/lint.sh, pipeline stage "Lint Suite") verifies the whole repository.
+version = 1
+
+[[annotations]]
+# Project metadata, generated media and the owner's original vision (kept unedited).
+path = [
+    "VERSION",
+    "BUILD_NUMBER",
+    "LICENSE",
+    "vision.md",
+    "models/checksums.json",
+    "app/src/main/res/raw/*.wav",
+    "docs/screenshots/*.png",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Marcel Petrick"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+# Written by the planning agent; its one-line headers are not REUSE-parseable and the
+# working agreement forbids editing plan_v2/, so the tags are asserted here.
+path = "plan_v2/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Marcel Petrick"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+# The Gradle wrapper, as distributed by Gradle.
+path = ["gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties", "gradlew"]
+precedence = "override"
+SPDX-FileCopyrightText = "2015 the original authors (Gradle)"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+# Generated from the release SBOM by scripts/sbom.py (checked by the pipeline).
+path = "app/src/main/assets/third_party.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Marcel Petrick"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+# Upstream licence file of protobuf-javalite (protocolbuffers/protobuf v26.1), shipped in the app.
+path = "app/src/main/assets/notices/protobuf.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2008 Google Inc."
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+# Upstream licence file of the Checker Framework 3.43.0 (checker-qual is used under MIT).
+path = "app/src/main/assets/notices/checker-framework.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2004-present the Checker Framework developers"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+# MediaPipe Pose Landmarker models, downloaded by scripts/models.py (not tracked in git) and
+# bundled in the APK; verified by SHA-256 against models/checksums.json.
+path = "app/src/main/assets/*.task"
+precedence = "override"
+SPDX-FileCopyrightText = "Google LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+# Apache-2.0 NOTICE files of MediaPipe Tasks (META-INF/NOTICE of tasks-core/tasks-vision 1.0.0,
+# listing the native libraries' upstream notices) and of jakarta.inject-api 2.0.1.
+path = ["app/src/main/assets/notices/mediapipe.txt", "app/src/main/assets/notices/jakarta-inject.txt"]
+precedence = "override"
+SPDX-FileCopyrightText = "Google LLC, the Eclipse Foundation and the authors listed in the notices"
+SPDX-License-Identifier = "Apache-2.0"

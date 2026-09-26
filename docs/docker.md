@@ -1,6 +1,7 @@
-# Docker distribution
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Docker distribution
 
 The product is an Android app: the camera, pose model and warnings run only on the
 phone. Docker therefore does **not** run the monitor. The image is a small, pinned
@@ -34,13 +35,16 @@ docker run --rm -p 8080:8080 fork-around-and-find-out:local
 
 `scripts/docker-dist.sh` stages `build/docker-dist/`. It prefers the signed release APK
 and falls back to the debug APK (labelled as such on the install page) when no signing
-key is configured.
+key is configured. The site also serves the release SBOM
+(`fork-around-and-find-out-<version>.cdx.json`), the licence texts under `licenses/`,
+`NOTICES.txt`, and a link to the exact source tag; the smoke test checks all of them
+([licensing](licensing.md)).
 
 ## Release signing
 
 Release APKs are signed with a dedicated key (RSA 4096). Certificate SHA-256:
 
-```
+```text
 AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0
 ```
 

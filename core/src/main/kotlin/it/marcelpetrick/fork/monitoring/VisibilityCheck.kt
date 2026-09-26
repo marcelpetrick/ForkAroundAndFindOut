@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.detection.Pose
@@ -71,7 +72,7 @@ class VisibilityCheck(
                 .key
         val armsVisible = samples.count { it.visible >= people }.toDouble() / samples.size
         val seconds = (samples.last().time - samples.first().time) / 1000.0
-        val enough = seconds * 1000 >= windowMs * 0.8
+        val enough = seconds * 1000 >= windowMs * MIN_COVERAGE
         val reason =
             when {
                 detected == 0 -> Reason.NOBODY
@@ -88,9 +89,9 @@ class VisibilityCheck(
                 samples
                     .flatMap { it.hiddenAt }
                     .map { x ->
-                        if (x < 1.0 / 3) {
+                        if (x < LEFT_THIRD) {
                             Side.LEFT
-                        } else if (x > 2.0 / 3) {
+                        } else if (x > RIGHT_THIRD) {
                             Side.RIGHT
                         } else {
                             Side.MIDDLE
@@ -106,6 +107,11 @@ class VisibilityCheck(
     companion object {
         const val WINDOW_MS = 10_000L
         const val REQUIRED_SHARE = 0.8
+
+        /** Share of the window that must be covered by evidence. */
+        const val MIN_COVERAGE = 0.8
+        const val LEFT_THIRD = 1.0 / 3
+        const val RIGHT_THIRD = 2.0 / 3
 
         /** Shoulders, elbows, wrists (MediaPipe indices). */
         val ARM_JOINTS = listOf(11, 12, 13, 14, 15, 16)

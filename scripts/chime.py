@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Generate the reminder chimes deterministically (no third-party audio).
 
 Three soft sounds, 22.05 kHz mono 16-bit, gentle attack and exponential decay:
@@ -10,6 +11,7 @@ Usage:
   scripts/chime.py           write the files into app/src/main/res/raw/
   scripts/chime.py --check   fail if a committed file differs from the generator
 """
+
 import io
 import math
 import struct
@@ -38,7 +40,9 @@ def render(notes, decay: float, harmonic: float, seconds: float) -> bytes:
             if local < 0:
                 continue
             envelope = level * min(1.0, local / 0.01) * math.exp(-local * decay)
-            value += envelope * (math.sin(2 * math.pi * frequency * local) + harmonic * math.sin(4 * math.pi * frequency * local))
+            value += envelope * (
+                math.sin(2 * math.pi * frequency * local) + harmonic * math.sin(4 * math.pi * frequency * local)
+            )
         samples.append(int(max(-1.0, min(1.0, value * 0.35)) * 32767))
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as out:

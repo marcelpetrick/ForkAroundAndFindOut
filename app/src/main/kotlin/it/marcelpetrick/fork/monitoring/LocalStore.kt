@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import android.annotation.SuppressLint
@@ -43,6 +44,7 @@ class LocalStore(
     fun add(record: JSONObject) = addAll(listOf(record))
 
     /** Writes a batch atomically: either every record is stored or none is. */
+    @Suppress("TooGenericExceptionCaught") // rolls back the atomic write, then rethrows unchanged
     fun addAll(batch: List<JSONObject>) {
         val existing = records()
         check(notice == null) { notice!! }

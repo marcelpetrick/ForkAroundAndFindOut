@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Local quality pipeline; GitHub Actions runs this same script.
 # Stage functions are invoked indirectly through stage():
 # shellcheck disable=SC2317,SC2329
@@ -35,19 +36,24 @@ Local project pipeline (GitHub Actions runs the same script):
   3. Python        byte-compile the helper scripts; verify the generated chime;
                    check relative Markdown links and anchors
   4. Whitespace    reject whitespace errors in the working tree
-  5. Format        ktlint via Spotless for Kotlin and Gradle Kotlin DSL
-  6. Android Lint  lint with warnings as errors (Kotlin compiler: -Werror)
-  7. Unit Tests    JVM (:detection, :core, :tools) + Robolectric (:app) tests, merged Kover
-                   coverage over all modules (>=95% lines), HTML report
-  8. APK Build     debug APK and unsigned release APK
-  9. E2E           instrumented tests on an attached emulator/device
+  5. Lint Suite    scripts/lint.sh in pinned containers: reuse (REUSE/SPDX), ruff, yamllint,
+                   xmllint, hadolint, actionlint, markdownlint (needs Docker; follows --docker)
+  6. Format        ktlint via Spotless for Kotlin and Gradle Kotlin DSL
+  7. Detekt        Kotlin static analysis over all modules (detekt.yml, findings fail)
+  8. Android Lint  lint with warnings as errors (Kotlin compiler: -Werror)
+  9. Unit Tests    JVM (:detection, :core, :tools) + Robolectric (:app) tests, merged Kover
+                   coverage over all modules (>=95% lines, gate fails below), HTML report
+ 10. APK Build     debug APK and unsigned release APK
+ 11. SBOM          CycloneDX SBOM of the release runtime classpath plus the bundled models
+                   (build/sbom/); the About screen's component list must match it
+ 12. E2E           instrumented tests on an attached emulator/device
                    auto: run when a device is attached, else WARN; required: FAIL
                    without a device; skip: do not run
- 10. Docker        build the APK distribution image and smoke-test it (from step 08)
- 11. Open Coverage open the coverage HTML report (suppressed by --noOpen or in CI)
- 12. Launch App    install and start the debug APK on an attached device
+ 13. Docker        build the APK distribution image (APK, SBOM, licences) and smoke-test it
+ 14. Open Coverage open the coverage HTML report (suppressed by --noOpen or in CI)
+ 15. Launch App    install and start the debug APK on an attached device
                    (suppressed by --noRun; never affects the result)
- 13. Summary       stage-by-stage PASS/FAIL/WARN/SKIP with details
+ 16. Summary       stage-by-stage PASS/FAIL/WARN/SKIP with details
 
 Every stage runs; a stage whose prerequisite failed is skipped. The exit code is
 non-zero when any mandatory stage fails. Use --report-dir to keep stage logs and the
@@ -120,6 +126,32 @@ stage_whitespace() {
     git diff --check && git diff --cached --check && detail "no whitespace errors"
 }
 
+# Docker-based stages share one availability rule: skip on request, WARN (auto) or FAIL (required)
+# without a daemon.
+docker_ready() {
+    if [[ "${DOCKER_MODE}" == "skip" ]]; then
+        detail "skipped by --docker skip"
+        return 4
+    fi
+    if ! docker info >/dev/null 2>&1; then
+        detail "Docker daemon unavailable"
+        [[ "${DOCKER_MODE}" == "required" ]] && return 1
+        return 3
+    fi
+    return 0
+}
+
+stage_lint_suite() {
+    docker_ready || return $?
+    scripts/lint.sh | tee "${LOG_DIR}/lint-suite.out" || return 1
+    detail "$(tail -n 1 "${LOG_DIR}/lint-suite.out")"
+}
+
+stage_detekt() {
+    "${GRADLE[@]}" detekt || return 1
+    detail "0 findings over $(git ls-files '*.kt' | wc -l) Kotlin files (detekt.yml)"
+}
+
 stage_format() {
     "${GRADLE[@]}" spotlessCheck && detail "ktlint clean (Kotlin + Gradle KTS)"
 }
@@ -138,6 +170,15 @@ stage_tests() {
 stage_apk() {
     "${GRADLE[@]}" :app:assembleDebug :app:assembleRelease || return 1
     detail "$(find app/build/outputs/apk -name '*.apk' -printf '%f %s bytes\n' | sort | awk '{printf "%s%s (%.1f MB)", (NR > 1 ? ", " : ""), $1, $2 / 1048576}')"
+}
+
+stage_sbom() {
+    "${GRADLE[@]}" :app:cyclonedxDirectBom || return 1
+    local out
+    out="$(python3 scripts/sbom.py build)" || return 1
+    python3 scripts/sbom.py notices --check || return 1
+    cp build/sbom/*.cdx.json "${LOG_DIR}/" 2>/dev/null || true
+    detail "$(python3 -c 'import json, sys; b = json.load(open(sys.argv[1])); print(len(b["components"]), "components, CycloneDX", b["specVersion"])' "${out#Wrote }") · About list matches"
 }
 
 stage_e2e() {
@@ -164,19 +205,7 @@ stage_e2e() {
 }
 
 stage_docker() {
-    if [[ "${DOCKER_MODE}" == "skip" ]]; then
-        detail "skipped by --docker skip"
-        return 4
-    fi
-    if [[ ! -f Dockerfile ]]; then
-        detail "no Dockerfile yet"
-        return 4
-    fi
-    if ! docker info >/dev/null 2>&1; then
-        detail "Docker daemon unavailable"
-        [[ "${DOCKER_MODE}" == "required" ]] && return 1
-        return 3
-    fi
+    docker_ready || return $?
     scripts/docker-smoke.sh && detail "image built; APK, checksum and license served"
 }
 
@@ -284,12 +313,15 @@ main() {
     stage "ShellCheck" yes "" stage_shellcheck
     stage "Python" yes "" stage_python
     stage "Whitespace" yes "" stage_whitespace
+    stage "Lint Suite" yes "" stage_lint_suite
     stage "Format" yes "" stage_format
+    stage "Detekt" yes "" stage_detekt
     stage "Android Lint" yes "Models" stage_lint
     stage "Unit Tests" yes "Models" stage_tests
     stage "APK Build" yes "Models" stage_apk
+    stage "SBOM" yes "APK Build" stage_sbom
     stage "E2E" yes "APK Build" stage_e2e
-    stage "Docker" yes "APK Build" stage_docker
+    stage "Docker" yes "APK Build,SBOM" stage_docker
     stage "Open Coverage" no "Unit Tests" stage_open
     stage "Launch App" no "APK Build" stage_launch
 

@@ -1,6 +1,7 @@
-# Pose framework comparison and selection
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Pose framework comparison and selection
 
 Decision date: 2026-09-25. Product stack: native Kotlin Android throughout, as
 explicitly selected by the user. This supersedes the Flutter recommendation in

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Check that relative Markdown links and image paths point to existing files, and that
 #anchors exist as headings in the target. External (http/https/mailto) links are skipped.
 
 Usage: scripts/check_links.py [FILE.md ...]   (default: all tracked *.md files)
 """
+
 import re
 import subprocess
 import sys
@@ -38,7 +40,8 @@ def check(markdown: Path) -> list:
 
 if __name__ == "__main__":
     files = [Path(f) for f in sys.argv[1:]] or [
-        Path(f) for f in subprocess.run(["git", "ls-files", "*.md"], capture_output=True, text=True, check=True).stdout.split()
+        Path(f)
+        for f in subprocess.run(["git", "ls-files", "*.md"], capture_output=True, text=True, check=True).stdout.split()
     ]
     issues = [problem for markdown in files for problem in check(markdown)]
     print("\n".join(issues) or f"{len(files)} Markdown files: all relative links resolve")

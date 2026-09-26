@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.detection.Detector
@@ -45,7 +46,7 @@ class Monitor(
 
     val health: Health
         get() =
-            when (val period = medianPeriodMs) {
+            when (medianPeriodMs) {
                 null -> Health.MEASURING
                 in 0..SLOW_MS -> Health.OK
                 in SLOW_MS..TOO_SLOW_MS -> Health.SLOW
@@ -90,20 +91,44 @@ class Monitor(
         rotation: Int = settings.calibrationRotation,
     ): Boolean {
         if (!active) return false
-        val aspectChanged = settings.calibrationAspect > 0 && abs(aspect - settings.calibrationAspect) > 0.03
-        val rotationChanged = settings.calibrationRotation >= 0 && rotation != settings.calibrationRotation
-        if (!aspect.isFinite() || aspect <= 0 || aspectChanged || rotationChanged) {
+        if (geometryChanged(aspect, rotation)) {
             calibrationInvalid = true
             pause(now)
             return false
         }
-        if (captured > now || now - captured > freshnessMs || (lastFrame != null && captured <= lastFrame!!)) return false
+        if (!fresh(captured, now)) return false
         lastFrame?.let {
             periods.addLast(captured - it)
             if (periods.size > WINDOW) periods.removeFirst()
         }
         lastFrame = captured
         results = detector!!.process(poses, captured, aspect, gapMs)
+        count(results)
+        return true
+    }
+
+    /** The picture's shape or rotation differs from the calibration: the outline no longer fits. */
+    private fun geometryChanged(
+        aspect: Double,
+        rotation: Int,
+    ): Boolean {
+        if (!(aspect.isFinite() && aspect > 0)) return true
+        val aspectChanged = settings.calibrationAspect > 0 && abs(aspect - settings.calibrationAspect) > ASPECT_TOLERANCE
+        val rotationChanged = settings.calibrationRotation >= 0 && rotation != settings.calibrationRotation
+        return aspectChanged || rotationChanged
+    }
+
+    /** Not from the future, not too old on arrival, and newer than the last accepted frame. */
+    private fun fresh(
+        captured: Long,
+        now: Long,
+    ): Boolean {
+        val newer = lastFrame?.let { captured > it } ?: true
+        return captured <= now && now - captured <= freshnessMs && newer
+    }
+
+    /** Violation episodes per elbow and the running mean joint confidence. */
+    private fun count(results: List<SeatResult>) {
         val current = mutableSetOf<Pair<Int, Boolean>>()
         for (seat in results) {
             for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
@@ -116,7 +141,6 @@ class Monitor(
         }
         violations += (current - previouslyViolating).size
         previouslyViolating = current
-        return true
     }
 
     fun tick(now: Long): Boolean {
@@ -139,6 +163,9 @@ class Monitor(
         const val SLOW_MS = 200L
         const val TOO_SLOW_MS = 700L
         const val FRESHNESS_FLOOR_MS = 1500L
+
+        /** A picture shape this far from the calibrated one means the geometry changed. */
+        const val ASPECT_TOLERANCE = 0.03
     }
 }
 
@@ -156,28 +183,40 @@ class AlarmPolicy {
         now: Long,
         repeatMs: Long,
     ): Sound {
-        if (!active || mode == AudioMode.OFF) {
-            val stop = wasActive || continuous
-            wasActive = false
-            continuous = false
-            return if (stop) Sound.STOP else Sound.NONE
-        }
+        if (!active || mode == AudioMode.OFF) return silent()
         val first = !wasActive
         wasActive = true
-        if (mode == AudioMode.CONTINUOUS) {
-            if (continuous) return Sound.NONE
-            continuous = true
-            return Sound.START
-        }
+        return if (mode == AudioMode.CONTINUOUS) continuousSound() else chime(first, mode, now, repeatMs)
+    }
+
+    /** Any reminder ended (or sound is off): stop whatever plays. */
+    private fun silent(): Sound {
+        val stop = wasActive || continuous
+        wasActive = false
+        continuous = false
+        return if (stop) Sound.STOP else Sound.NONE
+    }
+
+    private fun continuousSound(): Sound {
+        if (continuous) return Sound.NONE
+        continuous = true
+        return Sound.START
+    }
+
+    /** Once, or again every [repeatMs]; a switch away from continuous stops the loop first. */
+    private fun chime(
+        first: Boolean,
+        mode: AudioMode,
+        now: Long,
+        repeatMs: Long,
+    ): Sound {
         if (continuous) {
             continuous = false
             wasActive = false
             return Sound.STOP
         }
-        if (first || (mode == AudioMode.REPEAT && now - lastBeep >= repeatMs)) {
-            lastBeep = now
-            return Sound.BEEP
-        }
-        return Sound.NONE
+        if (!first && !(mode == AudioMode.REPEAT && now - lastBeep >= repeatMs)) return Sound.NONE
+        lastBeep = now
+        return Sound.BEEP
     }
 }

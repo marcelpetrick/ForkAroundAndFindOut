@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fetch immutable MediaPipe model version 1 and verify SHA-256 before bundling."""
+
 import hashlib
 import json
 from pathlib import Path

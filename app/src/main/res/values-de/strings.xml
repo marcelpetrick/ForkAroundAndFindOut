@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <resources>
     <string name="welcome_intro">Eine freundliche Erinnerung an „Ellbogen vom Tisch“ beim Familienessen.</string>
     <string name="welcome_privacy">Alles läuft auf diesem Handy. Es werden keine Bilder oder Videos gespeichert, nichts wird hochgeladen und niemand wird identifiziert.</string>
@@ -143,9 +144,7 @@
     <string name="deleted_log">Sitzungsprotokoll gelöscht.</string>
     <string name="about">Über die App</string>
     <string name="about_version">Version %1$s (Build %2$d)</string>
-    <string name="about_license">Freie Software von Marcel Petrick unter der GNU General Public License v3 oder später. Du darfst sie nutzen, untersuchen, weitergeben und verbessern; sie kommt ohne Gewährleistung.</string>
-    <string name="about_notices">Komponenten Dritter (Apache License 2.0): MediaPipe Tasks Vision 1.0.0 und die Pose-Landmarker-Modelle Full/Lite (Modellkarte: BlazePose GHUM 3D), AndroidX CameraX 1.6.2 und Activity, Kotlin-Standardbibliothek. Der Hinweiston wird von diesem Projekt erzeugt. Details: NOTICES.md im Quellcode.</string>
-    <string name="about_source">Quellcode, Dokumentation und Releases: https://github.com/marcelpetrick/ForkAroundAndFindOut</string>
+    <string name="about_license">Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern, entweder gemäß Version 3 der Lizenz oder (nach deiner Wahl) jeder späteren Version. Es wird in der Hoffnung verbreitet, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FÜR EINEN BESTIMMTEN ZWECK. Verbindlich ist der englische Lizenztext.</string>
     <string name="thank_you">Danke!</string>
     <string name="reminder_detail">%1$s Platz · %2$s</string>
     <string name="seat_colour_1">Grüner</string>
@@ -228,4 +227,18 @@
     <string name="hidden_arm">%1$s Platz · der %2$s Arm ist oft verdeckt, vielleicht durch einen Topf oder eine Flasche. Verschiebe ihn oder das Handy, damit Ellbogen und Hand sichtbar bleiben.</string>
     <string name="arm_left">linke</string>
     <string name="arm_right">rechte</string>
+    <string name="about_author">Entwickelt von Marcel Petrick.</string>
+    <string name="about_copyright">Copyright © 2026 Marcel Petrick.</string>
+    <string name="read_gpl">GNU General Public License v3 lesen</string>
+    <string name="gpl_title">GNU General Public License v3</string>
+    <string name="about_source_version">Vollständiger Quellcode dieser Version: %1$s</string>
+    <string name="third_party_title">Komponenten Dritter (%1$d)</string>
+    <string name="third_party_help">Alles, was diese App enthält, laut ihrer Software-Stückliste (SBOM). Alle Lizenzen sind mit der GPL v3 vereinbar.</string>
+    <string name="third_party_entry">%1$s %2$s · %3$s</string>
+    <string name="read_notice">Hinweise zu %1$s</string>
+    <string name="read_license">Lizenz %1$s lesen</string>
+    <string name="license_texts_title">Lizenztexte</string>
+    <string name="text_page">Seite %1$d von %2$d</string>
+    <string name="previous_page">Vorherige Seite</string>
+    <string name="next_page">Nächste Seite</string>
 </resources>

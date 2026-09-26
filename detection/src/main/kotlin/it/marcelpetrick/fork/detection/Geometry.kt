@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.detection
 
 import kotlin.math.acos
@@ -21,14 +22,14 @@ class Polygon(
     val points: List<Point>,
 ) {
     init {
-        require(points.size == 4 && points.all { it.inImage() }) { "Tap four corners inside the image" }
-        val turns = points.indices.map { i -> cross(points[i], points[(i + 1) % 4], points[(i + 2) % 4]) }
-        require(turns.all { it > 0.0001 } || turns.all { it < -0.0001 }) {
+        require(points.size == CORNERS && points.all { it.inImage() }) { "Tap four corners inside the image" }
+        val turns = points.indices.map { i -> cross(points[i], points[(i + 1) % CORNERS], points[(i + 2) % CORNERS]) }
+        require(turns.all { it > MIN_TURN } || turns.all { it < -MIN_TURN }) {
             "Corners must form a non-crossing convex table or seat region"
         }
     }
 
-    fun contains(point: Point): Boolean = signedDistance(point) >= -1e-9
+    fun contains(point: Point): Boolean = signedDistance(point) >= -EPSILON
 
     /** Positive inside; negative outside. Zero on the perimeter. */
     fun signedDistance(
@@ -47,10 +48,10 @@ class Polygon(
             val t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)).coerceIn(0.0, 1.0)
             distance = min(distance, p.distance(Point(a.x + t * dx, a.y + t * dy)))
         }
-        return if (signs.all { it >= -1e-9 } || signs.all { it <= 1e-9 }) distance else -distance
+        return if (signs.all { it >= -EPSILON } || signs.all { it <= EPSILON }) distance else -distance
     }
 
-    fun center(): Point = Point(points.sumOf { it.x } / 4, points.sumOf { it.y } / 4)
+    fun center(): Point = Point(points.sumOf { it.x } / CORNERS, points.sumOf { it.y } / CORNERS)
 
     /** Separating-axis test for convex regions; touching edges count as overlap. */
     fun overlaps(other: Polygon): Boolean =
@@ -77,7 +78,16 @@ fun angle(
     b: Point,
 ): Double {
     val divisor = a.distance(vertex) * b.distance(vertex)
-    if (divisor < 1e-9) return 0.0
+    if (divisor < EPSILON) return 0.0
     val dot = (a.x - vertex.x) * (b.x - vertex.x) + (a.y - vertex.y) * (b.y - vertex.y)
     return Math.toDegrees(acos((dot / divisor).coerceIn(-1.0, 1.0)))
 }
+
+/** Tables and seats are quadrilaterals. */
+const val CORNERS = 4
+
+/** Smallest turn (cross product) that still counts as convex, not collinear. */
+private const val MIN_TURN = 0.0001
+
+/** Numerical tolerance for "on the edge". */
+private const val EPSILON = 1e-9

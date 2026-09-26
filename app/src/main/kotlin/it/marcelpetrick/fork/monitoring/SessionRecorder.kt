@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import java.io.File
@@ -33,7 +34,7 @@ class SessionRecorder(
         directory.mkdirs()
         check(SessionFiles.totalBytes(directory) < limitBytes) { "Session log storage is full. Export and delete logs first." }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(now)
-        file = File(directory, "$stamp-${session.take(8)}.jsonl.gz")
+        file = File(directory, "$stamp-${session.take(ID_PREFIX)}.jsonl.gz")
         writer = GZIPOutputStream(file.outputStream(), true).bufferedWriter()
         write(SessionLog.header(session, app, settings), flush = true)
     }
@@ -79,3 +80,6 @@ object SessionFiles {
         list(directory).forEach { it.delete() }
     }
 }
+
+/** Characters of the session id kept in a log file name. */
+private const val ID_PREFIX = 8

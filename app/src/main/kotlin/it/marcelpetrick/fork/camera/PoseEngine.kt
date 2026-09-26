@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.camera
 
 import android.content.Context
@@ -58,14 +59,15 @@ class MediaPipeEngine(
                     .build(),
             ).setRunningMode(RunningMode.LIVE_STREAM)
             .setNumPoses(settings.people)
-            .setMinPoseDetectionConfidence(0.6f)
-            .setMinPosePresenceConfidence(0.6f)
-            .setMinTrackingConfidence(0.6f)
+            .setMinPoseDetectionConfidence(MIN_CONFIDENCE)
+            .setMinPosePresenceConfidence(MIN_CONFIDENCE)
+            .setMinTrackingConfidence(MIN_CONFIDENCE)
             .setResultListener { result, _ -> handle(result) }
             .setErrorListener { error -> fail(error) }
             .build()
 
     /** The GPU delegate is experimental: when it cannot start, inference runs on the CPU. */
+    @Suppress("TooGenericExceptionCaught") // MediaPipe reports delegate failures as runtime exceptions
     private val landmarker =
         try {
             factory(context, options(settings.processor), settings.processor)
@@ -98,6 +100,7 @@ class MediaPipeEngine(
         onError(error)
     }
 
+    @Suppress("TooGenericExceptionCaught") // clears the in-flight slot, then rethrows unchanged
     override fun submit(
         bitmap: Bitmap,
         timeMs: Long,
@@ -119,3 +122,6 @@ class MediaPipeEngine(
         pending.set(null)
     }
 }
+
+/** MediaPipe detection, presence and tracking gates (vision §18). */
+private const val MIN_CONFIDENCE = 0.6f

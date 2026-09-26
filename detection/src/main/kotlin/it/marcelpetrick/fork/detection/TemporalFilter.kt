@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.detection
 
 enum class ElbowState { UNKNOWN, CLEAR, SUSPECT, VIOLATION }
@@ -49,45 +50,68 @@ class TemporalFilter(
         val previous = last
         last = timeMs
         val gap = timeMs < 0 || (previous != null && (timeMs <= previous || timeMs - previous > maxGapMs))
-        if (!gap && score == null && hidden && state == ElbowState.VIOLATION) {
-            val since = hiddenSince ?: timeMs.also { hiddenSince = it }
-            if (timeMs - since < timing.holdMs) return state
-        }
-        if (gap || score == null || !score.isFinite() || score !in 0.0..1.0) {
-            state = ElbowState.UNKNOWN
-            clearing = null
-            hiddenSince = null
-            return state
-        }
+        val occluded = score == null && hidden
+        if (!gap && occluded && holding(timeMs)) return state
+        val valid = score != null && score.isFinite() && score in 0.0..1.0
+        if (gap || !valid) return reset()
         hiddenSince = null
         when (state) {
-            ElbowState.UNKNOWN, ElbowState.CLEAR -> {
-                state = ElbowState.CLEAR
-                if (score >= timing.trigger && timeMs >= cooldownUntil) {
-                    state = ElbowState.SUSPECT
-                    since = timeMs
-                }
-            }
-            ElbowState.SUSPECT -> {
-                if (score < timing.trigger) {
-                    state = ElbowState.CLEAR
-                } else if (timeMs - since >= timing.triggerMs) {
-                    state = ElbowState.VIOLATION
-                }
-            }
-            ElbowState.VIOLATION -> {
-                if (score <= timing.clear) {
-                    if (clearing == null) clearing = timeMs
-                    if (timeMs - clearing!! >= timing.clearMs) {
-                        state = ElbowState.CLEAR
-                        cooldownUntil = timeMs + timing.cooldownMs
-                        clearing = null
-                    }
-                } else {
-                    clearing = null
-                }
-            }
+            ElbowState.UNKNOWN, ElbowState.CLEAR -> fromClear(timeMs, score)
+            ElbowState.SUSPECT -> fromSuspect(timeMs, score)
+            ElbowState.VIOLATION -> fromViolation(timeMs, score)
         }
         return state
+    }
+
+    /** A running reminder survives hidden joints for [Timing.holdMs]; nothing else is held. */
+    private fun holding(timeMs: Long): Boolean {
+        if (state != ElbowState.VIOLATION) return false
+        val since = hiddenSince ?: timeMs.also { hiddenSince = it }
+        return timeMs - since < timing.holdMs
+    }
+
+    private fun reset(): ElbowState {
+        state = ElbowState.UNKNOWN
+        clearing = null
+        hiddenSince = null
+        return state
+    }
+
+    private fun fromClear(
+        timeMs: Long,
+        score: Double,
+    ) {
+        state = ElbowState.CLEAR
+        if (score >= timing.trigger && timeMs >= cooldownUntil) {
+            state = ElbowState.SUSPECT
+            since = timeMs
+        }
+    }
+
+    private fun fromSuspect(
+        timeMs: Long,
+        score: Double,
+    ) {
+        if (score < timing.trigger) {
+            state = ElbowState.CLEAR
+        } else if (timeMs - since >= timing.triggerMs) {
+            state = ElbowState.VIOLATION
+        }
+    }
+
+    private fun fromViolation(
+        timeMs: Long,
+        score: Double,
+    ) {
+        if (score > timing.clear) {
+            clearing = null
+            return
+        }
+        val start = clearing ?: timeMs.also { clearing = it }
+        if (timeMs - start >= timing.clearMs) {
+            state = ElbowState.CLEAR
+            cooldownUntil = timeMs + timing.cooldownMs
+            clearing = null
+        }
     }
 }

@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 import java.util.Properties
 
 plugins {
@@ -21,6 +22,8 @@ android {
         versionName = rootProject.file("VERSION").readText().trim()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    // The full licence texts (REUSE `LICENSES/`) ship in the APK for the About screen.
+    sourceSets.getByName("main").assets.srcDir(rootProject.file("LICENSES"))
     // Release signing: a properties file (storeFile, storePassword, keyAlias, keyPassword)
     // from $FORK_SIGNING or the default local path. Without it the release stays unsigned.
     val signing =
@@ -103,4 +106,11 @@ kover {
             rule { minBound(95) }
         }
     }
+}
+// Software bill of materials: exactly what ships in the release APK (scripts/sbom.py adds the
+// bundled MediaPipe models and writes the release SBOM; scripts/licenses.py derives the About list).
+tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+    projectType = org.cyclonedx.model.Component.Type.APPLICATION
+    includeLicenseText = false
 }

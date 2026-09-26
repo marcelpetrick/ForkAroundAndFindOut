@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.detection.Polygon
@@ -77,9 +78,12 @@ data class Settings(
         require(people in 1..4 && seats.size <= people)
         require(volume in 0..100 && repeatMs >= 1000 && graceMs >= 0)
         require(calibrationAspect.isFinite() && calibrationAspect >= 0)
-        require(calibrationRotation in setOf(-1, 0, 90, 180, 270))
+        require(calibrationRotation in ROTATIONS)
     }
 
     /** Extension point for platform codecs (the app adds `decode`). */
-    companion object
+    companion object {
+        /** Sensor rotations in degrees; -1 means not calibrated yet. */
+        val ROTATIONS = setOf(-1, 0, 90, 180, 270)
+    }
 }

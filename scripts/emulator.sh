@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Boot an Android emulator headless and wait until it is ready for tests.
 # Usage: scripts/emulator.sh [AVD_NAME]   (default: ForkApi34, or $FORK_AVD)
 set -euo pipefail

@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.ui
 
 import android.content.Context
@@ -126,10 +127,11 @@ fun lensLabels(focalLengths: Map<String, Float>): List<Lens> {
     }
 }
 
-fun settingsOptions(cameras: List<Lens>): List<Option> {
-    val choices = listOf("") + cameras.map { it.id }
-    return listOf(
-        // Reminders
+/** Every setting in screen order: Reminders, Sensitivity, Camera and model, Data. */
+fun settingsOptions(cameras: List<Lens>): List<Option> = reminderOptions() + sensitivityOptions() + cameraOptions(cameras) + dataOptions()
+
+private fun reminderOptions(): List<Option> =
+    listOf(
         Option(Group.REMINDERS, R.string.option_visual, { c, s -> c.getString(visualNames.getValue(s.visual)) }) { s, d ->
             s.copy(visual = cycle(VisualMode.entries, s.visual, d))
         },
@@ -148,7 +150,11 @@ fun settingsOptions(cameras: List<Lens>): List<Option> {
         Option(Group.REMINDERS, R.string.option_grace, { c, s -> c.seconds(s.graceMs) }) { s, d ->
             s.copy(graceMs = step(s.graceMs, d, 1000, 0L..30_000L))
         },
-        // Sensitivity: a named feel first, the raw values below it.
+    )
+
+/** A named feel first, the raw values below it. */
+private fun sensitivityOptions(): List<Option> =
+    listOf(
         Option(Group.SENSITIVITY, R.string.option_sensitivity, { c, s ->
             Sensitivity.of(s.timing)?.let { c.getString(sensitivityNames.getValue(it)) } ?: c.getString(R.string.sensitivity_custom)
         }) { s, d ->
@@ -173,7 +179,11 @@ fun settingsOptions(cameras: List<Lens>): List<Option> {
         Option(Group.SENSITIVITY, R.string.option_cooldown, { c, s -> c.seconds(s.timing.cooldownMs) }) { s, d ->
             s.copy(timing = s.timing.copy(cooldownMs = step(s.timing.cooldownMs, d, 500, 0L..10_000L)))
         },
-        // Camera & model
+    )
+
+private fun cameraOptions(cameras: List<Lens>): List<Option> {
+    val choices = listOf("") + cameras.map { it.id }
+    return listOf(
         Option(Group.CAMERA, R.string.option_people, { c, s -> c.getString(R.string.value_number, s.people.toString()) }) { s, d ->
             val people = (s.people + d).coerceIn(1, 4)
             s.copy(people = people, seats = if (s.seats.size > people) emptyList() else s.seats)
@@ -196,8 +206,11 @@ fun settingsOptions(cameras: List<Lens>): List<Option> {
         Option(Group.CAMERA, R.string.option_processor, { c, s ->
             c.getString(if (s.processor == Processor.CPU) R.string.processor_cpu else R.string.processor_gpu)
         }) { s, d -> s.copy(processor = cycle(Processor.entries, s.processor, d)) },
-        // Data
+    )
+}
+
+private fun dataOptions(): List<Option> =
+    listOf(
         Option(Group.DATA, R.string.option_debug, { c, s -> c.toggle(s.debug) }) { s, _ -> s.copy(debug = !s.debug) },
         Option(Group.DATA, R.string.option_statistics, { c, s -> c.toggle(s.statistics) }) { s, _ -> s.copy(statistics = !s.statistics) },
     )
-}

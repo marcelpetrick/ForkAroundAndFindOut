@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork
 
 import android.Manifest
@@ -173,9 +174,39 @@ class MainActivityTest {
             activity.click("About")
             assertEquals(MainActivity.Screen.ABOUT, activity.screen)
             assertTrue(activity.texts().contains("Version ${BuildConfig.VERSION_NAME}"))
-            assertTrue(activity.texts().contains("GNU General Public License v3 or later"))
-            assertTrue(activity.texts().contains("MediaPipe Tasks Vision"))
-            assertTrue(activity.texts().contains("github.com/marcelpetrick/ForkAroundAndFindOut"))
+            // GPL "appropriate legal notices": author, copyright, no warranty, the licence itself.
+            assertTrue(activity.texts().contains("Made by Marcel Petrick"))
+            assertTrue(activity.texts().contains("Copyright © 2026 Marcel Petrick"))
+            assertTrue(activity.texts().contains("WITHOUT ANY WARRANTY"))
+            assertTrue(activity.texts().contains("github.com/marcelpetrick/ForkAroundAndFindOut/tree/v${BuildConfig.VERSION_NAME}"))
+            // Every bundled component with its licence, from the SBOM-derived list.
+            assertTrue(activity.texts().contains("tasks-vision 1.0.0 · Apache-2.0"))
+            assertTrue(activity.texts().contains("protobuf-javalite"))
+            assertTrue(Regex("Third-party components \\((\\d+)\\)").find(activity.texts())!!.groupValues[1].toInt() > 50)
+            activity.click("Read the GNU General Public License v3")
+            assertEquals(MainActivity.Screen.TEXT, activity.screen)
+            assertTrue(activity.texts().contains("GNU GENERAL PUBLIC LICENSE"))
+            activity.onBackPressedDispatcher.onBackPressed()
+            idle()
+            assertEquals(MainActivity.Screen.ABOUT, activity.screen)
+            activity.click("Notices of protobuf-javalite")
+            assertTrue(activity.texts().contains("Copyright 2008 Google Inc."))
+            activity.click("Back")
+            // MediaPipe's Apache NOTICE lists its native libraries: long, so it is paged.
+            activity.click("Notices of tasks-vision")
+            assertTrue(activity.texts().contains("MediaPipe Tasks Privacy Notice"))
+            val pages = Regex("Page 1 of (\\d+)").find(activity.texts())!!.groupValues[1].toInt()
+            assertTrue(pages > 10)
+            activity.click("Previous page") // already on the first page
+            assertTrue(activity.texts().contains("Page 1 of $pages"))
+            activity.click("Next page")
+            assertTrue(activity.texts().contains("Page 2 of $pages"))
+            activity.click("Back")
+            for (id in listOf("Apache-2.0", "BSD-3-Clause", "MIT")) {
+                activity.click("Read the $id licence")
+                assertEquals(MainActivity.Screen.TEXT, activity.screen)
+                activity.click("Back")
+            }
             activity.click("Back")
             activity.onBackPressedDispatcher.onBackPressed()
             assertTrue(activity.isFinishing)

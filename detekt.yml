@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
+# detekt rules on top of the default configuration (buildUponDefaultConfig). Every deviation
+# from the defaults is listed here with its reason; findings fail the pipeline.
+style:
+  MaxLineLength:
+    # One line length for the whole project: ktlint's 140 columns.
+    maxLineLength: 140
+    excludeCommentStatements: true
+  MagicNumber:
+    # Drawing code (dp, alpha, angles), the scripted synthetic demo and tests read better with
+    # inline literals; everywhere else numbers are named or come from declarations/enums.
+    excludes: ["**/test/**", "**/testFixtures/**", "**/androidTest/**", "**/ui/**", "**/demo/**", "**/MainActivity.kt"]
+    ignorePropertyDeclaration: true
+    ignoreEnums: true
+    ignoreRanges: true
+    ignoreNumbers: ["-1", "0", "1", "2", "100", "1000"]
+  ReturnCount:
+    max: 3
+    excludeGuardClauses: true
+complexity:
+  CyclomaticComplexMethod:
+    ignoreSimpleWhenEntries: true
+  LongMethod:
+    excludes: ["**/test/**", "**/androidTest/**"]
+  LargeClass:
+    # MainActivity is the single-activity UI (all screens); splitting it into screen classes
+    # is tracked in plan.md (backlog). Every other class stays within the default.
+    excludes: ["**/test/**", "**/androidTest/**", "**/MainActivity.kt"]
+  TooManyFunctions:
+    excludes: ["**/test/**", "**/androidTest/**"]
+    ignorePrivate: true
+  LongParameterList:
+    # Constructors take injectable test seams with defaults; those are not "long" for callers.
+    ignoreDefaultParameters: true
+    functionThreshold: 7

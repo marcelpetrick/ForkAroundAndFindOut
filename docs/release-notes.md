@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 **Fork Around & Find Out 0.11.44** — an offline Android helper that gently reminds a family
 to keep elbows off the dinner table. This release completes the plan_v2 product design.
 
@@ -8,6 +11,7 @@ been measured yet**; the protocol is in `docs/hardware-validation.md`. Version 1
 reserved for when those targets are met.
 
 ## New since 0.10.32
+
 - **Guided setup:** placement picture, people stepper, Wide/Main/Tele lens chips (new setups
   start on the widest lens), and a visibility check that says *why* it does not pass
   (nobody, too few or too many people, arms hidden on the left/middle/right, slow phone).
@@ -28,6 +32,7 @@ reserved for when those targets are met.
   laptop emulator guide (`docs/emulator.md`).
 
 ## What it does
+
 - Per-elbow detection with MediaPipe Pose Landmarker (Full/Lite, up to 4 people) and a
   conservative, time-filtered rule: reaching, passing food and brief crossings do not
   trigger; hidden elbows are "Not visible", never "good posture".
@@ -38,10 +43,12 @@ reserved for when those targets are met.
   dim-room themes.
 
 ## Privacy
+
 No image or video is ever stored; the app has **no internet permission**, and a test guards
 against its return.
 
 ## Install
+
 Download `fork-around-and-find-out-0.11.44.apk` below (arm64, Android 14+), verify it with the `.sha256` file,
 and install it. Signing certificate SHA-256:
 `AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0`.

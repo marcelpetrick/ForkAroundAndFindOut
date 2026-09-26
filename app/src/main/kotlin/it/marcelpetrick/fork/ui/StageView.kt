@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.ui
 
 import android.content.Context
@@ -15,6 +16,7 @@ import android.view.View
 import androidx.core.graphics.withClip
 import it.marcelpetrick.fork.R
 import it.marcelpetrick.fork.detection.ElbowState
+import it.marcelpetrick.fork.detection.Joint
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
@@ -150,44 +152,49 @@ class StageView(
         if (synthetic) canvas.drawColor(Palette.stageBackground)
         mapping?.let { canvas.drawPath(shadeMargins(it), fill.apply { color = Color.argb(150, 0, 0, 0) }) }
         table?.let { polygon(canvas, it.points, Color.argb(60, 255, 214, 102), Color.rgb(255, 214, 102)) }
-        seats.forEachIndexed { index, seat ->
-            polygon(canvas, seat.points, Color.argb(30, 120, 200, 255), Color.rgb(120, 200, 255))
-            label(canvas, context.getString(R.string.seat_empty, index + 1).substringBefore(" ·"), seat.center(), Color.rgb(120, 200, 255))
-        }
-        if (taps.isNotEmpty()) {
-            polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
-            taps.forEachIndexed { index, tap ->
-                val (x, y) = view(tap)
-                canvas.drawCircle(x, y, context.dp(14).toFloat(), fill.apply { color = Palette.green })
-                text.color = Color.WHITE
-                canvas.drawText((index + 1).toString(), x - context.dp(5), y + context.dp(6), text)
-            }
-        }
-        if (skeleton) {
-            val tracked = results.mapNotNull { it.pose }.toSet()
-            poses.filter { it !in tracked }.forEach { bones(canvas, it) }
-            for (seat in results) {
-                val pose = seat.pose ?: continue
-                bones(canvas, pose)
-                for ((index, arm) in listOf(13 to seat.left, 14 to seat.right)) {
-                    val elbow = pose.landmarks.getOrNull(index)?.point ?: continue
-                    val (x, y) = view(elbow)
-                    canvas.drawCircle(
-                        x,
-                        y,
-                        context.dp(12).toFloat(),
-                        fill.apply { color = Palette.of(arm.state) },
-                    )
-                }
-                pose.center()?.let {
-                    label(canvas, context.getString(R.string.seat_empty, seat.seat).substringBefore(" ·"), it, Color.WHITE)
-                }
-            }
-        }
+        drawSeats(canvas)
+        drawTaps(canvas)
+        if (skeleton) drawSkeletons(canvas)
         if (dimmed) canvas.drawColor(Color.argb(140, 0, 0, 0))
         drawLoupe(canvas)
         drawWarning(canvas)
         drawCard(canvas)
+    }
+
+    private fun drawSeats(canvas: Canvas) {
+        seats.forEachIndexed { index, seat ->
+            polygon(canvas, seat.points, Color.argb(30, 120, 200, 255), Color.rgb(120, 200, 255))
+            label(canvas, context.getString(R.string.seat_empty, index + 1).substringBefore(" ·"), seat.center(), Color.rgb(120, 200, 255))
+        }
+    }
+
+    private fun drawTaps(canvas: Canvas) {
+        if (taps.isEmpty()) return
+        polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
+        taps.forEachIndexed { index, tap ->
+            val (x, y) = view(tap)
+            canvas.drawCircle(x, y, context.dp(14).toFloat(), fill.apply { color = Palette.green })
+            text.color = Color.WHITE
+            canvas.drawText((index + 1).toString(), x - context.dp(5), y + context.dp(6), text)
+        }
+    }
+
+    /** Untracked people as plain bones; tracked seats with state-coloured elbows and a label. */
+    private fun drawSkeletons(canvas: Canvas) {
+        val tracked = results.mapNotNull { it.pose }.toSet()
+        poses.filter { it !in tracked }.forEach { bones(canvas, it) }
+        for (seat in results) {
+            val pose = seat.pose ?: continue
+            bones(canvas, pose)
+            for ((index, arm) in listOf(Joint.LEFT_ELBOW to seat.left, Joint.RIGHT_ELBOW to seat.right)) {
+                val elbow = pose.landmarks.getOrNull(index)?.point ?: continue
+                val (x, y) = view(elbow)
+                canvas.drawCircle(x, y, context.dp(12).toFloat(), fill.apply { color = Palette.of(arm.state) })
+            }
+            pose.center()?.let {
+                label(canvas, context.getString(R.string.seat_empty, seat.seat).substringBefore(" ·"), it, Color.WHITE)
+            }
+        }
     }
 
     /**
@@ -341,9 +348,8 @@ class StageView(
         pose: Pose,
     ) {
         stroke.strokeWidth = context.dp(4).toFloat()
-        for ((a, b) in BONES) {
-            val from = pose.joint(a) ?: continue
-            val to = pose.joint(b) ?: continue
+        val visible = BONES.mapNotNull { (a, b) -> pose.joint(a)?.let { from -> pose.joint(b)?.let { to -> from to to } } }
+        for ((from, to) in visible) {
             stroke.color = Color.argb((255 * minOf(from.confidence, to.confidence)).toInt(), 255, 255, 255)
             val (x1, y1) = view(from.point)
             val (x2, y2) = view(to.point)
@@ -370,6 +376,18 @@ class StageView(
         const val FADE_OUT_MS = 600L
         const val PULSE_MS = 2400.0
         val SEAT_NAMES = listOf(R.string.seat_colour_1, R.string.seat_colour_2, R.string.seat_colour_3, R.string.seat_colour_4)
-        val BONES = listOf(11 to 12, 11 to 13, 13 to 15, 12 to 14, 14 to 16, 11 to 23, 12 to 24, 23 to 24)
+        val BONES =
+            with(Joint) {
+                listOf(
+                    LEFT_SHOULDER to RIGHT_SHOULDER,
+                    LEFT_SHOULDER to LEFT_ELBOW,
+                    LEFT_ELBOW to LEFT_WRIST,
+                    RIGHT_SHOULDER to RIGHT_ELBOW,
+                    RIGHT_ELBOW to RIGHT_WRIST,
+                    LEFT_SHOULDER to LEFT_HIP,
+                    RIGHT_SHOULDER to RIGHT_HIP,
+                    LEFT_HIP to RIGHT_HIP,
+                )
+            }
     }
 }

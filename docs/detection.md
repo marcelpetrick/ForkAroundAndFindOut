@@ -1,6 +1,7 @@
-# Detection contract
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Detection contract
 
 `detection/` is pure Kotlin and has no Android or MediaPipe dependency. Inputs are
 33 landmarks normalized to the upright (rotated) camera analysis image — the one

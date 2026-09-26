@@ -1,6 +1,7 @@
-# Hardware validation
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Hardware validation
 
 Automated tests prove software behaviour on synthetic data and on an emulator camera.
 They cannot prove how the app behaves at a real family table. That evidence must come

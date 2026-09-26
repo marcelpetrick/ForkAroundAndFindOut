@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork
 
 import android.Manifest
@@ -61,20 +62,24 @@ import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.monitoring.sessionRecord
 import it.marcelpetrick.fork.ui.ChimeSpeaker
 import it.marcelpetrick.fork.ui.Group
+import it.marcelpetrick.fork.ui.LICENSE_TEXTS
 import it.marcelpetrick.fork.ui.Lens
 import it.marcelpetrick.fork.ui.Option
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
 import it.marcelpetrick.fork.ui.action
+import it.marcelpetrick.fork.ui.asset
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.chip
 import it.marcelpetrick.fork.ui.column
 import it.marcelpetrick.fork.ui.dp
 import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.lensLabels
+import it.marcelpetrick.fork.ui.licenseAsset
 import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.settingsOptions
+import it.marcelpetrick.fork.ui.thirdParty
 import it.marcelpetrick.fork.ui.title
 import it.marcelpetrick.fork.ui.update
 import org.json.JSONObject
@@ -100,7 +105,7 @@ typealias SourceFactory = (
 
 /** Single-activity native UI. All state lives on the main thread. */
 class MainActivity : ComponentActivity() {
-    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS, DATA, ABOUT }
+    enum class Screen { WELCOME, POSITION, TABLE, SEATS, MONITOR, DEMO, SETTINGS, DATA, ABOUT, TEXT }
 
     internal lateinit var store: LocalStore
     internal var settings = Settings()
@@ -206,6 +211,7 @@ class MainActivity : ComponentActivity() {
             when {
                 screen == Screen.WELCOME -> finish()
                 screen == Screen.MONITOR && monitor != null -> confirmStop()
+                screen == Screen.TEXT -> show(Screen.ABOUT)
                 else -> show(Screen.WELCOME)
             }
         }
@@ -334,17 +340,7 @@ class MainActivity : ComponentActivity() {
     internal fun show(target: Screen) {
         if (target == Screen.MONITOR && monitor == null) return show(Screen.WELCOME)
         if (target in CAMERA_SCREENS && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            pendingCamera = target
-            if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                AlertDialog
-                    .Builder(this)
-                    .setMessage(R.string.permission_rationale)
-                    .setPositiveButton(R.string.continue_label) { _, _ -> permission.launch(Manifest.permission.CAMERA) }
-                    .setNegativeButton(R.string.cancel) { _, _ -> pendingCamera = null }
-                    .show()
-            } else {
-                permission.launch(Manifest.permission.CAMERA)
-            }
+            requestCamera(target)
             return
         }
         if (screen == Screen.MONITOR && target != Screen.MONITOR) endSession()
@@ -352,43 +348,67 @@ class MainActivity : ComponentActivity() {
         handler.removeCallbacks(ticker)
         taps.clear()
         screen = target
-        val keepAwake = target in CAMERA_SCREENS || target == Screen.DEMO
-        // A propped-up phone must not rotate mid-setup or mid-meal: that would change geometry.
-        requestedOrientation =
-            if (target in CAMERA_SCREENS) ActivityInfo.SCREEN_ORIENTATION_LOCKED else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        if (keepAwake) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+        holdStill(target)
         when (target) {
             Screen.WELCOME -> page(welcome())
             Screen.SETTINGS -> page(settingsPage())
             Screen.DATA -> page(dataPage())
             Screen.ABOUT -> page(aboutPage())
+            Screen.TEXT -> page(textPage())
             Screen.DEMO -> startDemo()
-            else -> {
-                if (source != null && sourceLimit != poseLimit(target)) closeCamera()
-                if (preview == null) cameraLayout()
-                panel!!.removeAllViews()
-                stage!!.onTap = null
-                stage!!.onDrag = null
-                stage!!.taps = emptyList()
-                stage!!.results = emptyList()
-                stage!!.warning = VisualMode.OFF
-                stage!!.table = settings.table
-                stage!!.seats = settings.seats
-                stage!!.skeleton = settings.debug || target != Screen.MONITOR
-                when (target) {
-                    Screen.POSITION -> positionPanel()
-                    Screen.TABLE -> tablePanel()
-                    Screen.SEATS -> seatsPanel()
-                    else -> monitorPanel()
-                }
-                stage!!.refresh()
-                if (source == null) openCamera()
-            }
+            else -> cameraScreen(target)
         }
+    }
+
+    /** Android's rationale case explains first; afterwards the system dialog asks. */
+    private fun requestCamera(target: Screen) {
+        pendingCamera = target
+        if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+            AlertDialog
+                .Builder(this)
+                .setMessage(R.string.permission_rationale)
+                .setPositiveButton(R.string.continue_label) { _, _ -> permission.launch(Manifest.permission.CAMERA) }
+                .setNegativeButton(R.string.cancel) { _, _ -> pendingCamera = null }
+                .show()
+        } else {
+            permission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    /** Camera screens and the demo keep the screen on; a propped-up phone must not rotate mid-meal. */
+    private fun holdStill(target: Screen) {
+        requestedOrientation =
+            if (target in CAMERA_SCREENS) ActivityInfo.SCREEN_ORIENTATION_LOCKED else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        if (target in CAMERA_SCREENS || target == Screen.DEMO) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    /** The shared camera layout with the panel of one setup step or the monitor. */
+    private fun cameraScreen(target: Screen) {
+        if (source != null && sourceLimit != poseLimit(target)) closeCamera()
+        if (preview == null) cameraLayout()
+        panel!!.removeAllViews()
+        stage!!.apply {
+            onTap = null
+            onDrag = null
+            taps = emptyList()
+            results = emptyList()
+            warning = VisualMode.OFF
+            table = settings.table
+            seats = settings.seats
+            skeleton = settings.debug || target != Screen.MONITOR
+        }
+        when (target) {
+            Screen.POSITION -> positionPanel()
+            Screen.TABLE -> tablePanel()
+            Screen.SEATS -> seatsPanel()
+            else -> monitorPanel()
+        }
+        stage!!.refresh()
+        if (source == null) openCamera()
     }
 
     private fun page(content: View) {
@@ -653,12 +673,11 @@ class MainActivity : ComponentActivity() {
         val lenses = cameraIds()
         if (lenses.size < 2) return null
         return row(
-            *lenses
-                .map { lens ->
-                    action(getString(lens.label), primary = lens.id == settings.camera) { selectLens(lens.id) }.apply {
-                        contentDescription = getString(R.string.lens_choice, getString(lens.label))
-                    }
-                }.toTypedArray(),
+            lenses.map { lens ->
+                action(getString(lens.label), primary = lens.id == settings.camera) { selectLens(lens.id) }.apply {
+                    contentDescription = getString(R.string.lens_choice, getString(lens.label))
+                }
+            },
         )
     }
 
@@ -942,22 +961,29 @@ class MainActivity : ComponentActivity() {
         )
         panel!!.findViewWithTag<View>(RECALIBRATE_TAG)?.visibility =
             if (state.status == Status.NOBODY_FOR_A_WHILE) View.VISIBLE else View.GONE
-        status?.update(
-            when (state.status) {
-                Status.PAUSED -> getString(R.string.paused)
-                Status.GRACE -> getString(R.string.grace, state.countdown)
-                Status.TOO_SLOW -> getString(R.string.too_slow, fps)
-                Status.RESTING -> getString(R.string.snoozed, state.countdown)
-                Status.NOBODY_FOR_A_WHILE -> getString(R.string.nobody_for_a_while)
-                Status.WAITING -> getString(R.string.waiting)
-                Status.SLOW -> getString(R.string.slow_processing, fps)
-                Status.REMINDING -> getString(R.string.warning_text)
-                Status.WATCHING -> getString(R.string.watching)
-            },
-        )
+        status?.update(statusText(state))
         renderSeats(state.seats)
         renderBanner(state)
-        // A pot, bottle or glass in the way: say which arm, so the table can be rearranged.
+        renderHiddenArm(state)
+        sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
+        renderAdult(current)
+    }
+
+    private fun statusText(state: MonitorUiState): String =
+        when (state.status) {
+            Status.PAUSED -> getString(R.string.paused)
+            Status.GRACE -> getString(R.string.grace, state.countdown)
+            Status.TOO_SLOW -> getString(R.string.too_slow, fps)
+            Status.RESTING -> getString(R.string.snoozed, state.countdown)
+            Status.NOBODY_FOR_A_WHILE -> getString(R.string.nobody_for_a_while)
+            Status.WAITING -> getString(R.string.waiting)
+            Status.SLOW -> getString(R.string.slow_processing, fps)
+            Status.REMINDING -> getString(R.string.warning_text)
+            Status.WATCHING -> getString(R.string.watching)
+        }
+
+    /** A pot, bottle or glass in the way: say which arm, so the table can be rearranged. */
+    private fun renderHiddenArm(state: MonitorUiState) {
         hiddenHint?.apply {
             val arm = state.hiddenArm
             visibility = if (arm == null) View.GONE else View.VISIBLE
@@ -971,7 +997,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
+    }
+
+    /** Adult tools: diagnostics readout and the training controls. */
+    private fun renderAdult(current: MonitorSession) {
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
         if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))
         adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
@@ -989,13 +1018,8 @@ class MainActivity : ComponentActivity() {
         val slow = state.status == Status.SLOW || state.status == Status.TOO_SLOW
         val show = settings.model == PoseModel.FULL && !state.paused && (warm || slow)
         card.visibility = if (show) View.VISIBLE else View.GONE
-        if (show) {
-            (
-                card.getChildAt(
-                    0,
-                ) as TextView
-            ).update(if (warm) getString(R.string.banner_warm) else getString(R.string.banner_slow, fps))
-        }
+        val message = card.getChildAt(0) as TextView
+        if (show) message.update(if (warm) getString(R.string.banner_warm) else getString(R.string.banner_slow, fps))
     }
 
     /** Restarts inference with the Lite model; the meal and its calibration continue. */
@@ -1145,16 +1169,89 @@ class MainActivity : ComponentActivity() {
             addView(action(getString(R.string.back), primary = true) { begin(Screen.WELCOME) })
         }
 
+    /**
+     * Who made it, the GPL's "appropriate legal notices" (copyright, no warranty, how to read the
+     * licence), the source of this exact version, and every bundled component with its licence.
+     */
     private fun aboutPage(): View =
         column().apply {
             addView(title(getString(R.string.about)))
             addView(label(getString(R.string.about_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE), 19f, bold = true))
-            addView(card(label(getString(R.string.about_license)), label(getString(R.string.welcome_privacy))))
-            addView(card(label(getString(R.string.about_notices), 15f)))
-            addView(label(getString(R.string.about_source)).apply { autoLinkMask = Linkify.WEB_URLS })
+            addView(
+                card(
+                    label(getString(R.string.about_author), bold = true),
+                    label(getString(R.string.about_copyright)),
+                    label(getString(R.string.about_license), 15f),
+                    action(getString(R.string.read_gpl)) { showText(getString(R.string.gpl_title), licenseAsset(LICENSE_TEXTS.first())) },
+                ),
+            )
+            addView(
+                card(
+                    label(getString(R.string.about_source_version, "$SOURCE_URL/tree/v${BuildConfig.VERSION_NAME}"), 15f).apply {
+                        autoLinkMask = Linkify.WEB_URLS
+                    },
+                    label(getString(R.string.welcome_privacy), 15f),
+                ),
+            )
+            val components = thirdParty(this@MainActivity)
+            addView(label(getString(R.string.third_party_title, components.size), 20f, bold = true, color = Palette.green))
+            addView(label(getString(R.string.third_party_help), 15f, color = Palette.muted))
+            for (component in components) addView(componentEntry(component))
+            addView(label(getString(R.string.license_texts_title), 20f, bold = true, color = Palette.green))
+            for (id in LICENSE_TEXTS.drop(1)) addView(action(getString(R.string.read_license, id)) { showText(id, licenseAsset(id)) })
             addView(label(getString(R.string.welcome_limits), color = Palette.muted))
             addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
         }
+
+    private fun componentEntry(component: it.marcelpetrick.fork.ui.ThirdPartyComponent): View =
+        column(0).apply {
+            addView(label(getString(R.string.third_party_entry, component.name, component.version, component.license), 15f, bold = true))
+            addView(label("${component.group} · ${component.url}", 13f, color = Palette.muted).apply { autoLinkMask = Linkify.WEB_URLS })
+            component.notice?.let { notice ->
+                addView(action(getString(R.string.read_notice, component.name)) { showText(component.name, notice) })
+            }
+        }
+
+    private var textTitle = ""
+    private var textAsset = ""
+    private var textPage = 0
+
+    /** Shows a licence or notice text from the assets; Back returns to About. */
+    private fun showText(
+        title: String,
+        asset: String,
+    ) {
+        textTitle = title
+        textAsset = asset
+        textPage = 0
+        show(Screen.TEXT)
+    }
+
+    /** Long notices (MediaPipe's lists 187 native libraries) are shown in pages, not at once. */
+    private fun textPage(): View =
+        column().apply {
+            val pages = asset(textAsset).chunked(TEXT_PAGE_CHARS)
+            addView(title(textTitle))
+            if (pages.size > 1) addView(label(getString(R.string.text_page, textPage + 1, pages.size), 15f, bold = true))
+            addView(label(pages[textPage], 13f).apply { typeface = android.graphics.Typeface.MONOSPACE })
+            if (pages.size > 1) {
+                addView(
+                    row(
+                        action(getString(R.string.previous_page)) { turnPage(-1, pages.size) },
+                        action(getString(R.string.next_page)) { turnPage(1, pages.size) },
+                    ),
+                )
+            }
+            addView(action(getString(R.string.back), primary = true) { show(Screen.ABOUT) })
+        }
+
+    private fun turnPage(
+        delta: Int,
+        pages: Int,
+    ) {
+        textPage = (textPage + delta).coerceIn(0, pages - 1)
+        show(Screen.TEXT)
+    }
 
     private fun confirm(
         message: Int,
@@ -1170,6 +1267,7 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    @Suppress("TooGenericExceptionCaught") // any provider or I/O failure becomes a message on the Data screen
     private fun exportTo(
         uri: Uri,
         write: (OutputStream) -> Unit,
@@ -1307,22 +1405,27 @@ class MainActivity : ComponentActivity() {
 
     /** Watchdog: runs even without camera callbacks, so stale evidence expires and silences. */
     private fun tick() {
-        val now = clock()
         val view = stage ?: return
-        if (screen == Screen.DEMO) {
-            val demo = demoMonitor ?: return
-            val aspect = if (view.width > 0 && view.height > 0) view.width.toDouble() / view.height else 1.0
-            demo.frame(SyntheticDemo.poses(now - demoStart), now, now, aspect)
-            // The demo previews the configured visual warning but never sounds or stores anything.
-            view.warning = if (demo.tick(now)) settings.visual else VisualMode.OFF
-            view.results = demo.results
-            view.poses = emptyList()
-            renderSeats(demo.results)
-            view.reminder = if (view.warning != VisualMode.OFF) MonitorSession.firstViolation(demo.results) else null
-            view.refresh()
-            schedule()
-            return
-        }
+        if (screen == Screen.DEMO) demoTick(view) else mealTick(view)
+    }
+
+    /** The demo previews the configured visual warning but never sounds or stores anything. */
+    private fun demoTick(view: StageView) {
+        val now = clock()
+        val demo = demoMonitor ?: return
+        val aspect = if (view.width > 0 && view.height > 0) view.width.toDouble() / view.height else 1.0
+        demo.frame(SyntheticDemo.poses(now - demoStart), now, now, aspect)
+        view.warning = if (demo.tick(now)) settings.visual else VisualMode.OFF
+        view.results = demo.results
+        view.poses = emptyList()
+        renderSeats(demo.results)
+        view.reminder = if (view.warning != VisualMode.OFF) MonitorSession.firstViolation(demo.results) else null
+        view.refresh()
+        schedule()
+    }
+
+    private fun mealTick(view: StageView) {
+        val now = clock()
         val current = meal ?: return
         val state = current.tick(now)
         if (current.monitor.calibrationInvalid) {
@@ -1458,6 +1561,8 @@ class MainActivity : ComponentActivity() {
         const val TICK_MS = 100L
         const val DEMO_FRAME_MS = 66L
         const val FADE_MS = 180L
+        const val TEXT_PAGE_CHARS = 40_000
+        const val SOURCE_URL = "https://github.com/marcelpetrick/ForkAroundAndFindOut"
         const val MAX_PEOPLE = 4
         const val ACTION_START_DINNER = "it.marcelpetrick.fork.action.START_DINNER"
 

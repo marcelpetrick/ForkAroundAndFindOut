@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Build the distribution image and verify it: install page, APK download with the right
 # MIME type and checksum, license, health endpoint, and no directory listing.
 # Usage: scripts/docker-smoke.sh [IMAGE_TAG]   (default: fork-around-and-find-out:local)
@@ -17,7 +18,13 @@ curl -fsS "${base}/healthz" | grep -qx ok
 name="fork-around-and-find-out-$(cat VERSION).apk"
 curl -fsS "${base}/" | grep -q "${name}"
 curl -fsS "${base}/LICENSE.txt" | grep -q "GNU GENERAL PUBLIC LICENSE"
-curl -fsS "${base}/NOTICES.txt" | grep -q "MediaPipe Tasks Vision"
+curl -fsS "${base}/NOTICES.txt" | grep -q "MediaPipe Tasks"
+curl -fsS "${base}/licenses/Apache-2.0.txt" | grep -q "Apache License"
+version="${name#fork-around-and-find-out-}"
+version="${version%.apk}"
+curl -fsS "${base}/fork-around-and-find-out-${version}.cdx.json" |
+    python3 -c 'import json, sys; bom = json.load(sys.stdin); assert bom["bomFormat"] == "CycloneDX" and bom["components"]'
+curl -fsS "${base}/" | grep -q "tree/v${version}"
 type="$(curl -fsS -o /dev/null -w '%{content_type}' "${base}/${name}")"
 [[ "${type}" == "application/vnd.android.package-archive" ]] || { echo "Wrong APK content type: ${type}" >&2; exit 1; }
 tmp="$(mktemp -d)"

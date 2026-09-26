@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.tools
 
 import it.marcelpetrick.fork.demo.SyntheticDemo
@@ -85,7 +86,7 @@ private fun replay(
                 cooldownMs = options["--cooldown-ms"] ?: base.cooldownMs,
                 holdMs = options["--hold-ms"] ?: base.holdMs,
             )
-        val report = Replay.run(recording, timing, options["--window-ms"] ?: 5_000)
+        val report = Replay.run(recording, timing, options["--window-ms"] ?: DEFAULT_WINDOW_MS)
         out.println(report.describe())
         reminders += report.reminders
         near += report.remindersNearNegativeLabels
@@ -93,7 +94,8 @@ private fun replay(
         detected += report.positiveDetected
     }
     out.println(
-        "TOTAL: ${files.size} sessions, $reminders reminders ($near near FALSE_ALARM/NORMAL labels), positive labels detected $detected/$positives",
+        "TOTAL: ${files.size} sessions, $reminders reminders ($near near FALSE_ALARM/NORMAL labels), " +
+            "positive labels detected $detected/$positives",
     )
     return 0
 }
@@ -103,12 +105,29 @@ private fun demoLog(
     out: PrintStream,
 ): Int {
     val target = File(requireNotNull(args.firstOrNull()) { "demo-log needs an output file" })
-    val loops = args.getOrNull(1)?.toIntOrNull() ?: 3
+    val loops = args.getOrNull(1)?.toIntOrNull() ?: DEFAULT_LOOPS
     GZIPOutputStream(target.outputStream()).bufferedWriter().use { writer ->
         SyntheticDemo.sessionLog(loops).forEach { writer.appendLine(it) }
     }
     out.println("Wrote ${target.path} ($loops synthetic loops)")
     return 0
+}
+
+/** Copies everything readable; a truncated gzip trailer ends the copy with what was flushed. */
+private fun copyUntilTruncated(
+    input: InputStream,
+    output: ByteArrayOutputStream,
+) {
+    val buffer = ByteArray(BUFFER_BYTES)
+    try {
+        var count = input.read(buffer)
+        while (count >= 0) {
+            output.write(buffer, 0, count)
+            count = input.read(buffer)
+        }
+    } catch (_: EOFException) {
+        // Truncated gzip trailer: keep what was flushed.
+    }
 }
 
 /** Reads plain or gzip logs; a gzip stream cut off by a killed app yields its complete lines. */
@@ -118,18 +137,12 @@ fun load(file: File): Recording {
     // Copy raw bytes first: a character reader would discard bytes it had read ahead
     // when the missing gzip trailer raises EOFException.
     val bytes = ByteArrayOutputStream()
-    input.use {
-        val buffer = ByteArray(64 * 1024)
-        try {
-            while (true) {
-                val count = it.read(buffer)
-                if (count < 0) break
-                bytes.write(buffer, 0, count)
-            }
-        } catch (_: EOFException) {
-            // Truncated gzip trailer: keep what was flushed.
-        }
-    }
+    input.use { copyUntilTruncated(it, bytes) }
     val lines = bytes.toString(Charsets.UTF_8).lines()
     return SessionLog.read(lines.asSequence())
 }
+
+/** Labels this close to a reminder count as "near" it. */
+private const val DEFAULT_WINDOW_MS = 5_000L
+private const val DEFAULT_LOOPS = 3
+private const val BUFFER_BYTES = 64 * 1024

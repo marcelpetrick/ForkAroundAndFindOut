@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Capture genuine screenshots of the running app from an attached emulator/device.
 # Usage: scripts/screenshots.sh [OUTPUT_DIR]   (default: docs/screenshots)
 # Installs the debug APK, then captures welcome, synthetic demo (with its warning),

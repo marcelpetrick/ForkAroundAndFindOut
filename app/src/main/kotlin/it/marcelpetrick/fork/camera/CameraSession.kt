@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.camera
 
 import android.content.Context
@@ -102,6 +103,7 @@ class CameraSession(
     override val processor: Processor?
         get() = engine?.processor
 
+    @Suppress("TooGenericExceptionCaught") // native/camera failures become a recoverable message
     override fun start() {
         previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -116,6 +118,7 @@ class CameraSession(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // native/camera failures become a recoverable message
     private fun bind() {
         val future = providerFactory(context)
         future.addListener({
@@ -140,7 +143,7 @@ class CameraSession(
                         ResolutionSelector
                             .Builder()
                             .setResolutionStrategy(
-                                ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                                ResolutionStrategy(PREVIEW_SIZE, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
                             ).build()
                     val preview = Preview.Builder().setResolutionSelector(resolution).build()
                     preview.setSurfaceProvider(previewView.surfaceProvider)
@@ -149,7 +152,7 @@ class CameraSession(
                         ResolutionSelector
                             .Builder()
                             .setResolutionStrategy(
-                                ResolutionStrategy(Size(640, 360), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                                ResolutionStrategy(ANALYSIS_SIZE, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
                             ).build()
                     val analysis =
                         ImageAnalysis
@@ -177,6 +180,7 @@ class CameraSession(
         failed(IllegalStateException(if (inUse) "the camera is in use by another app" else "camera error $code"))
     }
 
+    @Suppress("TooGenericExceptionCaught") // native/camera failures become a recoverable message
     private fun result(
         poses: List<Pose>,
         time: Long,
@@ -226,3 +230,8 @@ class CameraSession(
         executor.shutdown()
     }
 }
+
+private val PREVIEW_SIZE = Size(1280, 720)
+
+/** Pose models run at 256 px input; 640×360 keeps copies small. */
+private val ANALYSIS_SIZE = Size(640, 360)

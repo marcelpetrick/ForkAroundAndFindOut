@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Pure Kotlin/JVM product logic: settings model, monitoring session, alarm policy,
 // synthetic demo and the session-log format shared by the app and the replay tool.
 plugins {

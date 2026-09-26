@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Desktop tools over recorded session logs: replay/evaluation and synthetic log generation.
 plugins {
     id("org.jetbrains.kotlin.jvm")

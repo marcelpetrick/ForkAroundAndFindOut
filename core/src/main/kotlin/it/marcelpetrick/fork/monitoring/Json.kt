@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.monitoring
 
 /**
@@ -96,10 +97,10 @@ object Json {
                                 'f' -> '\u000c'
                                 'u' ->
                                     text
-                                        .substring(at, at + 4)
-                                        .toInt(16)
+                                        .substring(at, at + UNICODE_DIGITS)
+                                        .toInt(HEX)
                                         .toChar()
-                                        .also { at += 4 }
+                                        .also { at += UNICODE_DIGITS }
                                 else -> escaped
                             },
                         )
@@ -137,3 +138,6 @@ object Json {
         }
     }
 }
+
+private const val UNICODE_DIGITS = 4
+private const val HEX = 16

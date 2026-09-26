@@ -1,4 +1,5 @@
-# Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
 name: Pipeline
 on:
   push:
@@ -76,6 +77,7 @@ jobs:
             app/build/outputs/apk
             app/build/reports
             artifacts/pipeline
+            build/sbom
             build/docker-dist/site
       - name: Publish image to GHCR
         if: github.event_name == 'push'
@@ -102,5 +104,6 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             "${site}/fork-around-and-find-out-${version}.apk" \
             "${site}/fork-around-and-find-out-${version}.apk.sha256" \
+            "${site}/fork-around-and-find-out-${version}.cdx.json" \
             --title "Fork Around & Find Out ${version}" \
             --notes-file docs/release-notes.md

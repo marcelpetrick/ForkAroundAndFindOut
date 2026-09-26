@@ -1,6 +1,7 @@
-# Running the app in an emulator on a laptop
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# Running the app in an emulator on a laptop
 
 No phone is needed to try the app, to develop it or to run the end-to-end tests. An
 Android emulator on a laptop runs the real app with the real MediaPipe models. The

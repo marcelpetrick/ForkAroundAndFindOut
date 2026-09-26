@@ -1,4 +1,5 @@
-// Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+// SPDX-FileCopyrightText: 2026 Marcel Petrick
+// SPDX-License-Identifier: GPL-3.0-or-later
 package it.marcelpetrick.fork.camera
 
 import android.graphics.Bitmap
@@ -49,6 +50,7 @@ class FrameAnalyzer(
         busy.set(false)
     }
 
+    @Suppress("TooGenericExceptionCaught") // any native frame failure must release the frame and be reported
     override fun analyze(image: ImageProxy) {
         try {
             if (!enabled) return
@@ -85,7 +87,7 @@ class FrameAnalyzer(
         val height = image.height
         val target = reuse(sensor, width, height).also { sensor = it }
         val source = plane.buffer.apply { rewind() }
-        val row = width * 4
+        val row = width * RGBA_BYTES
         if (plane.rowStride == row) {
             target.copyPixelsFromBuffer(source)
         } else {
@@ -106,7 +108,7 @@ class FrameAnalyzer(
         degrees: Int,
     ): Bitmap {
         if (degrees == 0) return source
-        val quarter = degrees == 90 || degrees == 270
+        val quarter = degrees == QUARTER || degrees == THREE_QUARTERS
         val width = if (quarter) source.height else source.width
         val height = if (quarter) source.width else source.height
         val target = reuse(upright, width, height).also { upright = it }
@@ -114,8 +116,8 @@ class FrameAnalyzer(
             Matrix().apply {
                 postRotate(degrees.toFloat())
                 when (degrees) {
-                    90 -> postTranslate(source.height.toFloat(), 0f)
-                    180 -> postTranslate(source.width.toFloat(), source.height.toFloat())
+                    QUARTER -> postTranslate(source.height.toFloat(), 0f)
+                    HALF -> postTranslate(source.width.toFloat(), source.height.toFloat())
                     else -> postTranslate(0f, source.width.toFloat())
                 }
             }
@@ -123,3 +125,8 @@ class FrameAnalyzer(
         return target
     }
 }
+
+private const val RGBA_BYTES = 4
+private const val QUARTER = 90
+private const val HALF = 180
+private const val THREE_QUARTERS = 270

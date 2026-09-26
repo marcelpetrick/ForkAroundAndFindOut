@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Marcel Petrick
+# SPDX-License-Identifier: GPL-3.0-or-later
+# markdownlint-cli2 (scripts/lint.sh): project Markdown, excluding generated and third-party text.
+config:
+  default: true
+  # Prose is wrapped by hand at ~90 columns; tables, links and code may be longer.
+  MD013: false
+  # Files start with an invisible SPDX comment, then the title.
+  MD041: false
+  # Tables with pipes inside code are common in the docs.
+  MD056: false
+globs:
+  - "**/*.md"
+ignores:
+  - "**/build/**"
+  - "plan_v2/**"
+  - "vision.md"
+  - ".gradle/**"

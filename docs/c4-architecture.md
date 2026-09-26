@@ -1,6 +1,7 @@
-# How Fork Around & Find Out works (C4 architecture)
+<!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
+# How Fork Around & Find Out works (C4 architecture)
 
 This page explains the app from the outside in, in four steps. Each step zooms in a little
 further, following the [C4 model](https://c4model.com/):
@@ -220,12 +221,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    code["Change + tests"] --> local["./localPipeline.sh<br/>models · ShellCheck · Python ·<br/>whitespace · ktlint · Android lint ·<br/>unit + UI tests (≥95 % coverage) ·<br/>APKs · emulator e2e · Docker"]
+    code["Change + tests"] --> local["./localPipeline.sh<br/>models · ShellCheck · Python · whitespace ·<br/>lint suite (REUSE, ruff, yamllint, xmllint,<br/>hadolint, actionlint, markdownlint) ·<br/>ktlint · detekt · Android lint ·<br/>unit + UI tests (≥95 % coverage) ·<br/>APKs · SBOM · emulator e2e · Docker"]
     local --> push["git push (main)"]
     push --> ci["GitHub Actions:<br/>same pipeline on an emulator"]
     ci --> tag{"version tag v*?"}
     tag -- no --> artifacts["APKs + reports as artifacts"]
-    tag -- yes --> rel["GitHub release:<br/>signed arm64 APK + SHA-256,<br/>GHCR image :version and :latest"]
+    tag -- yes --> rel["GitHub release:<br/>signed arm64 APK + SHA-256 + SBOM,<br/>GHCR image :version and :latest"]
 ```
 
 ## 5. The everyday workflow for the family
