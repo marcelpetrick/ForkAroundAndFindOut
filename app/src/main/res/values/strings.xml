@@ -203,4 +203,8 @@
     <string name="seats_suggested">Seats were suggested from the table edges. Check that everyone sits inside one, or clear them.</string>
     <string name="seats_suggest_failed">No room for a seat on every side in view. Mark the seats by tapping, or skip them.</string>
     <string name="seats_inside">People inside a seat now: %1$d of %2$d</string>
+    <string name="use_lite">Use the Lite model</string>
+    <string name="banner_warm">The phone is getting warm. The Lite model needs less power and keeps watching.</string>
+    <string name="banner_slow">Processing is slow (%1$.0f FPS). The Lite model is faster.</string>
+    <string name="volume_pause_hint">Tip: hold volume-down to pause without looking.</string>
 </resources>

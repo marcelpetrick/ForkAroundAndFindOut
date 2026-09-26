@@ -33,7 +33,7 @@ Decisions (product, design, engineering), each one step below:
   when the visibility check fails; a placement illustration; widest rear lens as the default
   for new setups; a loupe while tapping/dragging corners; seat regions auto-proposed from the
   table edges (editable, overlap-checked).
-- [ ] V3-3 Monitor (screens 05–06, §8): meal summary card on Stop (duration, reminders per
+- [x] V3-3 Monitor (screens 05–06, §8): meal summary card on Stop (duration, reminders per
   seat colour, longest reminder-free stretch — positive framing); "nobody visible for a
   while — has the phone moved?" hint with a recalibrate action; long-press volume-down
   pauses; thermal banner suggesting Lite; 180 ms cross-fade between screens.
@@ -750,3 +750,13 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: `SeatProposalTest`, `VisibilityCheckTest` (reasons, sides), Robolectric
   setup flow (stepper, lens chips, every advice text, loupe, suggestion, seat check,
   settings intent); full local pipeline.
+
+### 0.11.36 — feat: pause by holding volume-down, offer Lite on a warm or slow phone, fade between screens (V3-3)
+
+- Done: holding volume-down pauses a running meal (a short press still lowers the volume;
+  holding never resumes — resuming stays a deliberate tap); a banner explains a warm
+  (thermal ≥ moderate) or slow phone and switches to the Lite model in one tap while the
+  meal and calibration continue; screens fade in over 180 ms. With 0.10.34 (meal summary,
+  "has the phone moved?" hint) V3-3 is complete.
+- Validation: Robolectric (thermal banner, Lite switch reopens inference, key handling on and
+  off the monitor); full local pipeline.

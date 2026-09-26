@@ -12,7 +12,9 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +26,7 @@ import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.monitoring.LocalStore
+import it.marcelpetrick.fork.monitoring.PoseModel
 import it.marcelpetrick.fork.monitoring.Replay
 import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.Sound
@@ -390,6 +393,57 @@ class MainActivityTest {
             assertTrue(activity.texts().contains("People inside a seat now: 1 of 1"))
             activity.click("Finish setup")
             assertEquals(1, activity.settings.seats.size)
+        }
+    }
+
+    @Test
+    fun aWarmPhoneIsOfferedLiteAndHoldingVolumeDownPauses() {
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
+        launch().use { controller ->
+            val activity = controller.get()
+            val sources = mutableListOf<FakeSource>()
+            lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
+            var thermal = PowerManager.THERMAL_STATUS_NONE
+            activity.thermalStatus = { thermal }
+            activity.sourceFactory = { view, _, f, _ ->
+                frame = f
+                FakeSource(view).also { sources += it }
+            }
+            activity.click("Set up camera")
+            activity.click("Mark table without the check")
+            frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
+            corners.forEach { activity.tap(it) }
+            activity.click("Save table")
+            activity.click("Finish setup")
+            activity.click("Start dinner")
+            assertTrue(activity.texts().contains("hold volume-down to pause"))
+            idle(200)
+            assertFalse(activity.texts().contains("Use the Lite model"))
+            thermal = PowerManager.THERMAL_STATUS_MODERATE
+            idle(200)
+            assertTrue(activity.texts().contains("The phone is getting warm"))
+            val opened = sources.size
+            activity.click("Use the Lite model")
+            assertEquals(PoseModel.LITE, activity.settings.model)
+            assertEquals(opened + 1, sources.size) // inference restarted with the lighter model
+            assertTrue(activity.monitor!!.active) // the meal continues
+            assertFalse(activity.texts().contains("Use the Lite model"))
+
+            // A short press only lowers the volume; holding the key pauses; holding again never resumes.
+            val down = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN)
+            assertTrue(activity.onKeyDown(KeyEvent.KEYCODE_VOLUME_DOWN, down))
+            assertTrue(activity.onKeyUp(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_VOLUME_DOWN)))
+            assertTrue(activity.monitor!!.active)
+            assertTrue(activity.onKeyLongPress(KeyEvent.KEYCODE_VOLUME_DOWN, down))
+            assertFalse(activity.monitor!!.active)
+            assertTrue(activity.texts().contains("Resume"))
+            activity.onKeyLongPress(KeyEvent.KEYCODE_VOLUME_DOWN, down)
+            assertFalse(activity.monitor!!.active)
+            // Other keys and other screens keep Android's behaviour.
+            assertFalse(activity.onKeyLongPress(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_UP)))
+            activity.click("Stop")
+            assertFalse(activity.onKeyDown(KeyEvent.KEYCODE_VOLUME_DOWN, down))
+            assertFalse(activity.onKeyUp(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_VOLUME_DOWN)))
         }
     }
 

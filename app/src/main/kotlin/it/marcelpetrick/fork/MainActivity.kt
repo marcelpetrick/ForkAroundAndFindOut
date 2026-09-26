@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
@@ -17,6 +18,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.text.util.Linkify
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -46,6 +48,7 @@ import it.marcelpetrick.fork.monitoring.MealSummary
 import it.marcelpetrick.fork.monitoring.Monitor
 import it.marcelpetrick.fork.monitoring.MonitorSession
 import it.marcelpetrick.fork.monitoring.MonitorUiState
+import it.marcelpetrick.fork.monitoring.PoseModel
 import it.marcelpetrick.fork.monitoring.SessionFiles
 import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.SessionRecorder
@@ -107,6 +110,11 @@ class MainActivity : ComponentActivity() {
     internal var clock: () -> Long = SystemClock::uptimeMillis
     internal var cameraIds: () -> List<Lens> = ::backCameras
 
+    /** Android thermal status (PowerManager.THERMAL_STATUS_*); replaceable in tests. */
+    internal var thermalStatus: () -> Int = {
+        getSystemService(PowerManager::class.java)?.currentThermalStatus ?: PowerManager.THERMAL_STATUS_NONE
+    }
+
     /** The running meal, or null. */
     internal var meal: MonitorSession? = null
         private set
@@ -127,6 +135,7 @@ class MainActivity : ComponentActivity() {
     private var status: TextView? = null
     private var seatCards: LinearLayout? = null
     private var sessionLine: TextView? = null
+    private var banner: LinearLayout? = null
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
     private var advice: TextView? = null
@@ -217,6 +226,53 @@ class MainActivity : ComponentActivity() {
             closeCamera()
         }
         show(screen)
+    }
+
+    private val monitoring: Boolean
+        get() = screen == Screen.MONITOR && meal != null
+
+    /**
+     * Holding volume-down pauses the meal without looking at the phone. A short press still
+     * lowers the volume; the key is tracked so the long press can take it over.
+     */
+    override fun onKeyDown(
+        keyCode: Int,
+        event: KeyEvent,
+    ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && monitoring) {
+            event.startTracking()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyLongPress(
+        keyCode: Int,
+        event: KeyEvent,
+    ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && monitoring) {
+            if (meal?.active == true) togglePause()
+            return true
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
+
+    override fun onKeyUp(
+        keyCode: Int,
+        event: KeyEvent,
+    ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && monitoring) {
+            if (event.isTracking && !event.isCanceled) {
+                getSystemService(AudioManager::class.java)
+                    ?.adjustSuggestedStreamVolume(
+                        AudioManager.ADJUST_LOWER,
+                        AudioManager.USE_DEFAULT_STREAM_TYPE,
+                        AudioManager.FLAG_SHOW_UI,
+                    )
+            }
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun confirmStop() {
@@ -312,7 +368,7 @@ class MainActivity : ComponentActivity() {
         stage = null
         preview = null
         panel = null
-        setContentView(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.surface) }.also { it.addView(content) }))
+        setContentView(fadeIn(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.surface) }.also { it.addView(content) })))
     }
 
     private fun welcome(): View =
@@ -473,8 +529,15 @@ class MainActivity : ComponentActivity() {
                 )
             }
         panel = controls
-        setContentView(insetAware(root))
+        setContentView(fadeIn(insetAware(root)))
     }
+
+    /** Screens change with a short 180 ms fade over the same background, never a hard cut. */
+    private fun fadeIn(root: View): View =
+        root.apply {
+            alpha = 0f
+            animate().alpha(1f).setDuration(FADE_MS).start()
+        }
 
     /** Keeps content clear of system bars and cutouts (edge-to-edge is enforced from API 35). */
     private fun insetAware(root: View): View =
@@ -780,9 +843,15 @@ class MainActivity : ComponentActivity() {
                     action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG },
                 ),
             )
+            banner =
+                card(
+                    label("", 15f, bold = true, color = Palette.amber),
+                    action(getString(R.string.use_lite)) { switchToLite() },
+                ).apply { visibility = View.GONE }.also(::addView)
             adult = adultPanel().also(::addView)
             seatCards = column(0).also(::addView)
             sessionLine = label("", 15f, color = Palette.muted).also(::addView)
+            addView(label(getString(R.string.volume_pause_hint), 14f, color = Palette.muted))
         }
         tick()
     }
@@ -824,12 +893,40 @@ class MainActivity : ComponentActivity() {
             },
         )
         renderSeats(state.seats)
+        renderBanner(state)
         sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
         if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))
         adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
         adult?.findViewWithTag<TextView>(SEAT_TAG)?.update(getString(R.string.training_seat, trainingSeat))
         adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * A warm or slow phone gets an explanation and a one-tap switch to the lighter model;
+     * only offered while the Full model runs.
+     */
+    private fun renderBanner(state: MonitorUiState) {
+        val card = banner ?: return
+        val warm = thermalStatus() >= PowerManager.THERMAL_STATUS_MODERATE
+        val slow = state.status == Status.SLOW || state.status == Status.TOO_SLOW
+        val show = settings.model == PoseModel.FULL && !state.paused && (warm || slow)
+        card.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            (
+                card.getChildAt(
+                    0,
+                ) as TextView
+            ).update(if (warm) getString(R.string.banner_warm) else getString(R.string.banner_slow, fps))
+        }
+    }
+
+    /** Restarts inference with the Lite model; the meal and its calibration continue. */
+    private fun switchToLite() {
+        updateSettings(settings.copy(model = PoseModel.LITE))
+        closeCamera()
+        openCamera()
+        tick()
     }
 
     private fun clockText(seconds: Long) = "%d:%02d".format(seconds / 60, seconds % 60)
@@ -1252,8 +1349,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Thermal throttling explains slow processing on a phone that has run for a whole meal. */
-    private fun thermal(): String =
-        thermalLabel(getSystemService(PowerManager::class.java)?.currentThermalStatus ?: PowerManager.THERMAL_STATUS_NONE)
+    private fun thermal(): String = thermalLabel(thermalStatus())
 
     private fun backCameras(): List<Lens> =
         try {
@@ -1274,6 +1370,7 @@ class MainActivity : ComponentActivity() {
         val CAMERA_SCREENS = setOf(Screen.POSITION, Screen.TABLE, Screen.SEATS, Screen.MONITOR)
         const val TICK_MS = 100L
         const val DEMO_FRAME_MS = 66L
+        const val FADE_MS = 180L
 
         /** Below this the setup suggests the Lite model. */
         const val SLOW_FPS = 5.0
