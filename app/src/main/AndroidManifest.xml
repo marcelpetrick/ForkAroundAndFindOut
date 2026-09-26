@@ -8,7 +8,8 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <application android:theme="@style/AppTheme" android:label="Fork Around &amp; Find Out"
         android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/app_icon" android:supportsRtl="true" android:enableOnBackInvokedCallback="true">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:configChanges="uiMode|fontScale|density|locale|layoutDirection|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

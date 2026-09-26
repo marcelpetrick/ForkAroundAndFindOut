@@ -94,6 +94,22 @@ class UiTest {
             now += 500
             stage.draw(canvas)
         }
+        // Reminder card (all four seat colours), thank-you, paused dimming, fade-out.
+        for (seat in 1..4) {
+            stage.reminder = seat to (seat % 2 == 0)
+            stage.draw(canvas)
+        }
+        stage.reminder = null
+        stage.thanks = true
+        stage.dimmed = true
+        stage.warning = VisualMode.BORDER
+        stage.warning = VisualMode.OFF // fades out
+        now += 100
+        stage.draw(canvas)
+        now += 1000
+        stage.draw(canvas)
+        stage.thanks = false
+        stage.dimmed = false
         stage.skeleton = false
         stage.mapping = null
         stage.taps = emptyList()

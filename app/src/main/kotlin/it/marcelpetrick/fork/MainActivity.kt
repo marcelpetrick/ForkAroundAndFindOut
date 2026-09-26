@@ -58,12 +58,14 @@ import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
 import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
+import it.marcelpetrick.fork.ui.chip
 import it.marcelpetrick.fork.ui.column
 import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.lensLabels
 import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.settingsOptions
 import it.marcelpetrick.fork.ui.title
+import it.marcelpetrick.fork.ui.update
 import org.json.JSONObject
 import java.io.File
 import java.io.OutputStream
@@ -110,7 +112,10 @@ class MainActivity : ComponentActivity() {
     private var preview: PreviewView? = null
     private var panel: LinearLayout? = null
     private var status: TextView? = null
-    private var seatsText: TextView? = null
+    private var seatCards: LinearLayout? = null
+    private var sessionLine: TextView? = null
+    private var alarmingBefore = false
+    private var thanksUntil = 0L
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
     private var advice: TextView? = null
@@ -170,11 +175,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Palette.load(this)
         store = LocalStore(this)
         settings = store.settings()
         notice = store.notice
         onBackPressedDispatcher.addCallback(this) {
-            if (screen == Screen.WELCOME) finish() else show(Screen.WELCOME)
+            when {
+                screen == Screen.WELCOME -> finish()
+                screen == Screen.MONITOR && monitor != null -> confirmStop()
+                else -> show(Screen.WELCOME)
+            }
         }
         show(Screen.WELCOME)
     }
@@ -183,6 +193,29 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         if (screen in CAMERA_SCREENS && source == null && preview != null) openCamera()
         if (screen == Screen.MONITOR || screen == Screen.DEMO) schedule()
+    }
+
+    /**
+     * Dark mode, font scale, locale or rotation outside camera screens: re-render in place.
+     * Recreating the activity would end a running meal session.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Palette.load(this)
+        if (screen in CAMERA_SCREENS) {
+            preview = null
+            closeCamera()
+        }
+        show(screen)
+    }
+
+    private fun confirmStop() {
+        AlertDialog
+            .Builder(this)
+            .setMessage(R.string.stop_confirm)
+            .setPositiveButton(R.string.stop) { _, _ -> show(Screen.WELCOME) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     /** Backgrounding silences immediately and releases the camera; the user resumes explicitly. */
@@ -257,26 +290,30 @@ class MainActivity : ComponentActivity() {
         stage = null
         preview = null
         panel = null
-        setContentView(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.SURFACE) }.also { it.addView(content) }))
+        setContentView(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.surface) }.also { it.addView(content) }))
     }
 
     private fun welcome(): View =
         column().apply {
-            notice?.let { addView(card(label(it, color = Palette.RED))) }
+            notice?.let { addView(card(label(it, color = Palette.red))) }
             addView(title(getString(R.string.app_name)))
             addView(label(getString(R.string.welcome_intro), 19f))
             addView(
                 card(
                     label(getString(R.string.welcome_privacy)),
                     label(getString(R.string.welcome_placement)),
-                    label(getString(R.string.welcome_limits), color = Palette.MUTED),
+                    label(getString(R.string.welcome_limits), color = Palette.muted),
                 ),
             )
             if (settings.table != null) {
+                val lens =
+                    cameraIds().firstOrNull { it.id == settings.camera }?.let { getString(it.label) }
+                        ?: getString(R.string.camera_automatic)
+                addView(label(getString(R.string.ready_line, settings.people, settings.seats.size, settings.model.name, lens), bold = true))
                 addView(action(getString(R.string.start_monitoring), primary = true) { startMonitoring() })
                 addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) })
             } else {
-                addView(label(getString(R.string.needs_setup), color = Palette.MUTED))
+                addView(label(getString(R.string.needs_setup), color = Palette.muted))
                 addView(action(getString(R.string.setup_camera), primary = true) { begin(Screen.POSITION) })
             }
             addView(action(getString(R.string.try_demo)) { begin(Screen.DEMO) })
@@ -293,7 +330,7 @@ class MainActivity : ComponentActivity() {
     private fun settingsPage(): View =
         column().apply {
             addView(title(getString(R.string.settings_title)))
-            addView(label(getString(R.string.settings_help), color = Palette.MUTED))
+            addView(label(getString(R.string.settings_help), color = Palette.muted))
             for (option in settingsOptions(cameraIds())) {
                 val name = getString(option.label)
                 val value = label(option.display(this@MainActivity, settings), 18f, bold = true)
@@ -305,7 +342,8 @@ class MainActivity : ComponentActivity() {
                 }
                 addView(
                     card(
-                        label(name, color = Palette.MUTED),
+                        label(name, bold = true),
+                        label(getString(option.explanation), 14f, color = Palette.muted),
                         row(
                             action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
                             value.apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
@@ -324,7 +362,7 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun cameraLayout(landscape: Boolean = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-        val frame = FrameLayout(this).apply { setBackgroundColor(Palette.STAGE) }
+        val frame = FrameLayout(this).apply { setBackgroundColor(Palette.stageBackground) }
         val view = PreviewView(this)
         frame.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val overlay = StageView(this).also { it.clock = clock }
@@ -342,7 +380,7 @@ class MainActivity : ComponentActivity() {
         val root =
             LinearLayout(this).apply {
                 orientation = if (landscape) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-                setBackgroundColor(Palette.SURFACE)
+                setBackgroundColor(Palette.surface)
                 addView(
                     frame,
                     if (landscape) {
@@ -389,7 +427,7 @@ class MainActivity : ComponentActivity() {
             addView(title(getString(R.string.position_title)))
             addView(label(getString(R.string.position_help)))
             status = label(getString(R.string.people_detected, 0), bold = true).also(::addView)
-            advice = label(getString(R.string.visibility_tips), color = Palette.MUTED).also(::addView)
+            advice = label(getString(R.string.visibility_tips), color = Palette.muted).also(::addView)
             addView(
                 action(getString(R.string.mark_table), primary = true) {
                     if (visibilityCheck?.result()?.passed == true) show(Screen.TABLE)
@@ -562,8 +600,10 @@ class MainActivity : ComponentActivity() {
         panel!!.apply {
             addView(title(getString(R.string.monitor_title)))
             status = label("", 19f, bold = true).also(::addView)
-            seatsText = label("").also(::addView)
+            // Pause stays above the seat cards: always visible, one tap, however many seats.
             addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
+            seatCards = column(0).also(::addView)
+            sessionLine = label("", 15f, color = Palette.muted).also(::addView)
             addView(action(getString(R.string.stop)) { show(Screen.WELCOME) })
             addView(action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG })
             adult = adultPanel().also(::addView)
@@ -595,10 +635,11 @@ class MainActivity : ComponentActivity() {
         val active = monitor ?: return
         if (screen != Screen.MONITOR || panel == null) return
         val now = clock()
-        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.text = getString(if (active.active) R.string.pause else R.string.resume)
-        panel!!.findViewWithTag<TextView>(DIAGNOSTICS_TAG)?.text =
-            getString(if (diagnosticsOpen) R.string.hide_diagnostics else R.string.show_diagnostics)
-        status?.text =
+        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.update(getString(if (active.active) R.string.pause else R.string.resume))
+        panel!!.findViewWithTag<TextView>(DIAGNOSTICS_TAG)?.update(
+            getString(if (diagnosticsOpen) R.string.hide_diagnostics else R.string.show_diagnostics),
+        )
+        status?.update(
             when {
                 !active.active -> getString(R.string.paused)
                 now - resumedAt < settings.graceMs -> getString(R.string.grace, (settings.graceMs - (now - resumedAt) + 999) / 1000)
@@ -607,20 +648,24 @@ class MainActivity : ComponentActivity() {
                 active.results.isEmpty() -> getString(R.string.waiting)
                 active.health == Health.SLOW -> getString(R.string.slow_processing, fps)
                 stage?.warning != VisualMode.OFF -> getString(R.string.warning_text)
-                else -> getString(R.string.monitor_title)
-            }
-        seatsText?.text = seatLines(active.results)
+                else -> getString(R.string.watching)
+            },
+        )
+        renderSeats(active.results)
+        val seconds = (active.elapsedMs + if (active.active) now - resumedAt else 0) / 1000
+        sessionLine?.update(getString(R.string.session_line, "%d:%02d".format(seconds / 60, seconds % 60), active.violations))
+        stage?.dimmed = !active.active
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
-        diagnosticsText?.text = diagnostics(active)
-        adult?.findViewWithTag<TextView>(TRAINING_TAG)?.text = getString(if (training) R.string.training_on else R.string.training_off)
-        adult?.findViewWithTag<TextView>(SEAT_TAG)?.text = getString(R.string.training_seat, trainingSeat)
+        if (diagnosticsOpen) diagnosticsText?.update(diagnostics(active))
+        adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
+        adult?.findViewWithTag<TextView>(SEAT_TAG)?.update(getString(R.string.training_seat, trainingSeat))
         adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
     }
 
     /** Adult-only tools, collapsed by default: diagnostics, feedback, explicit training. */
     private fun adultPanel(): LinearLayout =
         column(0).apply {
-            diagnosticsText = label("", 14f, color = Palette.MUTED).also(::addView)
+            diagnosticsText = label("", 14f, color = Palette.muted).also(::addView)
             addView(
                 row(
                     action(getString(R.string.false_alarm)) { feedback("FALSE_ALARM") },
@@ -631,7 +676,7 @@ class MainActivity : ComponentActivity() {
             addView(
                 column(0).apply {
                     tag = LABELS_TAG
-                    addView(label(getString(R.string.training_help), 14f, color = Palette.MUTED))
+                    addView(label(getString(R.string.training_help), 14f, color = Palette.muted))
                     addView(
                         action(getString(R.string.training_seat, 1)) {
                             trainingSeat = trainingSeat % settings.people + 1
@@ -715,7 +760,7 @@ class MainActivity : ComponentActivity() {
             addView(title(getString(R.string.data_title)))
             addView(label(getString(R.string.data_help)))
             val count = store.records().length()
-            store.notice?.let { addView(card(label(it, color = Palette.RED))) }
+            store.notice?.let { addView(card(label(it, color = Palette.red))) }
             notice?.let { addView(label(it, bold = true)) }
             addView(label(getString(R.string.data_count, count), 19f, bold = true))
             addView(action(getString(R.string.export)) { exporter.launch("fork-around-samples.json") })
@@ -759,7 +804,7 @@ class MainActivity : ComponentActivity() {
             addView(card(label(getString(R.string.about_license)), label(getString(R.string.welcome_privacy))))
             addView(card(label(getString(R.string.about_notices), 15f)))
             addView(label(getString(R.string.about_source)).apply { autoLinkMask = Linkify.WEB_URLS })
-            addView(label(getString(R.string.welcome_limits), color = Palette.MUTED))
+            addView(label(getString(R.string.welcome_limits), color = Palette.muted))
             addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
         }
 
@@ -791,12 +836,47 @@ class MainActivity : ComponentActivity() {
         show(Screen.DATA)
     }
 
-    private fun seatLines(results: List<SeatResult>): String =
-        results.joinToString("\n") { seat ->
-            if (seat.pose == null) {
-                getString(R.string.seat_empty, seat.seat)
-            } else {
-                getString(R.string.seat_status, seat.seat, word(seat.left.state), word(seat.right.state))
+    /**
+     * One card per seat in its identity colour, with a words-and-colour chip per elbow.
+     * Cards are built once and updated in place only when a state changes: rebuilding views
+     * ten times a second would waste the main thread and flood accessibility services.
+     */
+    private fun renderSeats(results: List<SeatResult>) {
+        val container = seatCards ?: return
+        val shown = results.map { Triple(it.pose != null, it.left.state, it.right.state) }
+        if (container.tag == shown) return
+        container.tag = shown
+        container.removeAllViews()
+        for (seat in results) {
+            val name = label(getString(R.string.seat_name, seat.seat), 17f, bold = true, color = Palette.seat(seat.seat))
+            val card =
+                if (seat.pose == null) {
+                    card(name, label(getString(R.string.nobody_detected), 15f, color = Palette.muted))
+                } else {
+                    card(
+                        name,
+                        row(
+                            chip(getString(R.string.chip_left, word(seat.left.state)), seat.left.state),
+                            chip(getString(R.string.chip_right, word(seat.right.state)), seat.right.state),
+                        ),
+                    )
+                }
+            card.contentDescription =
+                if (seat.pose == null) {
+                    getString(R.string.seat_empty, seat.seat)
+                } else {
+                    getString(R.string.seat_status, seat.seat, word(seat.left.state), word(seat.right.state))
+                }
+            container.addView(card)
+        }
+    }
+
+    private fun firstViolation(results: List<SeatResult>): Pair<Int, Boolean>? =
+        results.firstNotNullOfOrNull { seat ->
+            when {
+                seat.left.state == ElbowState.VIOLATION -> seat.seat to true
+                seat.right.state == ElbowState.VIOLATION -> seat.seat to false
+                else -> null
             }
         }
 
@@ -865,9 +945,9 @@ class MainActivity : ComponentActivity() {
         overlay.table = SyntheticDemo.table
         panel!!.apply {
             addView(title(getString(R.string.demo_title)))
-            addView(label(getString(R.string.demo_banner), bold = true, color = Palette.AMBER))
+            addView(label(getString(R.string.demo_banner), bold = true, color = Palette.amber))
             addView(label(getString(R.string.demo_help)))
-            seatsText = label("").also(::addView)
+            seatCards = column(0).also(::addView)
             addView(action(getString(R.string.restart), primary = true) { restartDemo() })
             addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
         }
@@ -898,7 +978,8 @@ class MainActivity : ComponentActivity() {
             view.warning = if (demo.tick(now)) settings.visual else VisualMode.OFF
             view.results = demo.results
             view.poses = emptyList()
-            seatsText?.text = seatLines(demo.results)
+            renderSeats(demo.results)
+            view.reminder = if (view.warning != VisualMode.OFF) firstViolation(demo.results) else null
             view.refresh()
             schedule()
             return
@@ -912,6 +993,15 @@ class MainActivity : ComponentActivity() {
         }
         view.results = active.results
         view.warning = if (alarming) settings.visual else VisualMode.OFF
+        // A correction (not a pause or a false-alarm rest) earns a short thank-you.
+        if (alarmingBefore && !alarming && active.active && now >= snoozedUntil &&
+            active.results.isNotEmpty()
+        ) {
+            thanksUntil = now + THANKS_MS
+        }
+        alarmingBefore = alarming
+        view.reminder = if (alarming) firstViolation(active.results) else null
+        view.thanks = !alarming && now < thanksUntil
         speaker.play(alarm.update(alarming, settings.audio, now, settings.repeatMs), settings.volume)
         refreshMonitorPanel()
         view.refresh()
@@ -967,6 +1057,10 @@ class MainActivity : ComponentActivity() {
 
     private fun silence() {
         stage?.warning = VisualMode.OFF
+        stage?.reminder = null
+        stage?.thanks = false
+        alarmingBefore = false
+        thanksUntil = 0L
         stage?.refresh()
         alarm.update(false, settings.audio, clock(), settings.repeatMs)
         speaker.play(Sound.STOP, settings.volume)
@@ -1016,6 +1110,7 @@ class MainActivity : ComponentActivity() {
         const val TRAINING_TAG = "training"
         const val CONTINUE_TAG = "continue"
         const val SNOOZE_MS = 30_000L
+        const val THANKS_MS = 2_000L
         const val SEAT_TAG = "seat"
         const val LABELS_TAG = "labels"
     }

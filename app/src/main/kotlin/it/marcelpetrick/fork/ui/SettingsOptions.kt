@@ -13,7 +13,29 @@ class Option(
     val label: Int,
     val display: (Context, Settings) -> String,
     val change: (Settings, Int) -> Settings,
-)
+) {
+    /** One-line explanation shown under the setting. */
+    val explanation: Int
+        get() = EXPLANATIONS.getValue(label)
+}
+
+private val EXPLANATIONS =
+    mapOf(
+        R.string.option_people to R.string.explain_people,
+        R.string.option_camera to R.string.explain_camera,
+        R.string.option_model to R.string.explain_model,
+        R.string.option_trigger to R.string.explain_trigger,
+        R.string.option_trigger_delay to R.string.explain_trigger_delay,
+        R.string.option_clear_delay to R.string.explain_clear_delay,
+        R.string.option_cooldown to R.string.explain_cooldown,
+        R.string.option_grace to R.string.explain_grace,
+        R.string.option_visual to R.string.explain_visual,
+        R.string.option_audio to R.string.explain_audio,
+        R.string.option_volume to R.string.explain_volume,
+        R.string.option_repeat to R.string.explain_repeat,
+        R.string.option_debug to R.string.explain_debug,
+        R.string.option_statistics to R.string.explain_statistics,
+    )
 
 private fun <T> cycle(
     values: List<T>,

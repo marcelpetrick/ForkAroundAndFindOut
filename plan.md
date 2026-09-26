@@ -89,24 +89,39 @@ paths only, so neither agent commits the other's uncommitted files.
 
 ## Vision traceability
 
-| Vision sections | Delivery / evidence | Status |
-| --- | --- | --- |
-| 1–6, 16–19, 32–35 | Android Kotlin/CameraX/MediaPipe architecture and pose feasibility | Pending |
-| 7, FR-05 | Four-corner table calibration and persistence | Pending |
-| 8, FR-06 | Optional seat regions and stable association despite reordered detections | Pending |
-| 9–10, 28 | Table-relative arm geometry, confidence and motion classifier | Pending |
-| 11–12, 26 | Independent UNKNOWN/CLEAR/SUSPECT/VIOLATION states and hysteresis | Pending |
-| 13, FR-09–11 | Configurable warnings, clearing, cooldown/grace, immediate pause | Pending |
-| FR-01–04, 14–15 | Local multi-person camera analysis, no recording by default | Pending |
-| FR-12–13 | Debug telemetry, settings and model/camera selection | Pending |
-| FR-15–16, 21–23, 27 | Explicit local training/feedback, deletion, session statistics | Pending |
-| 15, 19, 29 | Performance, real-camera feasibility, household acceptance | Hardware evidence pending |
-| 24–26 | CI, APK artifact, tests and deterministic synthetic fixtures | Pending |
-| 10.2, 21–22, phase 6 | Session-split learned classifier after sufficient real labelled sessions | Conditional; no dataset available |
-| 10.3, phase 7 | Local image classifier only if landmarks prove insufficient | Conditional future work |
-| 20, phase 8 | Optional depth evaluation | Conditional future work |
-| 3.2, 30–31, phase 9 | Raspberry Pi/multi-camera appliance after smartphone validation | Explicitly deferred by vision |
-| 36 | Verify relevant upstream APIs and record references | In progress |
+Audited against every section of `vision.md` (final gate). "Done" means implemented and
+covered by automated tests; physical-world outcomes are listed separately and honestly.
+
+| Vision | Delivery (where) | Evidence | Status |
+| --- | --- | --- | --- |
+| §1 objective, §2 approach, §34 core decision | CameraX → MediaPipe → seat tracker → table-relative features → rule classifier → temporal filter → warning (`docs/architecture.md`) | unit + Robolectric + emulator e2e | Done |
+| §3 smartphone first | Native Android app (API 34+); Kotlin throughout by owner decision instead of Flutter (§16–17 intent kept: native camera/inference, only results cross into UI) | APK builds, emulator | Done |
+| §3.2, §30–31, phase 9 Raspberry Pi / multi-camera | — | — | Deferred by the vision until the phone version is validated |
+| §4, §18 framework and configuration | MediaPipe Pose Landmarker Full (Lite selectable), LIVE_STREAM, ≤4 poses, 0.6 gates, pinned SHA-256 models; comparison in `docs/pose-frameworks.md` | `NativeModelTest` (both models, offline) | Done |
+| §5 problem formulation (away / passing / supported) | Conservative supported-elbow rule: stationary, bent, downward upper arm, near/inside table | `DetectorTest` acceptance cases | Done |
+| §6 camera position | Welcome placement copy, visibility-check tips, README/hardware protocol | UI text; real placement **not yet measured** | Done (guidance); physical validation pending |
+| §7, FR-05 table calibration | Four-corner marking in image space, crossing/letterbox rejection, drag adjust, persisted with aspect+rotation, invalidated on change | Robolectric + emulator real-camera flow | Done |
+| §7, §8, FR-06 seat zones and assignment | Optional non-overlapping regions (all or none), tracker without identity, ambiguity rejection | `SeatTrackerTest`, flow tests | Done |
+| §9 features, §10.1 rules, §28 conservative rule | Signed distances, limb lengths, angles, heights, torso/shoulder tilt, speed/variance, confidence | `GeometryTest`, `DetectorTest` | Done |
+| §10.2, §21–22, phase 6 learned classifier | Landmark session logs + replay harness + session-split guidance prepared | `SessionLogTest`, `ToolsTest` | Conditional: needs real consented sessions; none exist |
+| §10.3, phase 7 image classifier | — | — | Conditional future work (only if landmarks insufficient) |
+| §11–12, §26, FR-07/08 states and temporal filter | UNKNOWN/CLEAR/SUSPECT/VIOLATION per elbow, dwell, clear delay, cooldown, gap reset, no single-frame alarm | `TemporalFilterTest`, `MonitorTest` | Done |
+| §13, FR-09/10/11 alarms | Border/icon/tint/slow pulse (no flashing), reminder card by seat colour, chime once/repeat/continuous with volume, auto clear, grace, pause always visible, false-alarm rest | Robolectric, `UiTest` | Done |
+| §14 FR-01/02/03/04 | Rear camera selection (lens labels), on-device only (no INTERNET permission), 1–4 people, arm landmarks with confidence | `PrivacyGuardTest`, flow tests | Done |
+| FR-12 debug overlay | Skeleton, confidence, table, seats, state, score, FPS, latency p50/p95, dropped, thermal, battery | flow tests, e2e readout | Done |
+| FR-13 configuration | Every listed setting persisted (versioned, migrated) | `StorageTest`, `UiTest` | Done |
+| FR-14 no recording, §23 privacy | Frames only in reused memory; no image storage; backup off; telemetry uploader blocked | `PrivacyGuardTest`, emulator job test | Done |
+| FR-15, §21, §27 training and feedback | Explicit training mode → landmark logs with labels; False alarm / Missed violation | flow tests | Done |
+| FR-16 statistics | Opt-in session statistics (duration, violations, corrections, confidence) | flow tests | Done |
+| §15 non-functional (FPS, latency, backlog, background thread, failure policy) | 640×360 analysis, one frame in flight, latest-only, measured budgets, uncertainty = no alarm | emulator 27.9 FPS (not phone); CI emulator 5 FPS → "slow" state | Done in software; phone numbers **pending** |
+| §15 false alarms per meal, §29 household acceptance | Protocol and result table in `docs/hardware-validation.md`; synthetic acceptance cases automated | synthetic only | **Pending real meals — cannot be fabricated** |
+| §19 partial-body visibility | In-app 10 s visibility check gating table marking | Robolectric + emulator | Done (software); real placement pending |
+| §20, phase 8 depth | — | — | Conditional future work |
+| §24 CI/CD | `localPipeline.sh` = CI: lint, tests, coverage ≥95 % (98 %), APKs, emulator e2e, Docker; artifacts; GHCR; releases | GitHub Actions green | Done |
+| §25 project structure | `:detection`, `:core`, `:tools`, `:app` (Kotlin equivalent of the proposed layout) | builds | Done |
+| §32 phases 1–5 | 1 feasibility (camera+pose+overlay), 2 UI integration (native), 3 calibration, 4 rules, 5 data collection tooling | tests | Done in software; phase 4/5 household testing pending |
+| §33 stack, §35 recommendation | Implemented except Flutter (owner chose Kotlin) and Heavy model (not bundled) | — | Done with documented deviations |
+| §36 references | Upstream APIs used as documented; links in docs | link check | Done |
 
 ## Validation boundaries
 
@@ -605,3 +620,28 @@ is empty; the same method was applied to the session range instead. Findings fix
   KB/s gzip), activity recreation on system config changes during a meal ends the session
   safely (silence, statistics saved), MediaPipe result-never-arrives is not observed with
   one frame in flight.
+
+### 0.10.30 — feat: apply the plan_v2 design system: dim-room theme, seat cards, reminder card
+
+- Done (plan_v2/design/ui-ux.md): colour tokens as resources with a system-following dark
+  "dim room" variant; seat identity colours; per-seat cards with words-and-colour state chips;
+  session line; Pause directly under the status (the camera e2e test found it pushed below
+  the fold by four seat cards); centred reminder card "Elbows off the table, please · Blue seat
+  · left" and a 2 s "Thank you!" after a real correction; perimeter fades in 400 ms / out
+  600 ms, pulse 0.6↔1.0 over 2.4 s; paused preview dimmed; Back asks "Stop monitoring?";
+  Welcome shows a Ready line and "Start dinner"; every setting has a one-line explanation
+  (en/de); status "Watching the table." instead of repeating the title. Configuration
+  changes (dark mode, font scale, locale, rotation outside camera screens) re-render in place
+  instead of recreating the activity, so a meal session survives a dark-mode switch at dusk.
+- Deviation: light-mode amber/grey chip text darkened (#8A5A1D, #5F6662) — the sheet's
+  #C9822B/#8A918D on their soft backgrounds fail its own 4.5:1 contrast rule.
+- Found and fixed while validating: seat cards were first rebuilt every tick (the e2e suite
+  slowed from 4 to 21 minutes because the UI never idled); cards now re-render only when a
+  state changes (a Kotlin precedence slip in the first cache key was caught by the tests),
+  and per-tick texts update only on change. UiFlowTest takes failure screenshots before the
+  scenario closes; assertions use stable facts instead of the 3 s grace text.
+- Vision traceability table rewritten as the final-gate audit (see above).
+- Validation: 53 tests, 98.3 % merged lines (2097/2133), E2E 4/4 (4 min), Docker PASS,
+  refreshed genuine screenshots.
+- Not done (optional polish from plan_v2): loupe, auto-proposed seat zones, cross-fade
+  between screens, presenter extraction.

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- "Dim room" tokens from plan_v2/design/ui-ux.md; follows the system dark setting. -->
+<resources>
+    <color name="bg">#17201C</color>
+    <color name="card">#1F2A26</color>
+    <color name="line">#2E3B35</color>
+    <color name="ink">#F1EDE3</color>
+    <color name="muted">#A5AFA9</color>
+    <color name="green">#6FB597</color>
+    <color name="on_green">#17201C</color>
+    <color name="green_soft">#24463A</color>
+    <color name="amber">#E2A25A</color>
+    <color name="amber_soft">#4A3620</color>
+    <color name="red">#E5766B</color>
+    <color name="red_soft">#4A2522</color>
+    <color name="grey">#A5AFA9</color>
+    <color name="grey_soft">#2A332F</color>
+</resources>

@@ -12,7 +12,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -42,6 +41,11 @@ class UiFlowTest {
             ) {
                 device.executeShellCommand("screencap -p /data/local/tmp/fork-e2e-${description.methodName}.png")
             }
+
+            // Closing here (not in @After) keeps the app on screen for the failure screenshot.
+            override fun finished(description: Description) {
+                scenario.close()
+            }
         }
 
     /** CI emulators sometimes show "System UI isn't responding"; waiting lets the test proceed. */
@@ -66,11 +70,6 @@ class UiFlowTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         device.waitForIdle()
         dismissSystemDialogs()
-    }
-
-    @After
-    fun stop() {
-        scenario.close()
     }
 
     private fun waitFor(
@@ -116,8 +115,15 @@ class UiFlowTest {
     fun syntheticDemoShowsWarningWithoutCamera() {
         tap("Try demo (synthetic)")
         waitFor("SYNTHETIC DEMO")
-        waitFor("Elbow on table", 12_000)
-        waitFor("Seat 1 · Left: Clear")
+        // The reminder card (drawn on the overlay) targets seat 2, left, within one demo loop.
+        var reminder: Pair<Int, Boolean>? = null
+        val deadline = System.currentTimeMillis() + 16_000
+        while (reminder == null && System.currentTimeMillis() < deadline) {
+            scenario.onActivity { reminder = it.stage?.reminder }
+            if (reminder == null) Thread.sleep(200)
+        }
+        assertEquals(2 to true, reminder)
+        waitFor("Left: Clear")
         device.pressBack()
         waitFor("Try demo (synthetic)")
     }
@@ -176,8 +182,8 @@ class UiFlowTest {
         waitFor("Seats (optional)")
         scrollTo("Finish setup")
         tap("Finish setup")
-        tap("Start monitoring")
-        waitFor("Warnings begin in")
+        tap("Start dinner")
+        waitFor("Pause") // the grace countdown may already be over on a slow device
         Thread.sleep(5_000) // let the latency window fill
         tap("Adult diagnostics")
         // "latency p50" is unique to the diagnostics readout; a slow CI emulator also shows

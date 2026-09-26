@@ -5,9 +5,14 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 ## Intended experience
 
 A supervising adult sets up a fixed phone once, then starts each meal in two taps.
-The interface uses warm ivory surfaces, deep green controls, large text, rounded
-cards, and restrained amber/red status accents. Status always has words, not just
-color. Use a scrollable layout on small screens and at large system font sizes.
+The interface follows `plan_v2/design/ui-ux.md`: warm ivory tokens (`values/colors.xml`)
+and a "dim room" dark variant that follows the system setting (`values-night/`), deep
+green controls, large text, rounded cards with hairlines, restrained amber/red accents.
+Status always has words, not just colour (state chips "Left: Clear"). Layouts scroll on
+small screens and at large font sizes. System configuration changes (dark mode, font
+scale, locale, rotation outside camera screens) re-render in place and never end a
+running meal session. Light-mode amber/grey chip text is darker than the design sheet
+(#8A5A1D, #5F6662) to meet its own 4.5:1 contrast rule.
 
 1. **Welcome / ready:** explain local-only processing, no images saved, and camera
    placement. Primary action: Set up camera. Secondary: Try demo (clearly synthetic).
@@ -19,10 +24,14 @@ color. Use a scrollable layout on small screens and at large system font sizes.
    aligned to the visible image, never to letterboxed margins.
 4. **Seats (optional):** define non-overlapping torso regions, up to four. Explain
    their role in stable assignment and that seat numbers do not identify people.
-5. **Monitor:** preview plus per-seat left/right statuses. Primary control becomes
-   Pause, always available without opening a menu. Uncertainty reads “Not visible”
+5. **Monitor:** preview; Pause directly under the status line (always visible, one tap,
+   however many seats); one card per seat in its identity colour (green/blue/orange/
+   purple — colours, never names) with a chip per elbow; a session line "Session 12:03 ·
+   reminders: 1". Paused dims the preview. Back asks "Stop monitoring?". Uncertainty reads “Not visible”
    rather than “Good posture”. Setup and settings never produce alarms (Settings has an explicit "Test sound" preview); the demo previews the visual warning only, never sound or storage.
-6. **Warning:** static perimeter and a plain-language elbow reminder by default.
+6. **Warning:** static perimeter (fades in 400 ms, out 600 ms; pulse 0.6↔1.0 over 2.4 s)
+   and a centred card "Elbows off the table, please · Blue seat · left" by default; after
+   a real correction a short "Thank you!" card.
    Audio (a soft generated two-note chime, respecting Do-Not-Disturb) and all alternate
    visual modes are configurable. "False alarm" silences and rests reminders for 30 s. Clear automatically on
    correction; silence immediately on pause, backgrounding, lost camera or stale data.

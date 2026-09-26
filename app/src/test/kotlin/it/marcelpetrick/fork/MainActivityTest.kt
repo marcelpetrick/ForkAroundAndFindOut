@@ -6,6 +6,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Looper
@@ -120,7 +121,7 @@ class MainActivityTest {
             val speaker = RecordingSpeaker()
             activity.speaker = speaker
             assertTrue(activity.texts().contains("Set up camera"))
-            assertFalse(activity.texts().contains("Start monitoring"))
+            assertFalse(activity.texts().contains("Start dinner"))
 
             activity.click("Try demo (synthetic)")
             assertEquals(MainActivity.Screen.DEMO, activity.screen)
@@ -238,7 +239,7 @@ class MainActivityTest {
             assertEquals(0, activity.settings.seats.size) // automatic assignment
             assertEquals(1, sources.single().closed)
 
-            activity.click("Start monitoring")
+            activity.click("Start dinner")
             assertEquals(MainActivity.Screen.MONITOR, activity.screen)
             assertTrue(activity.texts().contains("Warnings begin in 3 s"))
             repeat(50) {
@@ -248,7 +249,8 @@ class MainActivityTest {
             assertEquals(VisualMode.BORDER, activity.stage!!.warning)
             assertEquals(listOf(Sound.BEEP), speaker.sounds)
             assertTrue(activity.texts().contains("Elbows off the table, please"))
-            assertTrue(activity.texts().contains("Seat 1 · Left: Elbow on table"))
+            assertTrue(activity.texts().contains("Seat 1\nLeft: Elbow on table"))
+            assertEquals(1 to true, activity.stage!!.reminder) // the card names seat 1, left
             activity.click("Adult diagnostics")
             assertTrue(activity.texts().contains("FPS"))
             assertTrue(activity.texts().contains("Seat 1 left: score 0.95"))
@@ -292,7 +294,7 @@ class MainActivityTest {
             assertTrue(activity.texts().contains("Recalibrate the table"))
             assertNull(activity.monitor)
 
-            activity.click("Start monitoring")
+            activity.click("Start dinner")
             error("Camera or model unavailable: gone. Retry setup or choose Lite.")
             idle()
             assertEquals(MainActivity.Screen.WELCOME, activity.screen)
@@ -371,7 +373,7 @@ class MainActivityTest {
             assertEquals(0.75, activity.settings.calibrationAspect, 0.0)
             assertEquals(90, activity.settings.calibrationRotation)
             activity.click("Finish setup")
-            activity.click("Start monitoring")
+            activity.click("Start dinner")
             val aspect = activity.settings.calibrationAspect
 
             fun feed(ms: Long) =
@@ -490,7 +492,7 @@ class MainActivityTest {
             // A full store reports the problem instead of pretending to save.
             LocalStore(activity).addAll(List(LocalStore.LIMIT) { JSONObject() })
             activity.click("Back")
-            activity.click("Start monitoring")
+            activity.click("Start dinner")
             activity.click("Adult diagnostics")
             activity.click("False alarm")
             assertTrue(activity.texts().contains("Not saved: Sample limit reached"))
@@ -545,6 +547,50 @@ class MainActivityTest {
                     .x,
                 0.01,
             )
+            activity.click("Finish setup")
+            assertTrue(activity.texts().contains("Ready · people: 1 · seat regions: 0"))
+
+            // A reminder names the seat by colour; a real correction earns a short thank-you.
+            activity.click("Start dinner")
+
+            fun feed(
+                ms: Long,
+                person: Pose,
+            ) = repeat((ms / 100).toInt()) {
+                frame(listOf(person), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
+                idle(100)
+            }
+            feed(5000, pose())
+            assertEquals(1 to true, activity.stage!!.reminder)
+            assertTrue(activity.texts().contains("Session 0:0"))
+            feed(1000, pose(Point(0.04, 0.6), Point(0.96, 0.6)))
+            assertEquals(null, activity.stage!!.reminder)
+            assertTrue(activity.stage!!.thanks)
+            feed(2500, pose(Point(0.04, 0.6), Point(0.96, 0.6)))
+            assertFalse(activity.stage!!.thanks)
+
+            // Dark mode switching at dusk re-renders in place and keeps the meal session.
+            val session = activity.monitor
+            activity.onConfigurationChanged(Configuration(activity.resources.configuration))
+            idle()
+            assertEquals(MainActivity.Screen.MONITOR, activity.screen)
+            assertTrue(session === activity.monitor)
+
+            // Back asks before ending a running session.
+            activity.onBackPressedDispatcher.onBackPressed()
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+            idle()
+            assertEquals(MainActivity.Screen.MONITOR, activity.screen)
+            activity.onBackPressedDispatcher.onBackPressed()
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            idle()
+            assertEquals(MainActivity.Screen.WELCOME, activity.screen)
+            assertNull(activity.monitor)
+
+            // Rotating or switching theme outside camera screens re-renders the page.
+            activity.onConfigurationChanged(Configuration(activity.resources.configuration))
+            assertEquals(MainActivity.Screen.WELCOME, activity.screen)
+            assertTrue(activity.texts().contains("Start dinner"))
         }
     }
 }
@@ -592,10 +638,24 @@ class GermanLocaleTest {
             assertTrue(activity.texts().contains("Es werden keine Bilder oder Videos gespeichert"))
             activity.click("Demo ausprobieren (synthetisch)")
             idle(6000)
-            assertTrue(activity.texts().contains("Platz 2 · Links: Ellbogen auf dem Tisch"))
+            assertTrue(activity.texts().contains("Platz 2\nLinks: Ellbogen auf dem Tisch"))
             activity.click("Zurück")
             activity.click("Einstellungen")
             assertTrue(activity.texts().contains("Weitwinkel") || activity.texts().contains("Automatisch"))
+        }
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "night")
+class DimRoomThemeTest {
+    @Test
+    fun systemDarkModeUsesTheDimRoomPalette() {
+        Robolectric.buildActivity(MainActivity::class.java).setup().use { controller ->
+            val activity = controller.get()
+            assertEquals(android.graphics.Color.parseColor("#17201C"), it.marcelpetrick.fork.ui.Palette.surface)
+            assertEquals(android.graphics.Color.parseColor("#F1EDE3"), it.marcelpetrick.fork.ui.Palette.ink)
+            assertTrue(activity.texts().contains("Set up camera"))
         }
     }
 }

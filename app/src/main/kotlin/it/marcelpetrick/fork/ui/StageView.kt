@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import it.marcelpetrick.fork.R
+import it.marcelpetrick.fork.detection.ElbowState
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
@@ -39,7 +40,27 @@ class StageView(
 
     /** Normalized image → view pixels; taps outside the image (letterbox margins) are rejected. */
     var mapping: Matrix? = null
+
+    /** Visual warning mode; changes fade in (400 ms) and out (600 ms), never pop or flash. */
     var warning = VisualMode.OFF
+        set(value) {
+            if (value == field) return
+            if (value == VisualMode.OFF) fadingOut = field
+            field = value
+            changedAt = clock()
+            postInvalidateOnAnimation()
+        }
+    private var fadingOut = VisualMode.OFF
+    private var changedAt = 0L
+
+    /** The reminder card: which seat (colour and number) and side, or null. */
+    var reminder: Pair<Int, Boolean>? = null
+
+    /** When set, a short "Thank you" card after a correction is shown. */
+    var thanks = false
+
+    /** Paused: the preview is dimmed so it is obvious nothing is being watched. */
+    var dimmed = false
     var onTap: ((Point) -> Unit)? = null
     var onRejectedTap: (() -> Unit)? = null
 
@@ -102,7 +123,7 @@ class StageView(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (synthetic) canvas.drawColor(Palette.STAGE)
+        if (synthetic) canvas.drawColor(Palette.stageBackground)
         mapping?.let { canvas.drawPath(shadeMargins(it), fill.apply { color = Color.argb(150, 0, 0, 0) }) }
         table?.let { polygon(canvas, it.points, Color.argb(60, 255, 214, 102), Color.rgb(255, 214, 102)) }
         seats.forEachIndexed { index, seat ->
@@ -113,7 +134,7 @@ class StageView(
             polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
             taps.forEachIndexed { index, tap ->
                 val (x, y) = view(tap)
-                canvas.drawCircle(x, y, context.dp(14).toFloat(), fill.apply { color = Palette.GREEN })
+                canvas.drawCircle(x, y, context.dp(14).toFloat(), fill.apply { color = Palette.green })
                 text.color = Color.WHITE
                 canvas.drawText((index + 1).toString(), x - context.dp(5), y + context.dp(6), text)
             }
@@ -139,37 +160,90 @@ class StageView(
                 }
             }
         }
+        if (dimmed) canvas.drawColor(Color.argb(140, 0, 0, 0))
         drawWarning(canvas)
+        drawCard(canvas)
     }
 
     private fun drawWarning(canvas: Canvas) {
-        if (warning == VisualMode.OFF) return
-        val red = Palette.RED
-        val edge = context.dp(14).toFloat()
-        when (warning) {
-            VisualMode.FULL -> canvas.drawColor(Color.argb(110, Color.red(red), Color.green(red), Color.blue(red)))
+        val elapsed = clock() - changedAt
+        val mode = if (warning == VisualMode.OFF) fadingOut else warning
+        val fade =
+            if (warning == VisualMode.OFF) {
+                1f - (elapsed / FADE_OUT_MS.toFloat()).coerceIn(0f, 1f)
+            } else {
+                (elapsed / FADE_IN_MS.toFloat()).coerceIn(0f, 1f)
+            }
+        if (mode == VisualMode.OFF || fade <= 0f) return
+        val red = Palette.red
+
+        fun tint(alpha: Float) = Color.argb((255 * alpha * fade).toInt(), Color.red(red), Color.green(red), Color.blue(red))
+        when (mode) {
+            VisualMode.FULL -> canvas.drawColor(tint(0.43f))
             VisualMode.ICON -> {
                 val radius = context.dp(40).toFloat()
-                canvas.drawCircle(width / 2f, radius * 1.5f, radius, fill.apply { color = red })
+                canvas.drawCircle(width / 2f, radius * 1.5f, radius, fill.apply { color = tint(1f) })
                 text.color = Color.WHITE
                 text.textSize = radius * 1.4f
                 canvas.drawText("!", width / 2f - radius * 0.2f, radius * 2f, text)
                 text.textSize = context.dp(16).toFloat()
             }
             else -> {
-                // Slow pulse is a gentle 0.5 Hz fade, far below WCAG's three-flashes limit.
-                val alpha =
-                    if (warning == VisualMode.PULSE) {
-                        (140 + 115 * sin(2 * PI * (clock() % 2000) / 2000.0)).toInt()
-                    } else {
-                        255
-                    }
-                stroke.color = Color.argb(alpha, Color.red(red), Color.green(red), Color.blue(red))
-                stroke.strokeWidth = edge * 2
+                // Slow pulse: opacity 0.6↔1.0 over 2.4 s (0.42 Hz), far below WCAG's flash limit.
+                val alpha = if (mode == VisualMode.PULSE) (0.8 + 0.2 * sin(2 * PI * (clock() % PULSE_MS) / PULSE_MS)).toFloat() else 1f
+                stroke.color = tint(alpha)
+                stroke.strokeWidth = context.dp(12).toFloat() * 2
                 canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), stroke)
-                if (warning == VisualMode.PULSE) postInvalidateOnAnimation()
             }
         }
+        if (mode == VisualMode.PULSE || fade < 1f) postInvalidateOnAnimation()
+    }
+
+    /** Centre card: the kind reminder naming the seat by colour, or a short thank-you. */
+    private fun drawCard(canvas: Canvas) {
+        val (seat, left) = reminder ?: (if (thanks) 0 to true else return)
+        val title = context.getString(if (thanks && reminder == null) R.string.thank_you else R.string.warning_text)
+        val detail =
+            if (reminder == null) {
+                ""
+            } else {
+                context.getString(
+                    R.string.reminder_detail,
+                    context.getString(SEAT_NAMES.getOrElse(seat - 1) { R.string.seat_colour_1 }),
+                    context.getString(if (left) R.string.left else R.string.right),
+                )
+            }
+        val pad = context.dp(16).toFloat()
+        text.textSize = context.dp(20).toFloat()
+        val lineWidth = maxOf(text.measureText(title), text.measureText(detail)) + pad * 3 + context.dp(16)
+        val cardWidth = minOf(width - pad * 2, lineWidth)
+        val cardHeight = context.dp(if (detail.isEmpty()) 56 else 88).toFloat()
+        val left0 = (width - cardWidth) / 2
+        val top = height - cardHeight - context.dp(28)
+        val card = RectF(left0, top, left0 + cardWidth, top + cardHeight)
+        fill.color = Palette.softOf(if (reminder == null) ElbowState.CLEAR else ElbowState.VIOLATION)
+        canvas.drawRoundRect(card, pad, pad, fill)
+        if (reminder !=
+            null
+        ) {
+            canvas.drawCircle(
+                card.left + pad + context.dp(8),
+                card.top + pad + context.dp(10),
+                context.dp(8).toFloat(),
+                fill.apply {
+                    color =
+                        Palette.seat(seat)
+                },
+            )
+        }
+        text.color = Palette.ink
+        canvas.drawText(title, card.left + pad * 2 + context.dp(16), card.top + pad + context.dp(18), text)
+        if (detail.isNotEmpty()) {
+            text.textSize = context.dp(16).toFloat()
+            text.color = Palette.muted
+            canvas.drawText(detail, card.left + pad * 2 + context.dp(16), card.top + pad + context.dp(50), text)
+        }
+        text.textSize = context.dp(16).toFloat()
     }
 
     private fun matrix(): Matrix = mapping ?: Matrix().apply { setScale(width.toFloat(), height.toFloat()) }
@@ -235,6 +309,10 @@ class StageView(
 
     private companion object {
         const val GRAB_DP = 28
+        const val FADE_IN_MS = 400L
+        const val FADE_OUT_MS = 600L
+        const val PULSE_MS = 2400.0
+        val SEAT_NAMES = listOf(R.string.seat_colour_1, R.string.seat_colour_2, R.string.seat_colour_3, R.string.seat_colour_4)
         val BONES = listOf(11 to 12, 11 to 13, 13 to 15, 12 to 14, 14 to 16, 11 to 23, 12 to 24, 23 to 24)
     }
 }
