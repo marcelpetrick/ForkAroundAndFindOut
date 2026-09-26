@@ -85,27 +85,52 @@ object Json {
                 require(at < text.length) { "Unterminated string" }
                 val c = text[at++]
                 when (c) {
-                    '"' -> return out.toString()
+                    '"' -> {
+                        return out.toString()
+                    }
+
                     '\\' -> {
                         val escaped = text[at++]
                         out.append(
                             when (escaped) {
-                                'n' -> '\n'
-                                't' -> '\t'
-                                'r' -> '\r'
-                                'b' -> '\b'
-                                'f' -> '\u000c'
-                                'u' ->
+                                'n' -> {
+                                    '\n'
+                                }
+
+                                't' -> {
+                                    '\t'
+                                }
+
+                                'r' -> {
+                                    '\r'
+                                }
+
+                                'b' -> {
+                                    '\b'
+                                }
+
+                                'f' -> {
+                                    '\u000c'
+                                }
+
+                                'u' -> {
                                     text
                                         .substring(at, at + UNICODE_DIGITS)
                                         .toInt(HEX)
                                         .toChar()
                                         .also { at += UNICODE_DIGITS }
-                                else -> escaped
+                                }
+
+                                else -> {
+                                    escaped
+                                }
                             },
                         )
                     }
-                    else -> out.append(c)
+
+                    else -> {
+                        out.append(c)
+                    }
                 }
             }
         }

@@ -1021,3 +1021,20 @@ is empty; the same method was applied to the session range instead. Findings fix
   REUSE, SBOM, compatible licences), documentation (understandable C4, emulator, licensing),
   release procedure (tag after green CI, failed tag → new version, hand over the APK URL).
 - Validation: markdownlint, link check, REUSE.
+
+### 0.13.50 — build(deps): update toolchain, plugins, test libraries, actions and lint image
+
+- `/updateDependencies` (L6): checked every pin against Google Maven, Maven Central, the
+  Gradle Plugin Portal, Gradle's version service, Docker Hub and the GitHub releases API.
+  Updated: Android Gradle Plugin 9.3.2 → 9.4.1, Gradle wrapper 9.7.1 → 9.8.0, Spotless
+  8.10.0 → 8.10.3, ktlint 1.7.1 → 1.8.0 (new default: blank lines between multi-line `when`
+  branches — adopted, code reformatted), UiAutomator 2.3.0 → 2.4.0, lint image Python 3.13 →
+  3.14 (digest-pinned); GitHub Actions pinned from floating majors to exact latest tags
+  (checkout 7.0.1, setup-java 6.0.1, setup-android 4.0.4, gradle/actions 6.3.0, cache 6.1.0,
+  android-emulator-runner 2.38.0, upload-artifact 7.0.1). Already latest: activity-ktx
+  1.13.0, CameraX 1.6.2, MediaPipe Tasks 1.0.0, test runner 1.7.0, ext-junit 1.3.0, Mockito
+  5.24.0, JUnit 4.13.2, Robolectric 4.17, Kover 0.9.9, detekt 1.23.8, CycloneDX 3.4.1, nginx
+  1.30.5 (newest stable line; 1.31 is mainline).
+- Validation: full local pipeline (all stages green except Format, then fixed by adopting
+  ktlint 1.8 and re-verified: format, detekt, all unit/Robolectric tests, Android lint,
+  coverage 97.8 %).

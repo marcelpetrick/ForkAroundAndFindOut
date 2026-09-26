@@ -35,8 +35,14 @@ fun run(
 ): Int =
     try {
         when (args.firstOrNull()) {
-            "replay" -> replay(args.drop(1), out)
-            "demo-log" -> demoLog(args.drop(1), out)
+            "replay" -> {
+                replay(args.drop(1), out)
+            }
+
+            "demo-log" -> {
+                demoLog(args.drop(1), out)
+            }
+
             else -> {
                 err.println(USAGE)
                 2

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Marcel Petrick
 // SPDX-License-Identifier: GPL-3.0-or-later
 plugins {
-    id("com.android.application") version "9.3.2" apply false
+    id("com.android.application") version "9.4.1" apply false
     id("org.jetbrains.kotlinx.kover") version "0.9.9" apply false
-    id("com.diffplug.spotless") version "8.10.0"
+    id("com.diffplug.spotless") version "8.10.3"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
     id("org.cyclonedx.bom") version "3.4.1"
 }
@@ -23,10 +23,10 @@ detekt {
 spotless {
     kotlin {
         target("*/src/**/*.kt")
-        ktlint("1.7.1")
+        ktlint("1.8.0")
     }
     kotlinGradle {
         target("*.gradle.kts", "*/*.gradle.kts")
-        ktlint("1.7.1")
+        ktlint("1.8.0")
     }
 }

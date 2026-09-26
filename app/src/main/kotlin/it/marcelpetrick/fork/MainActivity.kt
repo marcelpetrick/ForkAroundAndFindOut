@@ -698,14 +698,29 @@ class MainActivity : ComponentActivity() {
 
     private fun visibilityAdvice(result: VisibilityCheck.Result): String =
         when {
-            result.passed -> getString(R.string.visibility_passed)
-            fps > 0 && fps < SLOW_FPS && result.seconds >= 3 -> getString(R.string.visibility_slow, fps)
-            else ->
+            result.passed -> {
+                getString(R.string.visibility_passed)
+            }
+
+            fps > 0 && fps < SLOW_FPS && result.seconds >= 3 -> {
+                getString(R.string.visibility_slow, fps)
+            }
+
+            else -> {
                 when (result.reason) {
-                    VisibilityCheck.Reason.NOBODY -> getString(R.string.visibility_nobody)
-                    VisibilityCheck.Reason.TOO_FEW -> getString(R.string.visibility_too_few, result.detected, settings.people)
-                    VisibilityCheck.Reason.TOO_MANY -> getString(R.string.visibility_too_many, result.detected, settings.people)
-                    VisibilityCheck.Reason.ARMS_HIDDEN ->
+                    VisibilityCheck.Reason.NOBODY -> {
+                        getString(R.string.visibility_nobody)
+                    }
+
+                    VisibilityCheck.Reason.TOO_FEW -> {
+                        getString(R.string.visibility_too_few, result.detected, settings.people)
+                    }
+
+                    VisibilityCheck.Reason.TOO_MANY -> {
+                        getString(R.string.visibility_too_many, result.detected, settings.people)
+                    }
+
+                    VisibilityCheck.Reason.ARMS_HIDDEN -> {
                         getString(
                             R.string.visibility_hidden,
                             getString(
@@ -716,8 +731,13 @@ class MainActivity : ComponentActivity() {
                                 },
                             ),
                         )
-                    else -> getString(R.string.visibility_tips)
+                    }
+
+                    else -> {
+                        getString(R.string.visibility_tips)
+                    }
                 }
+            }
         }
 
     /** Discards the evidence so far; the check runs its full ten seconds from now. */

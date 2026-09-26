@@ -112,12 +112,17 @@ class StageView(
                         ?.first
                         ?.takeIf { onDrag != null }
             }
+
             MotionEvent.ACTION_MOVE -> {
                 pressAt = floatArrayOf(event.x, event.y)
                 dragging?.let { index -> image(event)?.takeIf { it.inImage() }?.let { onDrag?.invoke(index, it) } }
                 invalidate()
             }
-            MotionEvent.ACTION_CANCEL -> endPress()
+
+            MotionEvent.ACTION_CANCEL -> {
+                endPress()
+            }
+
             MotionEvent.ACTION_UP -> {
                 endPress()
                 if (dragging == null) {
@@ -241,7 +246,10 @@ class StageView(
 
         fun tint(alpha: Float) = Color.argb((255 * alpha * fade).toInt(), Color.red(red), Color.green(red), Color.blue(red))
         when (mode) {
-            VisualMode.FULL -> canvas.drawColor(tint(0.43f))
+            VisualMode.FULL -> {
+                canvas.drawColor(tint(0.43f))
+            }
+
             VisualMode.ICON -> {
                 val radius = context.dp(40).toFloat()
                 canvas.drawCircle(width / 2f, radius * 1.5f, radius, fill.apply { color = tint(1f) })
@@ -250,6 +258,7 @@ class StageView(
                 canvas.drawText("!", width / 2f - radius * 0.2f, radius * 2f, text)
                 text.textSize = context.dp(16).toFloat()
             }
+
             else -> {
                 // Slow pulse: opacity 0.6↔1.0 over 2.4 s (0.42 Hz), far below WCAG's flash limit.
                 val alpha = if (mode == VisualMode.PULSE) (0.8 + 0.2 * sin(2 * PI * (clock() % PULSE_MS) / PULSE_MS)).toFloat() else 1f
