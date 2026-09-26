@@ -5,12 +5,13 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import it.marcelpetrick.fork.R
+import it.marcelpetrick.fork.monitoring.Chime
 import it.marcelpetrick.fork.monitoring.Sound
 
 /** Executes [Sound] decisions; policy stays in [it.marcelpetrick.fork.monitoring.AlarmPolicy]. */
 interface Speaker {
-    /** Loads resources ahead of the first reminder. */
-    fun prepare() = Unit
+    /** Loads [chime] ahead of the first reminder; a different chime replaces the loaded one. */
+    fun prepare(chime: Chime = Chime.BELL) = Unit
 
     fun play(
         sound: Sound,
@@ -42,23 +43,29 @@ class ChimeSpeaker(
 ) : Speaker {
     private var pool: SoundPool? = null
     private var chime = 0
+    private var selected: Chime? = null
     private var stream = 0
     private var loaded = false
 
     /** A play requested before the chime finished loading: (volume, loop). */
     private var pending: Pair<Int, Int>? = null
 
-    override fun prepare() {
-        if (pool != null) return
-        pool =
-            factory().also { created ->
-                created.setOnLoadCompleteListener { _, _, status ->
+    override fun prepare(chime: Chime) {
+        if (pool != null && chime == selected) return
+        val created =
+            pool ?: factory().also { fresh ->
+                fresh.setOnLoadCompleteListener { _, _, status ->
                     loaded = status == 0
                     pending?.takeIf { loaded }?.let { (volume, loop) -> start(volume, loop) }
                     pending = null
                 }
-                chime = created.load(context, R.raw.chime, 1)
+                pool = fresh
             }
+        stop()
+        if (this.chime != 0) created.unload(this.chime)
+        loaded = false
+        selected = chime
+        this.chime = created.load(context, sound(chime), 1)
     }
 
     override fun play(
@@ -77,7 +84,7 @@ class ChimeSpeaker(
         volume: Int,
         loop: Int,
     ) {
-        prepare()
+        prepare(selected ?: Chime.BELL)
         stop()
         if (!loaded) {
             pending = volume to loop
@@ -98,5 +105,15 @@ class ChimeSpeaker(
         pool?.release()
         pool = null
         loaded = false
+        chime = 0
+        selected = null
     }
 }
+
+/** The generated sound file for each [Chime]. */
+fun sound(chime: Chime): Int =
+    when (chime) {
+        Chime.BELL -> R.raw.chime
+        Chime.MARIMBA -> R.raw.chime_marimba
+        Chime.GLASS -> R.raw.chime_glass
+    }

@@ -21,6 +21,7 @@ import androidx.camera.view.transform.OutputTransform
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import it.marcelpetrick.fork.detection.Pose
+import it.marcelpetrick.fork.monitoring.Processor
 import it.marcelpetrick.fork.monitoring.Settings
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -43,6 +44,10 @@ interface FrameSource : AutoCloseable {
     /** Frames the camera delivered while an inference was still running (not analysed). */
     val dropped: Long
         get() = 0
+
+    /** Where inference runs once started, or null before the engine exists. */
+    val processor: Processor?
+        get() = null
 
     fun start()
 }
@@ -93,6 +98,9 @@ class CameraSession(
 
     override val dropped: Long
         get() = analyzer?.dropped ?: 0
+
+    override val processor: Processor?
+        get() = engine?.processor
 
     override fun start() {
         previewView.scaleType = PreviewView.ScaleType.FIT_CENTER

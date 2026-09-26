@@ -96,13 +96,15 @@ class UiFlowTest {
     }
 
     /**
-     * Small screens keep controls below the fold; swipe the panel until the target shows.
+     * Small screens and the grouped settings keep controls below the fold; swipe the panel
+     * until the target (text or content description) shows.
      * Swipes stay in the middle half of the panel, away from system gesture zones.
      */
     private fun scrollTo(text: String) {
         for (down in listOf(true, false)) {
             repeat(10) {
-                if (device.wait(Until.hasObject(By.textContains(text)), 300)) return
+                // Icon-like buttons (− / +) are found by their content description.
+                if (device.wait(Until.hasObject(By.textContains(text)), 300) || device.hasObject(By.desc(text))) return
                 val area = device.findObject(By.scrollable(true))?.visibleBounds ?: return
                 val (low, high) = area.centerY() + area.height() / 4 to area.centerY() - area.height() / 4
                 device.swipe(area.centerX(), if (down) low else high, area.centerX(), if (down) high else low, 30)

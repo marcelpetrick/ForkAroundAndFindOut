@@ -16,7 +16,10 @@ import it.marcelpetrick.fork.detection.SeatResult
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.detection.table
 import it.marcelpetrick.fork.monitoring.AudioMode
+import it.marcelpetrick.fork.monitoring.Chime
 import it.marcelpetrick.fork.monitoring.PoseModel
+import it.marcelpetrick.fork.monitoring.Processor
+import it.marcelpetrick.fork.monitoring.Sensitivity
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
@@ -171,7 +174,8 @@ class UiTest {
         assertEquals(0.6, settings.timing.trigger, 0.0)
         assertEquals(0, settings.volume)
 
-        val camera = options[1]
+        fun option(label: Int) = options.single { it.label == label }
+        val camera = option(R.string.option_camera)
         val calibrated = Settings(table = table, calibrationAspect = 1.5)
         assertEquals("Automatic", camera.display(context, calibrated))
         val moved = camera.change(calibrated, 1)
@@ -179,12 +183,37 @@ class UiTest {
         assertEquals("2", moved.camera) // the widest lens is offered first
         assertEquals("Wide (camera 2)", camera.display(context, moved))
         assertEquals("Camera 9", camera.display(context, moved.copy(camera = "9"))) // no longer present
-        assertEquals(calibrated, settingsOptions(emptyList())[1].change(calibrated, 1)) // single choice keeps calibration
-        assertEquals(PoseModel.LITE, options[2].change(calibrated, 1).model)
-        assertEquals("Lite (faster)", options[2].display(context, options[2].change(calibrated, 1)))
-        assertEquals(AudioMode.ONCE, options[9].change(calibrated, 1).audio)
-        assertEquals(!calibrated.debug, options[12].change(calibrated, 1).debug)
-        assertEquals("On", options[13].display(context, options[13].change(calibrated, -1)))
+        val single = settingsOptions(emptyList()).single { it.label == R.string.option_camera }
+        assertEquals(calibrated, single.change(calibrated, 1)) // single choice keeps calibration
+        val model = option(R.string.option_model)
+        assertEquals(PoseModel.LITE, model.change(calibrated, 1).model)
+        assertEquals("Lite (faster)", model.display(context, model.change(calibrated, 1)))
+        assertEquals(AudioMode.ONCE, option(R.string.option_audio).change(calibrated, 1).audio)
+        assertEquals(!calibrated.debug, option(R.string.option_debug).change(calibrated, 1).debug)
+        val statistics = option(R.string.option_statistics)
+        assertEquals("On", statistics.display(context, statistics.change(calibrated, -1)))
+
+        // Groups appear in screen order, every one populated.
+        assertEquals(Group.entries, options.map { it.group }.distinct())
+        // Sensitivity presets set the raw timings; hand-tuned values read "Custom" and step back to Normal.
+        val sensitivity = option(R.string.option_sensitivity)
+        assertEquals("Normal", sensitivity.display(context, calibrated))
+        val responsive = sensitivity.change(calibrated, 1)
+        assertEquals(Sensitivity.RESPONSIVE, Sensitivity.of(responsive.timing))
+        assertEquals(750, responsive.timing.triggerMs)
+        assertEquals("Conservative", sensitivity.display(context, sensitivity.change(calibrated, -1)))
+        val custom = option(R.string.option_trigger_delay).change(calibrated, 1)
+        assertEquals("Custom", sensitivity.display(context, custom))
+        assertEquals(Sensitivity.NORMAL, Sensitivity.of(sensitivity.change(custom, 1).timing))
+        // An unknown trigger level (e.g. edited settings) steps from the middle level.
+        val odd = calibrated.copy(timing = calibrated.timing.copy(trigger = 0.8))
+        assertEquals(0.9, option(R.string.option_trigger).change(odd, 1).timing.trigger, 0.0)
+        val chime = option(R.string.option_chime)
+        assertEquals(Chime.MARIMBA, chime.change(calibrated, 1).chime)
+        assertEquals("Glass", chime.display(context, chime.change(calibrated, -1)))
+        val processor = option(R.string.option_processor)
+        assertEquals(Processor.GPU, processor.change(calibrated, 1).processor)
+        assertEquals("GPU (experimental)", processor.display(context, processor.change(calibrated, 1)))
     }
 
     @Test
@@ -222,5 +251,17 @@ class UiTest {
             prepare()
             release()
         }
+        // Choosing another chime replaces the loaded sound in the same pool.
+        val shared = mock(SoundPool::class.java)
+        `when`(shared.load(context, R.raw.chime, 1)).thenReturn(3)
+        `when`(shared.load(context, R.raw.chime_glass, 1)).thenReturn(4)
+        ChimeSpeaker(context) { shared }.apply {
+            prepare(Chime.BELL)
+            prepare(Chime.GLASS)
+            prepare(Chime.GLASS)
+        }
+        verify(shared).unload(3)
+        verify(shared, times(1)).load(context, R.raw.chime_glass, 1)
+        assertEquals(listOf(R.raw.chime, R.raw.chime_marimba, R.raw.chime_glass), Chime.entries.map(::sound))
     }
 }

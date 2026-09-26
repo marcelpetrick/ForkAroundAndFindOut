@@ -32,6 +32,8 @@ fun Settings.encode(): String =
             put("statistics", statistics)
             put("aspect", calibrationAspect)
             put("rotation", calibrationRotation)
+            put("chime", chime.name)
+            put("processor", processor.name)
         }.toString()
 
 fun Settings.Companion.decode(text: String): Settings {
@@ -70,6 +72,9 @@ fun Settings.Companion.decode(text: String): Settings {
         statistics = j.getBoolean("statistics"),
         calibrationAspect = if (imageSpace) j.getDouble("aspect") else 0.0,
         calibrationRotation = j.optInt("rotation", -1),
+        // Added in 0.11.37; older settings keep the defaults.
+        chime = Chime.valueOf(j.optString("chime", Chime.BELL.name)),
+        processor = Processor.valueOf(j.optString("processor", Processor.CPU.name)),
     )
 }
 

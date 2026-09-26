@@ -207,4 +207,23 @@
     <string name="banner_warm">The phone is getting warm. The Lite model needs less power and keeps watching.</string>
     <string name="banner_slow">Processing is slow (%1$.0f FPS). The Lite model is faster.</string>
     <string name="volume_pause_hint">Tip: hold volume-down to pause without looking.</string>
+    <string name="group_reminders">Reminders</string>
+    <string name="group_sensitivity">Sensitivity</string>
+    <string name="group_camera">Camera and model</string>
+    <string name="group_data">Data</string>
+    <string name="option_sensitivity">Sensitivity</string>
+    <string name="explain_sensitivity">Conservative reminds less and later, Responsive sooner. The values below show what it sets.</string>
+    <string name="sensitivity_conservative">Conservative</string>
+    <string name="sensitivity_normal">Normal</string>
+    <string name="sensitivity_responsive">Responsive</string>
+    <string name="sensitivity_custom">Custom</string>
+    <string name="option_chime">Chime</string>
+    <string name="explain_chime">Three soft sounds. Use Test sound to hear the choice.</string>
+    <string name="chime_bell">Bell</string>
+    <string name="chime_marimba">Marimba</string>
+    <string name="chime_glass">Glass</string>
+    <string name="option_processor">Processor</string>
+    <string name="explain_processor">GPU is experimental and may be faster; if it cannot start, the phone uses the CPU.</string>
+    <string name="processor_cpu">CPU</string>
+    <string name="processor_gpu">GPU (experimental)</string>
 </resources>

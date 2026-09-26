@@ -25,6 +25,7 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.pose
+import it.marcelpetrick.fork.monitoring.Processor
 import it.marcelpetrick.fork.monitoring.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -161,7 +162,7 @@ class CameraTest {
             MediaPipeEngine(context, Settings(), { p, t ->
                 poses = p
                 assertEquals(100, t)
-            }, { errors++ }, { _, o ->
+            }, { errors++ }, { _, o, _ ->
                 options = o
                 native
             })
@@ -201,6 +202,35 @@ class CameraTest {
         engine.close()
         verify(native).close()
         assertFalse(bitmap.isRecycled)
+        assertEquals(Processor.CPU, engine.processor)
+    }
+
+    @Test
+    fun gpuIsUsedWhenItStartsAndFallsBackToCpuWhenItCannot() {
+        val context = RuntimeEnvironment.getApplication()
+        val native = mock(PoseLandmarker::class.java)
+        val requested = mutableListOf<Processor>()
+        val gpu = Settings(processor = Processor.GPU)
+        val working =
+            MediaPipeEngine(context, gpu, { _, _ -> }, { }, { _, _, processor ->
+                requested += processor
+                native
+            })
+        assertEquals(Processor.GPU, working.processor)
+        assertEquals(listOf(Processor.GPU), requested)
+        requested.clear()
+        val fallback =
+            MediaPipeEngine(context, gpu, { _, _ -> }, { }, { _, _, processor ->
+                requested += processor
+                if (processor == Processor.GPU) throw IllegalStateException("no GPU delegate")
+                native
+            })
+        assertEquals(Processor.CPU, fallback.processor)
+        assertEquals(listOf(Processor.GPU, Processor.CPU), requested)
+        // A CPU failure has nothing to fall back to and is reported to the caller.
+        assertThrows(IllegalStateException::class.java) {
+            MediaPipeEngine(context, Settings(), { _, _ -> }, { }, { _, _, _ -> throw IllegalStateException("model missing") })
+        }
     }
 
     @Test

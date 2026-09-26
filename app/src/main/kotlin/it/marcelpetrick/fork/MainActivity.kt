@@ -60,7 +60,9 @@ import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.monitoring.sessionRecord
 import it.marcelpetrick.fork.ui.ChimeSpeaker
+import it.marcelpetrick.fork.ui.Group
 import it.marcelpetrick.fork.ui.Lens
+import it.marcelpetrick.fork.ui.Option
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
@@ -68,6 +70,7 @@ import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.chip
 import it.marcelpetrick.fork.ui.column
+import it.marcelpetrick.fork.ui.dp
 import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.lensLabels
 import it.marcelpetrick.fork.ui.row
@@ -451,35 +454,51 @@ class MainActivity : ComponentActivity() {
         column().apply {
             addView(title(getString(R.string.settings_title)))
             addView(label(getString(R.string.settings_help), color = Palette.muted))
-            for (option in settingsOptions(cameraIds())) {
-                val name = getString(option.label)
-                val value = label(option.display(this@MainActivity, settings), 18f, bold = true)
-
-                fun change(delta: Int) {
-                    settings = option.change(settings, delta)
-                    store.save(settings)
-                    value.text = option.display(this@MainActivity, settings)
+            val options = settingsOptions(cameraIds())
+            val refreshers = mutableListOf<() -> Unit>()
+            for (group in Group.entries) {
+                addView(label(getString(group.label), 20f, bold = true, color = Palette.green).apply { setPadding(0, dp(20), 0, 0) })
+                if (group == Group.REMINDERS) {
+                    addView(
+                        action(getString(R.string.test_sound)) {
+                            speaker.prepare(settings.chime)
+                            speaker.play(Sound.BEEP, settings.volume)
+                        },
+                    )
                 }
-                addView(
-                    card(
-                        label(name, bold = true),
-                        label(getString(option.explanation), 14f, color = Palette.muted),
-                        row(
-                            action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
-                            value.apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
-                            action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
-                        ),
-                    ),
-                )
+                if (group == Group.DATA) addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
+                for (option in options.filter { it.group == group }) addView(settingCard(option, refreshers))
             }
-            addView(
-                action(getString(R.string.test_sound)) {
-                    speaker.prepare()
-                    speaker.play(Sound.BEEP, settings.volume)
-                },
-            )
             addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
         }
+
+    /**
+     * One setting: name, a one-line explanation and − value + controls. [refresh] updates every
+     * shown value, because a sensitivity preset also changes the raw timings below it.
+     */
+    private fun settingCard(
+        option: Option,
+        refreshers: MutableList<() -> Unit>,
+    ): View {
+        val name = getString(option.label)
+        val value = label(option.display(this, settings), 18f, bold = true)
+        refreshers += { value.update(option.display(this, settings)) }
+
+        fun change(delta: Int) {
+            settings = option.change(settings, delta)
+            store.save(settings)
+            refreshers.forEach { it() }
+        }
+        return card(
+            label(name, bold = true),
+            label(getString(option.explanation), 14f, color = Palette.muted),
+            row(
+                action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
+                value.apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
+                action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
+            ),
+        )
+    }
 
     private fun cameraLayout(landscape: Boolean = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
         val frame = FrameLayout(this).apply { setBackgroundColor(Palette.stageBackground) }
@@ -825,7 +844,7 @@ class MainActivity : ComponentActivity() {
         meal = MonitorSession(settings, UUID.randomUUID().toString(), clock())
         lastSummary = null
         diagnosticsOpen = false // adult tools start collapsed in every session
-        speaker.prepare()
+        speaker.prepare(settings.chime)
         show(Screen.MONITOR)
     }
 
@@ -1164,7 +1183,7 @@ class MainActivity : ComponentActivity() {
                 percentile(50),
                 percentile(95),
                 source?.dropped ?: 0L,
-                settings.model.name,
+                "${settings.model.name} · ${source?.processor?.name ?: settings.processor.name}",
                 thermal(),
                 getSystemService(BatteryManager::class.java)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 0,
                 active.violations,

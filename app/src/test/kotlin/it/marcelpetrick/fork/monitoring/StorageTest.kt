@@ -7,6 +7,8 @@ import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.Timing
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.detection.table
+import it.marcelpetrick.fork.monitoring.Chime
+import it.marcelpetrick.fork.monitoring.Processor
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -39,8 +41,20 @@ class StorageTest {
                 visual = VisualMode.PULSE,
                 audio = AudioMode.REPEAT,
                 statistics = true,
+                chime = Chime.GLASS,
+                processor = Processor.GPU,
             )
         store.save(settings)
+        assertEquals(Chime.GLASS, LocalStore(context).settings().chime)
+        assertEquals(Processor.GPU, LocalStore(context).settings().processor)
+        // Settings saved before chimes and processors existed keep the defaults.
+        val older =
+            JSONObject(settings.encode()).apply {
+                remove("chime")
+                remove("processor")
+            }
+        assertEquals(Chime.BELL, Settings.decode(older.toString()).chime)
+        assertEquals(Processor.CPU, Settings.decode(older.toString()).processor)
         assertEquals(settings.encode(), LocalStore(context).settings().encode())
         assertEquals("pose_landmarker_lite.task", settings.model.asset)
         assertEquals(Settings().encode(), Settings.decode(Settings().encode()).encode())

@@ -146,6 +146,21 @@ class MainActivityTest {
 
             activity.click("Settings")
             assertEquals(MainActivity.Screen.SETTINGS, activity.screen)
+            for (group in listOf(
+                "Reminders",
+                "Sensitivity",
+                "Camera and model",
+                "Data",
+            )) {
+                assertTrue(activity.texts().contains("\n$group\n"))
+            }
+            // A preset also updates the raw timing cards shown below it.
+            assertTrue(activity.texts().contains("Normal"))
+            activity.click("Increase Sensitivity")
+            assertTrue(activity.texts().contains("Responsive"))
+            assertEquals(750, activity.settings.timing.triggerMs)
+            assertTrue(activity.texts().contains(activity.getString(R.string.value_seconds, 0.75)))
+            activity.click("Decrease Sensitivity")
             activity.click("Decrease People")
             activity.click("Increase Sound")
             assertTrue(activity.texts().contains("Chime once"))

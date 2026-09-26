@@ -37,7 +37,7 @@ Decisions (product, design, engineering), each one step below:
   seat colour, longest reminder-free stretch — positive framing); "nobody visible for a
   while — has the phone moved?" hint with a recalibrate action; long-press volume-down
   pauses; thermal banner suggesting Lite; 180 ms cross-fade between screens.
-- [ ] V3-4 Settings (screen 07): grouped sections (Reminders, Sensitivity, Camera & model,
+- [x] V3-4 Settings (screen 07): grouped sections (Reminders, Sensitivity, Camera & model,
   Data); sensitivity presets Conservative / Normal / Responsive; a choice of three soft
   generated chimes; processor CPU / GPU (experimental, automatic CPU fallback).
 - [ ] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
@@ -760,3 +760,22 @@ is empty; the same method was applied to the session range instead. Findings fix
   "has the phone moved?" hint) V3-3 is complete.
 - Validation: Robolectric (thermal banner, Lite switch reopens inference, key handling on and
   off the monitor); full local pipeline.
+
+### 0.11.37 — feat: grouped settings with sensitivity presets, three chimes and an experimental GPU processor (V3-4)
+
+- Done: Settings are grouped (Reminders · Sensitivity · Camera and model · Data, with *Test
+  sound* and *Local data* in their sections). Sensitivity presets Conservative / Normal /
+  Responsive set trigger level, reminder and clear delays and cooldown; hand-tuned values
+  show *Custom*, and every value card refreshes when a preset changes them. Three generated
+  chimes (Bell, Marimba, Glass; `scripts/chime.py`, Bell byte-identical to before) with
+  *Test sound* playing the choice. Processor CPU / GPU (experimental): the GPU delegate is
+  requested and inference falls back to the CPU when it cannot start; diagnostics show where
+  it runs. Settings saved by older versions keep the defaults.
+- Validation: `SensitivityTest`, option/speaker tests (presets, custom, chime switch unloads
+  the old sound), codec round trip and migration, GPU/CPU fallback through the factory seam,
+  Robolectric grouped page; e2e runs the Lite model with a GPU request on the emulator —
+  measured: the emulator's GPU delegate does not start and the engine falls back to the CPU
+  (log "LITE requested GPU, runs on CPU"); real GPU speed needs a phone. The e2e scroll helper
+  now also finds buttons by content description (the grouped page is longer).
+- Validation run: full local pipeline green except the first e2e run (scroll helper, fixed);
+  emulator suite re-run 4/4 green.

@@ -201,4 +201,23 @@
     <string name="banner_warm">Das Handy wird warm. Das Lite-Modell braucht weniger Strom und beobachtet weiter.</string>
     <string name="banner_slow">Die Verarbeitung ist langsam (%1$.0f FPS). Das Lite-Modell ist schneller.</string>
     <string name="volume_pause_hint">Tipp: Leiser-Taste gedrückt halten pausiert, ohne hinzusehen.</string>
+    <string name="group_reminders">Hinweise</string>
+    <string name="group_sensitivity">Empfindlichkeit</string>
+    <string name="group_camera">Kamera und Modell</string>
+    <string name="group_data">Daten</string>
+    <string name="option_sensitivity">Empfindlichkeit</string>
+    <string name="explain_sensitivity">Zurückhaltend erinnert seltener und später, Reaktionsschnell früher. Die Werte darunter zeigen die Einstellung.</string>
+    <string name="sensitivity_conservative">Zurückhaltend</string>
+    <string name="sensitivity_normal">Normal</string>
+    <string name="sensitivity_responsive">Reaktionsschnell</string>
+    <string name="sensitivity_custom">Eigene</string>
+    <string name="option_chime">Klang</string>
+    <string name="explain_chime">Drei sanfte Klänge. Mit „Ton testen“ die Auswahl anhören.</string>
+    <string name="chime_bell">Glocke</string>
+    <string name="chime_marimba">Marimba</string>
+    <string name="chime_glass">Glas</string>
+    <string name="option_processor">Prozessor</string>
+    <string name="explain_processor">GPU ist experimentell und kann schneller sein; startet sie nicht, nutzt das Handy die CPU.</string>
+    <string name="processor_cpu">CPU</string>
+    <string name="processor_gpu">GPU (experimentell)</string>
 </resources>
