@@ -645,3 +645,13 @@ is empty; the same method was applied to the session range instead. Findings fix
   refreshed genuine screenshots.
 - Not done (optional polish from plan_v2): loupe, auto-proposed seat zones, cross-fade
   between screens, presenter extraction.
+
+### 0.10.31 — fix: keep Stop and diagnostics next to Pause on the monitor
+
+- Evidence: remote run for 0.10.30 failed in UiFlowTest only: on the slower CI emulator the
+  diagnostics toggle sat below four seat cards and its live text shifted the layout while
+  the test scrolled (failure screenshot in the run artifacts). plan_v2's design puts the
+  adult toggle next to Pause.
+- Done: monitor order is now status → Pause → [Stop · Adult diagnostics] → adult panel
+  (collapsed) → seat cards → session line.
+- Validation: full local pipeline green; instrumented suite passed twice in a row.

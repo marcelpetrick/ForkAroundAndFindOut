@@ -602,11 +602,16 @@ class MainActivity : ComponentActivity() {
             status = label("", 19f, bold = true).also(::addView)
             // Pause stays above the seat cards: always visible, one tap, however many seats.
             addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
+            // Stop and the adult toggle sit next to Pause; the seat cards follow below.
+            addView(
+                row(
+                    action(getString(R.string.stop)) { show(Screen.WELCOME) },
+                    action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG },
+                ),
+            )
+            adult = adultPanel().also(::addView)
             seatCards = column(0).also(::addView)
             sessionLine = label("", 15f, color = Palette.muted).also(::addView)
-            addView(action(getString(R.string.stop)) { show(Screen.WELCOME) })
-            addView(action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG })
-            adult = adultPanel().also(::addView)
         }
         refreshMonitorPanel()
         schedule()
