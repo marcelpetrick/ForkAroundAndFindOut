@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- Per-app language (Android 13+: Settings → Apps → Fork Around & Find Out → Language). -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="de" />
+</locale-config>

@@ -220,4 +220,7 @@
     <string name="explain_processor">GPU ist experimentell und kann schneller sein; startet sie nicht, nutzt das Handy die CPU.</string>
     <string name="processor_cpu">CPU</string>
     <string name="processor_gpu">GPU (experimentell)</string>
+    <string name="shortcut_start_short">Essen starten</string>
+    <string name="shortcut_start_long">Essens-Überwachung starten</string>
+    <string name="shortcut_needs_setup">Richte die Kamera einmal ein, dann startet die Verknüpfung das Essen direkt.</string>
 </resources>

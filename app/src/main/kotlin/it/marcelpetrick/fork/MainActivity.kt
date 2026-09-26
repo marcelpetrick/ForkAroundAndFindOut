@@ -209,6 +209,28 @@ class MainActivity : ComponentActivity() {
             }
         }
         show(Screen.WELCOME)
+        handleShortcut(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShortcut(intent)
+    }
+
+    /**
+     * The launcher shortcut "Start dinner" goes straight to monitoring when the table is set
+     * up; otherwise it explains what is missing. A meal already running is left alone.
+     */
+    private fun handleShortcut(intent: Intent?) {
+        if (intent?.action != ACTION_START_DINNER || meal != null) return
+        intent.action = null // handled once, not again after a configuration change
+        if (settings.table == null) {
+            notice = getString(R.string.shortcut_needs_setup)
+            show(Screen.WELCOME)
+        } else {
+            startMonitoring()
+        }
     }
 
     override fun onStart() {
@@ -1390,6 +1412,7 @@ class MainActivity : ComponentActivity() {
         const val TICK_MS = 100L
         const val DEMO_FRAME_MS = 66L
         const val FADE_MS = 180L
+        const val ACTION_START_DINNER = "it.marcelpetrick.fork.action.START_DINNER"
 
         /** Below this the setup suggests the Lite model. */
         const val SLOW_FPS = 5.0

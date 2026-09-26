@@ -40,7 +40,7 @@ Decisions (product, design, engineering), each one step below:
 - [x] V3-4 Settings (screen 07): grouped sections (Reminders, Sensitivity, Camera & model,
   Data); sensitivity presets Conservative / Normal / Responsive; a choice of three soft
   generated chimes; processor CPU / GPU (experimental, automatic CPU fallback).
-- [ ] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
+- [x] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
   (Android 13+ `locales_config`); static shortcut "Start dinner"; run the e2e suite on an
   API 36 emulator image as target-SDK evidence if the image can be installed.
 - [ ] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
@@ -779,3 +779,16 @@ is empty; the same method was applied to the session range instead. Findings fix
   now also finds buttons by content description (the grouped page is longer).
 - Validation run: full local pipeline green except the first e2e run (scroll helper, fixed);
   emulator suite re-run 4/4 green.
+
+### 0.11.38 — feat: adaptive launcher icon, per-app language and a Start-dinner shortcut (V3-5)
+
+- Done: adaptive launcher icon (background, foreground scaled into the safe zone, monochrome
+  layer for themed icons) replacing the flat vector; `locales_config` (en, de) so Android 13+
+  offers a per-app language; a static launcher shortcut *Start dinner* that goes straight to
+  monitoring when the table is set up and otherwise explains the one-time setup (a running
+  meal is never restarted; the activity is `singleTask`).
+- Target-SDK evidence: the API 36 x86_64 Google APIs image was installed (`ForkApi36`, see
+  `docs/emulator.md`); the full local pipeline including the 4 e2e tests passed on it (SDK 36).
+  CI stays on API 34 (minSdk).
+- Validation: Robolectric shortcut flow (not set up / set up / repeat / plain launch), lint;
+  full local pipeline on the API 36 emulator.

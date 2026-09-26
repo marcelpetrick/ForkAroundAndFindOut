@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- Monochrome layer for themed icons (Android 13+): the launcher tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.72" android:scaleY="0.72">
+        <path android:strokeColor="#000000" android:strokeWidth="7" android:strokeLineCap="round" android:pathData="M30,24V43Q30,54 42,54Q54,54 54,43V24M42,24V83M76,24V83M28,68H84" />
+    </group>
+</vector>

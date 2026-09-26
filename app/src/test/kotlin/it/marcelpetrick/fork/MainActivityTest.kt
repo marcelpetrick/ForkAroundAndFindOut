@@ -462,6 +462,33 @@ class MainActivityTest {
         }
     }
 
+    @Test
+    fun startDinnerShortcutMonitorsWhenSetUpAndExplainsOtherwise() {
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
+
+        fun shortcut() = Intent(RuntimeEnvironment.getApplication(), MainActivity::class.java).setAction(MainActivity.ACTION_START_DINNER)
+        Robolectric.buildActivity(MainActivity::class.java, shortcut()).setup().use { controller ->
+            val activity = controller.get()
+            assertEquals(MainActivity.Screen.WELCOME, activity.screen)
+            assertTrue(activity.texts().contains("Set up the camera once"))
+            LocalStore(activity).save(activity.settings.copy(table = it.marcelpetrick.fork.detection.table))
+        }
+        val launched = Robolectric.buildActivity(MainActivity::class.java, shortcut())
+        launched.get().sourceFactory = { view, _, _, _ -> FakeSource(view) } // before onCreate opens the camera
+        launched.setup().use { controller ->
+            val activity = controller.get()
+            assertEquals(MainActivity.Screen.MONITOR, activity.screen)
+            val meal = activity.meal
+            // Launching the shortcut again while dinner runs keeps the same meal.
+            controller.newIntent(shortcut())
+            assertEquals(meal, activity.meal)
+            activity.click("Stop")
+            // A plain launcher intent never starts monitoring.
+            controller.newIntent(Intent(RuntimeEnvironment.getApplication(), MainActivity::class.java))
+            assertEquals(MainActivity.Screen.WELCOME, activity.screen)
+        }
+    }
+
     @Suppress("DEPRECATION")
     private fun MainActivity.answerPermission(grant: Int) {
         val request = shadowOf(this).lastRequestedPermission
