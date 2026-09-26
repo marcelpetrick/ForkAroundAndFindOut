@@ -1,40 +1,170 @@
 # Fork Around & Find Out
 
 [![Pipeline](https://github.com/marcelpetrick/ForkAroundAndFindOut/actions/workflows/pipeline.yml/badge.svg?branch=main)](https://github.com/marcelpetrick/ForkAroundAndFindOut/actions/workflows/pipeline.yml)
+[![Latest Release](https://img.shields.io/github/v/release/marcelpetrick/ForkAroundAndFindOut?sort=semver&include_prereleases)](https://github.com/marcelpetrick/ForkAroundAndFindOut/releases/latest)
 [![License: GPL v3 or later](https://img.shields.io/badge/license-GPLv3%20or%20later-blue.svg)](LICENSE)
 [![Android 14+](https://img.shields.io/badge/Android-14%2B%20%28API%2034%29-3ddc84.svg)](https://developer.android.com/about/versions/14)
 [![Kotlin 2.2](https://img.shields.io/badge/Kotlin-2.2-7f52ff.svg)](https://kotlinlang.org/)
 [![CameraX 1.6.2](https://img.shields.io/badge/CameraX-1.6.2-4285f4.svg)](https://developer.android.com/media/camera/camerax)
 [![MediaPipe Tasks 1.0.0](https://img.shields.io/badge/MediaPipe%20Tasks-1.0.0-0097a7.svg)](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/android)
-[![Coverage: 98%](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](app/build.gradle.kts)
+[![Coverage: 98%](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](localPipeline.sh)
 [![Coverage gate: 95%](https://img.shields.io/badge/coverage%20gate-95%25-brightgreen.svg)](localPipeline.sh)
-[![Offline: on-device](https://img.shields.io/badge/processing-on--device%2C%20offline-success.svg)](docs/detection.md)
+[![GHCR image](https://img.shields.io/badge/ghcr.io-forkaroundandfindout-2496ed.svg?logo=docker&logoColor=white)](https://github.com/marcelpetrick/ForkAroundAndFindOut/pkgs/container/forkaroundandfindout)
+[![Offline: no internet permission](https://img.shields.io/badge/network-none%20%28no%20INTERNET%20permission%29-success.svg)](docs/architecture.md#privacy-by-construction)
+[![Languages: en, de](https://img.shields.io/badge/languages-en%20%7C%20de-informational.svg)](app/src/main/res)
 
-An offline Android dining-table elbow monitor, written entirely in Kotlin.
-See [the delivery ledger](plan.md), [plan v2](plan_v2/plan_v2.md), [vision](vision.md)
-and [pose framework selection](docs/pose-frameworks.md).
+An offline Android app that watches a family dinner table through a phone camera and
+gently reminds whoever rests an elbow on the table. It uses MediaPipe body landmarks,
+a calibrated table outline and a conservative per-elbow temporal classifier, and it
+stays quiet when it is unsure. Everything runs on the phone: no images are saved,
+nothing is uploaded, nobody is identified. Written entirely in Kotlin.
 
 **Author: Marcel Petrick. License: GPLv3 or later. Built with AI assistance.**
 
-## Development
+## Status
 
-Install Java 21, Android SDK, Python 3 and ShellCheck. Set `ANDROID_HOME`, then:
+| Area | State |
+| --- | --- |
+| Camera, pose model, calibration, per-elbow detection, warnings, pause, settings, diagnostics, training logs, replay tool | Implemented and tested (unit, Robolectric, emulator end-to-end) |
+| Synthetic acceptance scenarios (vision §29) | Automated regression tests pass |
+| Real phone, real table, real meals (false alarms per meal, recall) | **Not yet measured** — see [hardware validation](docs/hardware-validation.md) |
+| Learned classifier, image classifier, depth, Raspberry Pi | Conditional future work per the vision; needs real, consented sessions first |
+
+Version 1.0.0 is reserved for when the real-meal targets are met and recorded.
+
+## Screenshots
+
+Genuine screenshots of the running app (Android 14 emulator). The demo shows generated
+stick figures, never camera footage; the setup screen shows the emulator's virtual camera.
+
+| Welcome | Synthetic demo with warning | Camera setup with visibility check | Settings |
+| --- | --- | --- | --- |
+| ![Welcome screen](docs/screenshots/welcome.png) | ![Synthetic demo: seat 2 rests the left elbow, red border warning](docs/screenshots/demo-synthetic-warning.png) | ![Position screen with the ten-second visibility check](docs/screenshots/setup-visibility-check.png) | ![Settings screen](docs/screenshots/settings.png) |
+
+## How it works
+
+```
+camera (CameraX, 640×360 analysis) → MediaPipe Pose Landmarker (≤ 4 people, 33 landmarks)
+  → seat tracking (no faces, no identity) → table-relative arm geometry + motion
+  → conservative rule: stationary, bent, supported elbow on the table
+  → per elbow: UNKNOWN / CLEAR / SUSPECT / VIOLATION with dwell, clearing and cooldown
+  → warning: red border (or icon / tint / slow pulse) and an optional soft chime
+```
+
+A reminder needs about one second of steady evidence; reaching, passing food and brief
+crossings do not trigger it. Hidden elbows are "Not visible", never "good posture".
+Details: [architecture](docs/architecture.md), [detection rules](docs/detection.md),
+[framework choice](docs/pose-frameworks.md), [UX](docs/ux.md).
+
+## Camera placement
+
+Put the phone **above head height at a corner of the table**, tilted down, so every
+shoulder, elbow and wrist and the whole tabletop are visible (a shelf or a small tripod
+works well). Avoid backlight. The setup's visibility check confirms the placement.
+
+## Usage
+
+1. **Set up camera** → the **visibility check** runs for 10 s with everyone seated.
+2. **Mark table**: tap the four tabletop corners (drag a corner to adjust).
+3. Optional **seats**: one region per place keeps assignments stable when people lean.
+4. **Start monitoring.** A short grace period, then reminders. **Pause** is always one tap.
+5. Adults can open **diagnostics**: FPS, latency, scores, *False alarm* (silences and
+   rests reminders for 30 s), *Missed violation*, and the opt-in **training mode**.
+
+Try it without a camera: **Try demo (synthetic)**.
+
+## Settings
+
+People (1–4), rear lens (Wide/Main/Tele), model (Full/Lite), evidence threshold, warning
+delay, clearing delay, cooldown, start grace, visual warning, sound (off / once / repeat /
+continuous chime), volume with *Test sound*, repeat interval, skeleton overlay, session
+statistics. Changing the lens clears the calibration.
+
+## Privacy
+
+- Frames are processed in memory and discarded; no image or video is ever written.
+- The app has **no internet permission**. MediaPipe ships a Google telemetry uploader;
+  its network access is removed from the manifest (builds before 0.9.26 did not do this —
+  see `plan.md`). A test fails if any network or storage permission reappears.
+- Local data is limited to settings, feedback taps, opt-in statistics and opt-in
+  training logs of body landmarks. Export and delete are on the *Local data* screen.
+  Backup is disabled. See [data](docs/data.md).
+
+## Training mode, data and replay
+
+Training mode records the session's landmarks and your labels (NORMAL, LEFT, RIGHT, BOTH,
+false alarm, missed) into a local gzip log. On a computer:
 
 ```sh
-./localPipeline.sh
+scripts/replay.sh demo-log /tmp/demo.jsonl.gz 3     # labelled synthetic session
+scripts/replay.sh replay /tmp/demo.jsonl.gz          # reminders, false alarms, recall
+scripts/replay.sh replay --trigger-ms 1500 meal-*.jsonl.gz   # tuning experiment
+```
+
+Evaluate by whole sessions, never by frames of the same meal ([data.md](docs/data.md)).
+
+## Setup
+
+Requirements: Java 21, Android SDK (`ANDROID_HOME`, platform 37 and build-tools),
+Python 3, ShellCheck, Docker (optional, for the Docker stage), an emulator or phone
+(optional, for end-to-end tests).
+
+```sh
+git clone https://github.com/marcelpetrick/ForkAroundAndFindOut.git
+cd ForkAroundAndFindOut
+./localPipeline.sh --noRun            # downloads the pinned models, checks, tests, builds
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Android 14/API 34 is the minimum. Compilation and target SDK are API 37.
-The pipeline formats/checks/tests/builds through pinned Gradle, runs identically
-on GitHub Actions, and enforces >=95% Kotlin line coverage. CI uploads APKs and
-reports. Release APKs are arm64-only and signed with the project key when it is
-configured (see [Docker and signing](docs/docker.md)).
+Release APKs are arm64-only and signed with the project key when it is configured
+([signing](docs/docker.md#release-signing)); fingerprint
+`AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0`.
+
+## Testing
+
+| Level | Command | Covers |
+| --- | --- | --- |
+| JVM unit | `./gradlew :detection:test :core:test :tools:test` | geometry, rules, seat tracking, temporal filter, acceptance scenarios, monitor budgets, visibility check, session logs, replay |
+| Robolectric | `./gradlew :app:testDebugUnitTest` | every screen flow, calibration, alarms, pause, stale data, permissions, storage, export, German locale, privacy guard |
+| Coverage | `./gradlew :app:koverHtmlReportAll` | merged over all modules; gate ≥ 95 % lines (currently 98 %) |
+| End-to-end | `scripts/emulator.sh && ./gradlew :app:connectedDebugAndroidTest` | real MediaPipe models offline, UI flows with real touches on the emulator camera |
+| Docker | `scripts/docker-smoke.sh` | image serves APK with correct type and checksum, license, notices |
+
+## Pipeline and CI
+
+`./localPipeline.sh` runs numbered stages — models, ShellCheck, Python and chime check,
+whitespace, ktlint, Android lint (warnings are errors), unit tests with merged coverage,
+APK builds, end-to-end tests, Docker smoke test, coverage report, app launch — and prints
+a PASS/FAIL/WARN/SKIP summary. `--help` lists the options (`--noRun`, `--noOpen`,
+`--e2e auto|required|skip`, `--docker …`, `--report-dir`). GitHub Actions runs the same
+script inside an API 34 emulator with end-to-end and Docker required, signs the release
+from repository secrets, uploads APKs and reports, publishes the image to GHCR and, for
+`v*` tags, creates a GitHub release. All scripts: [docs/scripts.md](docs/scripts.md).
+
+## Docker and GHCR
+
+The phone does the monitoring; Docker distributes the app. A small pinned nginx image
+serves the signed APK, its SHA-256, the license and notices:
 
 ```sh
 docker run --rm -p 8080:8080 ghcr.io/marcelpetrick/forkaroundandfindout:latest
+# open http://<this-computer>:8080 on the phone and download the APK
 ```
 
-serves the signed APK, its checksum and the license for download to a phone.
+Details: [docs/docker.md](docs/docker.md).
 
-See [script documentation](docs/scripts.md) and [working rules](agents.md).
+## Roadmap (conditional, per the vision)
+
+1. Real-phone validation and meals (the protocol in [hardware validation](docs/hardware-validation.md)).
+2. Threshold tuning by replaying held-out real sessions.
+3. A small learned landmark classifier once enough labelled sessions exist.
+4. Only if landmarks prove insufficient: a local elbow-image classifier; optional depth.
+5. A Raspberry Pi / multi-camera appliance after the phone version is validated.
+
+## License and notices
+
+GPL-3.0-or-later ([LICENSE](LICENSE)). Third-party components (MediaPipe Tasks and
+models, AndroidX/CameraX, Kotlin — all Apache-2.0) are listed in [NOTICES.md](NOTICES.md)
+and on the in-app About screen. Planning history: [plan.md](plan.md) (ledger) and
+[plan_v2](plan_v2/plan_v2.md) (review and plan of record); original [vision](vision.md);
+[working rules](agents.md).

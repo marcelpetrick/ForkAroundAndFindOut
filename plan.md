@@ -72,7 +72,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
 - [x] Step 08: Docker image that serves the release APK plus source/license links;
   Docker smoke test in the pipeline; GitHub Actions workflow builds and publishes
   to GHCR; verify by pulling and running the published image.
-- [ ] Step 09: README (badges, setup, usage, testing, pipeline, Docker, screenshot),
+- [x] Step 09: README (badges, setup, usage, testing, pipeline, Docker, screenshot),
   script docs, architecture, hardware validation checklist, full vision traceability.
 - [ ] Step 10: run `/reviewBranch`, fix confirmed findings, run `/githubAbout`, audit
   every `vision.md` section, full local pipeline, green Actions, verified GHCR image,
@@ -557,3 +557,23 @@ require consented physical sessions and must not be fabricated.
 - Done: the test locates the readout by "latency p50". Product behaviour unchanged and
   correct (slow-processing message on a slow device).
 - Validation: 4 instrumented tests PASS on the local emulator.
+
+### 0.9.28 — docs: complete README, architecture and hardware-validation protocol (plan_v2 M7)
+
+- Done: README rewritten per plan_v2 §3.14.1: badge set in the myLastFmPlayer/
+  Cullendula style (pipeline, latest release, license, Android, Kotlin, CameraX,
+  MediaPipe, coverage, gate, GHCR, no-network, languages), honest status table, four
+  genuine emulator screenshots (welcome, synthetic demo warning, setup visibility check on
+  the emulator camera, settings), how it works, placement, usage, settings, privacy
+  (including the pre-0.9.26 telemetry disclosure), training/replay, setup, testing levels,
+  pipeline/CI, Docker/GHCR, roadmap, license/notices. New `docs/architecture.md` and
+  `docs/hardware-validation.md` (plan_v2 §7 protocol, emulator numbers labelled as such,
+  real-phone rows "not yet measured"). `scripts/screenshots.sh` grants the camera after
+  `pm clear` and adds the setup screen. `scripts/check_links.py` (pipeline) verifies all
+  relative Markdown links and anchors.
+- Decisions on plan_v2 §9 open questions (owner did not answer; defaults taken):
+  German added; default people stays 4 (vision FR-03 1–4, one tap to reduce); orientation
+  follows how the phone is propped (both layouts supported; locked while calibrated);
+  no Heavy model download; new project-specific release key; registry name as proposed.
+- Validation: full pipeline green (51 tests, 98.2 %, E2E 4/4, Docker PASS, 16 Markdown
+  files with valid links).

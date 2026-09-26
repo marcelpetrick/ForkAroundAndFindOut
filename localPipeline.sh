@@ -32,7 +32,8 @@ Usage: ./localPipeline.sh [--noRun] [--noOpen] [--e2e auto|required|skip]
 Local project pipeline (GitHub Actions runs the same script):
   1. Models        download/verify pinned MediaPipe models (SHA-256)
   2. ShellCheck    lint every shell script
-  3. Python        byte-compile the helper scripts; verify the generated chime
+  3. Python        byte-compile the helper scripts; verify the generated chime;
+                   check relative Markdown links and anchors
   4. Whitespace    reject whitespace errors in the working tree
   5. Format        ktlint via Spotless for Kotlin and Gradle Kotlin DSL
   6. Android Lint  lint with warnings as errors (Kotlin compiler: -Werror)
@@ -111,8 +112,8 @@ stage_shellcheck() {
 }
 
 stage_python() {
-    python3 -m compileall -q scripts && python3 scripts/chime.py --check &&
-        detail "$(find scripts -maxdepth 1 -name '*.py' | wc -l) helper script(s) compile; chime matches its generator"
+    python3 -m compileall -q scripts && python3 scripts/chime.py --check && python3 scripts/check_links.py &&
+        detail "$(find scripts -maxdepth 1 -name '*.py' | wc -l) helper script(s) compile; chime matches; Markdown links resolve"
 }
 
 stage_whitespace() {

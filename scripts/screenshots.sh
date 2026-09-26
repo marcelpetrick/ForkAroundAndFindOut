@@ -2,8 +2,9 @@
 # Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 # Capture genuine screenshots of the running app from an attached emulator/device.
 # Usage: scripts/screenshots.sh [OUTPUT_DIR]   (default: docs/screenshots)
-# Installs the debug APK, then captures welcome, synthetic demo (with its warning)
-# and settings. The demo shows generated stick figures, never camera footage.
+# Installs the debug APK, then captures welcome, synthetic demo (with its warning),
+# settings and camera setup with the visibility check (emulator: its virtual scene).
+# The demo shows generated stick figures, never camera footage.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -33,6 +34,7 @@ for node in re.finditer(r"<node [^>]*>", xml):
 
 "${adb}" install -r -g app/build/outputs/apk/debug/app-debug.apk >/dev/null
 "${adb}" shell pm clear "${package}" >/dev/null
+"${adb}" shell pm grant "${package}" android.permission.CAMERA # pm clear revokes it
 "${adb}" shell am start -W -n "${package}/.MainActivity" >/dev/null
 sleep 2
 "${adb}" exec-out screencap -p > "${out}/welcome.png"
@@ -44,5 +46,10 @@ sleep 1
 tap_text "Settings"
 sleep 1
 "${adb}" exec-out screencap -p > "${out}/settings.png"
+"${adb}" shell input keyevent KEYCODE_BACK
+sleep 1
+tap_text "Set up camera"
+sleep 12 # the visibility check collects ten seconds of evidence
+"${adb}" exec-out screencap -p > "${out}/setup-visibility-check.png"
 "${adb}" shell input keyevent KEYCODE_BACK
 echo "Screenshots written to ${out}"
