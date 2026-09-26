@@ -853,7 +853,7 @@ is empty; the same method was applied to the session range instead. Findings fix
   closed with references.
 - Validation: link check, ShellCheck, whitespace; full local pipeline green on this tree.
 
-### 0.11.43 — chore(release): public release v0.11.43 completing plan v3
+### 0.11.43 — chore(release): prepare public release v0.11.43 (not published)
 
 - Gate: `/reviewBranch` over the v3 diff → R1–R5 fixed (0.11.40); `/githubAbout` re-checked —
   About text and the ten topics still match the product and are backed by the repo, left
@@ -866,3 +866,17 @@ is empty; the same method was applied to the session range instead. Findings fix
   `ghcr.io/marcelpetrick/forkaroundandfindout:0.11.43` and `latest`, and creates the GitHub
   release with the signed arm64 APK, its SHA-256 and `docs/release-notes.md`.
 - Honest status: still 0.x — 1.0.0 waits for the hardware protocol's real-meal numbers.
+- Outcome: the `v0.11.43` tag run failed in CI e2e ("'latency p50' did not appear") although
+  the same commit passed on `main`; nothing was published (GHCR and release steps skipped).
+  The tag was removed; the fix and the release follow as 0.11.44.
+
+### 0.11.44 — fix(ui): keep monitor controls fixed while hints appear; release v0.11.44
+
+- Cause: on a slow phone (the CI emulator runs at ~5 FPS) the Lite banner appeared above the
+  adult toggle, and the status line and "Recalibrate" hint above Pause change height during
+  the meal, so a control could move under a finger just before the tap — a real usability
+  defect the e2e run exposed.
+- Fix: Pause, Stop and the adult toggle now come directly under the title and never move;
+  status, hints, banner, diagnostics and seat cards follow below them.
+- Release: `docs/release-notes.md` for 0.11.44; tag `v0.11.44` after green `main` CI.
+- Validation: Robolectric, lint; full local pipeline (e2e on the API 36 emulator).

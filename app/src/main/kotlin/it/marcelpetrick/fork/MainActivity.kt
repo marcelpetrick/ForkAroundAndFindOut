@@ -892,17 +892,18 @@ class MainActivity : ComponentActivity() {
     private fun monitorPanel() {
         panel!!.apply {
             addView(title(getString(R.string.monitor_title)))
-            status = label("", 19f, bold = true).also(::addView)
-            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
-            // Pause stays above the seat cards: always visible, one tap, however many seats.
+            // Pause, Stop and the adult toggle come first and never move: everything whose size
+            // changes during the meal (status, hints, banner, diagnostics, seats) sits below them,
+            // so a control never shifts under a finger that is about to tap it.
             addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
-            // Stop and the adult toggle sit next to Pause; the seat cards follow below.
             addView(
                 row(
                     action(getString(R.string.stop)) { show(Screen.WELCOME) },
                     action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG },
                 ),
             )
+            status = label("", 19f, bold = true).also(::addView)
+            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
             banner =
                 card(
                     label("", 15f, bold = true, color = Palette.amber),

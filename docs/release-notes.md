@@ -1,4 +1,4 @@
-**Fork Around & Find Out 0.11.43** — an offline Android helper that gently reminds a family
+**Fork Around & Find Out 0.11.44** — an offline Android helper that gently reminds a family
 to keep elbows off the dinner table. This release completes the plan_v2 product design.
 
 **Status: software complete, real-table validation pending.** Everything below is
@@ -42,7 +42,7 @@ No image or video is ever stored; the app has **no internet permission**, and a 
 against its return.
 
 ## Install
-Download `fork-around-and-find-out-0.11.43.apk` below (arm64, Android 14+), verify it with the `.sha256` file,
+Download `fork-around-and-find-out-0.11.44.apk` below (arm64, Android 14+), verify it with the `.sha256` file,
 and install it. Signing certificate SHA-256:
 `AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0`.
 Or run the download server: `docker run --rm -p 8080:8080 ghcr.io/marcelpetrick/forkaroundandfindout:latest`.
