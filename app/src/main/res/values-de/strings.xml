@@ -174,4 +174,9 @@
     <string name="explain_debug">Erkannte Körper während der Überwachung über das Kamerabild zeichnen.</string>
     <string name="explain_statistics">Eine Zusammenfassung jeder Sitzung speichern (Dauer, Hinweise, Korrekturen). Keine Bilder.</string>
     <string name="watching">Der Tisch wird beobachtet.</string>
+    <string name="nobody_for_a_while">Seit einer Weile ist niemand zu sehen. Wurde das Handy bewegt? Neu einrichten, wenn der Tischumriss nicht mehr passt.</string>
+    <string name="summary_title">Letzte Mahlzeit</string>
+    <string name="summary_line">Zeit %1$s · Hinweise: %2$d · längste ruhige Phase: %3$s</string>
+    <string name="summary_seat">%1$s Platz: %2$d</string>
+    <string name="summary_none">Kein einziger Hinweis. Schön!</string>
 </resources>

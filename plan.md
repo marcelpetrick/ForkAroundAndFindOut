@@ -25,7 +25,7 @@ Decisions (product, design, engineering), each one step below:
 - **Never:** Raspberry Pi / multi-camera appliance (vision §3.2, §30–31, phase 9) — owner
   decision; removed from roadmap and traceability. Depth and learned/image classifiers stay
   conditional as the vision prescribes (they need real data, not engineering).
-- [ ] V3-1 Architecture (plan_v2 §3.2.1): `MonitorSession` in `:core` owns the running meal
+- [x] V3-1 Architecture (plan_v2 §3.2.1): `MonitorSession` in `:core` owns the running meal
   (monitor, alarm policy, grace, false-alarm rest, thank-you, reminder target, statistics,
   status kind) and exposes an immutable `MonitorUiState`; the activity only renders it.
 - [ ] V3-2 Setup (plan_v2 screens 01–04): permission rationale card with *Open settings*
@@ -43,6 +43,8 @@ Decisions (product, design, engineering), each one step below:
 - [ ] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
   (Android 13+ `locales_config`); static shortcut "Start dinner"; run the e2e suite on an
   API 36 emulator image as target-SDK evidence if the image can be installed.
+- [ ] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
+  creation, boot, install, virtual camera/webcam, demo, e2e, troubleshooting); README link.
 - [ ] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
   screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
 
@@ -70,6 +72,9 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   `plan.md` — update the plan first, then continue. Check remote CI and fix failures.
   `localPipeline.sh` and README badges must follow Cullendula / myLastFmPlayer.
   Work step by step and do not stop until the whole project is done.
+- 2026-09-26 session: "make a plan, get all done" — finish plan v3 (V3-1…V3-6) now. Also
+  "write docu: how to run the emulator on a laptop, etc." and hand over a GitHub URL of the
+  Android APK package at the end (release asset link).
 
 ## Tasks
 
@@ -713,3 +718,17 @@ is empty; the same method was applied to the session range instead. Findings fix
   ideas into steps V3-1…V3-6; Raspberry Pi / multi-camera marked **never** in plan, README,
   agents.md and pose-framework notes (vision.md stays the unedited original input).
 - Validation: documentation only; link check and whitespace in the pipeline.
+
+### 0.10.34 — refactor: move the running meal into a JVM-tested MonitorSession (V3-1)
+
+- Done: `MonitorSession` (`:core`) owns monitor, alarm policy, grace, false-alarm rest,
+  thank-you, reminder target, per-seat reminder episodes, calm-stretch record and a status
+  enum; it emits an immutable `MonitorUiState` per tick. `MainActivity` only renders it and
+  plays the returned sound. Part of V3-3 landed with it: a positive *Last meal* card on the
+  welcome screen (time, reminders, longest calm stretch, reminders per seat colour) and a
+  "nobody visible for a while — has the phone moved?" hint with a *Recalibrate* action.
+- Fixed during the move: backgrounding re-renders the monitor so it reads *Paused/Resume*
+  on return; session statistics keep millisecond duration.
+- Validation: `MonitorSessionTest` (grace → reminder → thank-you → rest → pause → summary;
+  nobody hint; slow/too-slow; suspend), Robolectric flows extended (summary card, hint);
+  full local pipeline.

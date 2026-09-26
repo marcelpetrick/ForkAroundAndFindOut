@@ -278,6 +278,10 @@ class MainActivityTest {
             activity.click("Resume")
             idle(4000) // no frames: stale evidence never alarms
             assertTrue(activity.texts().contains("Waiting for a clear camera view"))
+            assertFalse(activity.texts().contains("Recalibrate"))
+            idle(17_000) // nobody for a while: the phone may have moved
+            assertTrue(activity.texts().contains("Has the phone moved?"))
+            assertTrue(activity.texts().contains("Recalibrate"))
 
             controller.pause().stop()
             assertEquals(1, sources[1].closed)
@@ -412,6 +416,10 @@ class MainActivityTest {
             assertFalse(activity.texts().contains("LEFT ELBOW"))
             feed(1000) // not logged any more
             activity.click("Stop")
+            // The welcome screen shows a positive summary of the meal that just ended.
+            assertTrue(activity.texts().contains("Last meal"))
+            assertTrue(activity.lastSummary!!.activeMs > 5_000)
+            assertTrue(activity.texts().contains("No reminders at all") || activity.texts().contains(" seat: "))
 
             // The log holds landmarks and labels only, and replays to the live decisions.
             val recording = SessionLog.read(GZIPInputStream(log.inputStream()).bufferedReader().readLines().asSequence())

@@ -180,4 +180,9 @@
     <string name="explain_debug">Draw detected bodies over the camera image while monitoring.</string>
     <string name="explain_statistics">Keep a summary of each session (duration, reminders, corrections). No images.</string>
     <string name="watching">Watching the table.</string>
+    <string name="nobody_for_a_while">Nobody has been visible for a while. Has the phone moved? Recalibrate if the table outline no longer fits.</string>
+    <string name="summary_title">Last meal</string>
+    <string name="summary_line">Time %1$s · reminders: %2$d · longest calm stretch: %3$s</string>
+    <string name="summary_seat">%1$s seat: %2$d</string>
+    <string name="summary_none">No reminders at all. Lovely!</string>
 </resources>

@@ -38,15 +38,17 @@ import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.SeatResult
-import it.marcelpetrick.fork.monitoring.AlarmPolicy
-import it.marcelpetrick.fork.monitoring.Health
 import it.marcelpetrick.fork.monitoring.LocalStore
+import it.marcelpetrick.fork.monitoring.MealSummary
 import it.marcelpetrick.fork.monitoring.Monitor
+import it.marcelpetrick.fork.monitoring.MonitorSession
+import it.marcelpetrick.fork.monitoring.MonitorUiState
 import it.marcelpetrick.fork.monitoring.SessionFiles
 import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.SessionRecorder
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
+import it.marcelpetrick.fork.monitoring.Status
 import it.marcelpetrick.fork.monitoring.VisibilityCheck
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.monitoring.sampleRecord
@@ -101,7 +103,15 @@ class MainActivity : ComponentActivity() {
     internal var speaker: Speaker = ChimeSpeaker(this)
     internal var clock: () -> Long = SystemClock::uptimeMillis
     internal var cameraIds: () -> List<Lens> = ::backCameras
-    internal var monitor: Monitor? = null
+
+    /** The running meal, or null. */
+    internal var meal: MonitorSession? = null
+        private set
+    internal val monitor: Monitor?
+        get() = meal?.monitor
+
+    /** Summary of the last finished meal, shown on the welcome screen. */
+    internal var lastSummary: MealSummary? = null
         private set
     internal var stage: StageView? = null
         private set
@@ -114,13 +124,10 @@ class MainActivity : ComponentActivity() {
     private var status: TextView? = null
     private var seatCards: LinearLayout? = null
     private var sessionLine: TextView? = null
-    private var alarmingBefore = false
-    private var thanksUntil = 0L
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
     private var advice: TextView? = null
     private var visibilityCheck: VisibilityCheck? = null
-    private var alarm = AlarmPolicy()
     private val taps = mutableListOf<Point>()
     private val seats = mutableListOf<Polygon>()
     private var lastFrame = 0L
@@ -131,18 +138,13 @@ class MainActivity : ComponentActivity() {
     /** True once a frame (and with it the image geometry and view mapping) has arrived. */
     internal val cameraReady: Boolean
         get() = frameInfo != null && stage?.mapping != null
-    private var resumedAt = 0L
     private var demoMonitor: Monitor? = null
     private var demoStart = 0L
     private var diagnosticsOpen = false
     private var pendingCamera: Screen? = null
     private var adult: LinearLayout? = null
-    private var session = ""
-    private var falseAlarms = 0
-    private var missedViolations = 0
     private var training = false
     private var trainingSeat = 1
-    private var snoozedUntil = 0L
     internal var recorder: SessionRecorder? = null
         private set
     private var exportLog: File? = null
@@ -220,11 +222,14 @@ class MainActivity : ComponentActivity() {
 
     /** Backgrounding silences immediately and releases the camera; the user resumes explicitly. */
     override fun onStop() {
-        monitor?.pause(clock())
+        meal?.let { current ->
+            val now = clock()
+            speaker.play(current.suspend(now), settings.volume)
+            render(current.tick(now)) // show "Paused" / "Resume" when the user returns
+        }
         silence()
         closeCamera()
         handler.removeCallbacks(ticker)
-        refreshMonitorPanel()
         super.onStop()
     }
 
@@ -297,6 +302,7 @@ class MainActivity : ComponentActivity() {
         column().apply {
             notice?.let { addView(card(label(it, color = Palette.red))) }
             addView(title(getString(R.string.app_name)))
+            lastSummary?.let { addView(summaryCard(it)) }
             addView(label(getString(R.string.welcome_intro), 19f))
             addView(
                 card(
@@ -321,6 +327,31 @@ class MainActivity : ComponentActivity() {
             addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
             addView(action(getString(R.string.about)) { begin(Screen.ABOUT) })
         }
+
+    /** Positive end-of-meal card: time, reminders, the calm record, per-seat counts. */
+    private fun summaryCard(summary: MealSummary): View =
+        card(
+            label(getString(R.string.summary_title), 19f, bold = true, color = Palette.green),
+            label(
+                getString(
+                    R.string.summary_line,
+                    clockText(summary.activeSeconds),
+                    summary.reminders,
+                    clockText(summary.longestCalmSeconds),
+                ),
+            ),
+            label(
+                if (summary.remindersBySeat.isEmpty()) {
+                    getString(R.string.summary_none)
+                } else {
+                    summary.remindersBySeat.entries.joinToString(" · ") { (seat, count) ->
+                        getString(R.string.summary_seat, getString(SEAT_COLOURS.getOrElse(seat - 1) { R.string.seat_colour_1 }), count)
+                    }
+                },
+                15f,
+                color = Palette.muted,
+            ),
+        )
 
     private fun begin(target: Screen) {
         notice = null
@@ -584,14 +615,9 @@ class MainActivity : ComponentActivity() {
 
     private fun startMonitoring() {
         notice = null
-        monitor = Monitor(settings).also { it.start(clock()) }
-        session = UUID.randomUUID().toString()
+        meal = MonitorSession(settings, UUID.randomUUID().toString(), clock())
+        lastSummary = null
         diagnosticsOpen = false // adult tools start collapsed in every session
-        falseAlarms = 0
-        missedViolations = 0
-        snoozedUntil = 0L
-        resumedAt = clock()
-        alarm = AlarmPolicy()
         speaker.prepare()
         show(Screen.MONITOR)
     }
@@ -600,6 +626,7 @@ class MainActivity : ComponentActivity() {
         panel!!.apply {
             addView(title(getString(R.string.monitor_title)))
             status = label("", 19f, bold = true).also(::addView)
+            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
             // Pause stays above the seat cards: always visible, one tap, however many seats.
             addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
             // Stop and the adult toggle sit next to Pause; the seat cards follow below.
@@ -613,59 +640,55 @@ class MainActivity : ComponentActivity() {
             seatCards = column(0).also(::addView)
             sessionLine = label("", 15f, color = Palette.muted).also(::addView)
         }
-        refreshMonitorPanel()
-        schedule()
+        tick()
     }
 
     private fun togglePause() {
-        val active = monitor ?: return
-        val now = clock()
-        if (active.active) {
-            active.pause(now)
-            silence()
-        } else {
-            active.start(now)
-            resumedAt = now
-            snoozedUntil = 0L // an explicit resume means "watch again now"
-        }
-        refreshMonitorPanel()
+        val current = meal ?: return
+        val sound = current.togglePause(clock())
+        if (!current.active) silence()
+        speaker.play(sound, settings.volume)
+        tick()
     }
 
     private fun toggleDiagnostics() {
         diagnosticsOpen = !diagnosticsOpen
-        refreshMonitorPanel()
+        tick()
     }
 
-    private fun refreshMonitorPanel() {
-        val active = monitor ?: return
+    /** Renders one [MonitorUiState]; all decisions were made by [MonitorSession]. */
+    private fun render(state: MonitorUiState) {
+        val current = meal ?: return
         if (screen != Screen.MONITOR || panel == null) return
-        val now = clock()
-        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.update(getString(if (active.active) R.string.pause else R.string.resume))
+        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.update(getString(if (state.paused) R.string.resume else R.string.pause))
         panel!!.findViewWithTag<TextView>(DIAGNOSTICS_TAG)?.update(
             getString(if (diagnosticsOpen) R.string.hide_diagnostics else R.string.show_diagnostics),
         )
+        panel!!.findViewWithTag<View>(RECALIBRATE_TAG)?.visibility =
+            if (state.status == Status.NOBODY_FOR_A_WHILE) View.VISIBLE else View.GONE
         status?.update(
-            when {
-                !active.active -> getString(R.string.paused)
-                now - resumedAt < settings.graceMs -> getString(R.string.grace, (settings.graceMs - (now - resumedAt) + 999) / 1000)
-                active.health == Health.TOO_SLOW -> getString(R.string.too_slow, fps)
-                now < snoozedUntil -> getString(R.string.snoozed, (snoozedUntil - now + 999) / 1000)
-                active.results.isEmpty() -> getString(R.string.waiting)
-                active.health == Health.SLOW -> getString(R.string.slow_processing, fps)
-                stage?.warning != VisualMode.OFF -> getString(R.string.warning_text)
-                else -> getString(R.string.watching)
+            when (state.status) {
+                Status.PAUSED -> getString(R.string.paused)
+                Status.GRACE -> getString(R.string.grace, state.countdown)
+                Status.TOO_SLOW -> getString(R.string.too_slow, fps)
+                Status.RESTING -> getString(R.string.snoozed, state.countdown)
+                Status.NOBODY_FOR_A_WHILE -> getString(R.string.nobody_for_a_while)
+                Status.WAITING -> getString(R.string.waiting)
+                Status.SLOW -> getString(R.string.slow_processing, fps)
+                Status.REMINDING -> getString(R.string.warning_text)
+                Status.WATCHING -> getString(R.string.watching)
             },
         )
-        renderSeats(active.results)
-        val seconds = (active.elapsedMs + if (active.active) now - resumedAt else 0) / 1000
-        sessionLine?.update(getString(R.string.session_line, "%d:%02d".format(seconds / 60, seconds % 60), active.violations))
-        stage?.dimmed = !active.active
+        renderSeats(state.seats)
+        sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
-        if (diagnosticsOpen) diagnosticsText?.update(diagnostics(active))
+        if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))
         adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
         adult?.findViewWithTag<TextView>(SEAT_TAG)?.update(getString(R.string.training_seat, trainingSeat))
         adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
     }
+
+    private fun clockText(seconds: Long) = "%d:%02d".format(seconds / 60, seconds % 60)
 
     /** Adult-only tools, collapsed by default: diagnostics, feedback, explicit training. */
     private fun adultPanel(): LinearLayout =
@@ -685,7 +708,7 @@ class MainActivity : ComponentActivity() {
                     addView(
                         action(getString(R.string.training_seat, 1)) {
                             trainingSeat = trainingSeat % settings.people + 1
-                            refreshMonitorPanel()
+                            tick()
                         }.apply { tag = SEAT_TAG },
                     )
                     addView(
@@ -711,7 +734,7 @@ class MainActivity : ComponentActivity() {
         if (training) {
             recorder =
                 try {
-                    SessionRecorder(sessionsDir, session, BuildConfig.VERSION_NAME, settings)
+                    SessionRecorder(sessionsDir, meal?.id ?: UUID.randomUUID().toString(), BuildConfig.VERSION_NAME, settings)
                 } catch (error: IllegalStateException) {
                     training = false
                     trainingStatus?.text = getString(R.string.storage_failed, error.message)
@@ -720,7 +743,7 @@ class MainActivity : ComponentActivity() {
         } else {
             closeRecorder()
         }
-        refreshMonitorPanel()
+        tick()
     }
 
     private fun closeRecorder() {
@@ -729,16 +752,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun feedback(label: String) {
-        val active = monitor ?: return
+        val current = meal ?: return
+        val now = clock()
         if (label == "FALSE_ALARM") {
             // The adult corrected a wrong reminder: stop it now and give the table a short rest.
-            snoozedUntil = clock() + SNOOZE_MS
             silence()
+            speaker.play(current.falseAlarm(now), settings.volume)
+        } else {
+            current.missedViolation()
         }
-        recorder?.label(SessionLog.label(clock(), label, 0))
-        if (persist(listOf(sampleRecord(session, clock(), label, active.results, 0)), label)) {
-            if (label == "FALSE_ALARM") falseAlarms++ else missedViolations++
-        }
+        recorder?.label(SessionLog.label(now, label, 0))
+        persist(listOf(sampleRecord(current.id, now, label, current.monitor.results, 0)), label)
+        tick()
     }
 
     private fun labelEvent(label: String) {
@@ -876,15 +901,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun firstViolation(results: List<SeatResult>): Pair<Int, Boolean>? =
-        results.firstNotNullOfOrNull { seat ->
-            when {
-                seat.left.state == ElbowState.VIOLATION -> seat.seat to true
-                seat.right.state == ElbowState.VIOLATION -> seat.seat to false
-                else -> null
-            }
-        }
-
     private fun word(state: ElbowState): String =
         getString(
             when (state) {
@@ -984,31 +1000,25 @@ class MainActivity : ComponentActivity() {
             view.results = demo.results
             view.poses = emptyList()
             renderSeats(demo.results)
-            view.reminder = if (view.warning != VisualMode.OFF) firstViolation(demo.results) else null
+            view.reminder = if (view.warning != VisualMode.OFF) MonitorSession.firstViolation(demo.results) else null
             view.refresh()
             schedule()
             return
         }
-        val active = monitor ?: return
-        val alarming = active.tick(now) && now >= snoozedUntil
-        if (active.calibrationInvalid) {
+        val current = meal ?: return
+        val state = current.tick(now)
+        if (current.monitor.calibrationInvalid) {
             notice = getString(R.string.calibration_changed)
             show(Screen.WELCOME)
             return
         }
-        view.results = active.results
-        view.warning = if (alarming) settings.visual else VisualMode.OFF
-        // A correction (not a pause or a false-alarm rest) earns a short thank-you.
-        if (alarmingBefore && !alarming && active.active && now >= snoozedUntil &&
-            active.results.isNotEmpty()
-        ) {
-            thanksUntil = now + THANKS_MS
-        }
-        alarmingBefore = alarming
-        view.reminder = if (alarming) firstViolation(active.results) else null
-        view.thanks = !alarming && now < thanksUntil
-        speaker.play(alarm.update(alarming, settings.audio, now, settings.repeatMs), settings.volume)
-        refreshMonitorPanel()
+        view.results = state.seats
+        view.warning = if (state.warning) settings.visual else VisualMode.OFF
+        view.reminder = state.reminder
+        view.thanks = state.thanks
+        view.dimmed = state.paused
+        speaker.play(state.sound, settings.volume)
+        render(state)
         view.refresh()
         schedule()
     }
@@ -1027,10 +1037,10 @@ class MainActivity : ComponentActivity() {
         stage?.mapping = source?.mapping
         stage?.poses = poses
         if (screen == Screen.MONITOR) {
-            monitor?.let { active ->
+            meal?.let { current ->
                 // Only frames the monitor accepted are logged, so replay sees exactly what it decided on.
-                if (active.frame(poses, time, now, info.aspect, info.rotation)) {
-                    recorder?.frame(SessionLog.frame(time, info.aspect, poses, active.results))
+                if (current.frame(poses, time, now, info.aspect, info.rotation)) {
+                    recorder?.frame(SessionLog.frame(time, info.aspect, poses, current.monitor.results))
                 }
             }
         }
@@ -1039,7 +1049,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onCameraError(message: String) {
-        monitor?.pause(clock())
+        meal?.let { speaker.play(it.suspend(clock()), settings.volume) }
         silence()
         closeCamera()
         notice = getString(R.string.camera_error, message)
@@ -1060,28 +1070,37 @@ class MainActivity : ComponentActivity() {
         fps = 0.0
     }
 
+    /** Clears every warning from the screen and stops any sound immediately. */
     private fun silence() {
         stage?.warning = VisualMode.OFF
         stage?.reminder = null
         stage?.thanks = false
-        alarmingBefore = false
-        thanksUntil = 0L
         stage?.refresh()
-        alarm.update(false, settings.audio, clock(), settings.repeatMs)
         speaker.play(Sound.STOP, settings.volume)
     }
 
     private fun endSession() {
-        val active = monitor ?: return
-        active.pause(clock())
+        val current = meal ?: return
+        val now = clock()
+        current.suspend(now)
         silence()
-        monitor = null
+        meal = null
         closeRecorder()
         training = false
-        if (settings.statistics && active.elapsedMs > 0) {
-            val confidence = if (active.confidenceCount == 0) null else active.confidenceTotal / active.confidenceCount
+        val summary = current.summary(now)
+        if (summary.activeSeconds > 0) lastSummary = summary
+        if (settings.statistics && summary.activeSeconds > 0) {
             persist(
-                listOf(sessionRecord(session, active.elapsedMs, active.violations, falseAlarms, missedViolations, confidence)),
+                listOf(
+                    sessionRecord(
+                        current.id,
+                        summary.activeMs,
+                        summary.reminders,
+                        summary.falseAlarms,
+                        summary.missedViolations,
+                        summary.meanConfidence,
+                    ),
+                ),
                 "session",
             )
         }
@@ -1114,8 +1133,8 @@ class MainActivity : ComponentActivity() {
         const val DIAGNOSTICS_TAG = "diagnostics"
         const val TRAINING_TAG = "training"
         const val CONTINUE_TAG = "continue"
-        const val SNOOZE_MS = 30_000L
-        const val THANKS_MS = 2_000L
+        const val RECALIBRATE_TAG = "recalibrate"
+        val SEAT_COLOURS = listOf(R.string.seat_colour_1, R.string.seat_colour_2, R.string.seat_colour_3, R.string.seat_colour_4)
         const val SEAT_TAG = "seat"
         const val LABELS_TAG = "labels"
     }
