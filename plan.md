@@ -57,7 +57,7 @@ Decisions (product, design, engineering), each one step below:
     calm stretch.
   - [x] R4 (low) stored `violations` statistic changed meaning — keep Monitor.violations.
   - [x] R5 (low) TOO_MANY unreachable (numPoses = people) — setup screens detect up to four.
-- [ ] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
+- [x] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
   screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
 
 ## Owner input log
@@ -852,3 +852,17 @@ is empty; the same method was applied to the session range instead. Findings fix
   (welcome, demo warning, setup check, settings, dark, landscape). Backlog items from 0.0.1
   closed with references.
 - Validation: link check, ShellCheck, whitespace; full local pipeline green on this tree.
+
+### 0.11.43 — chore(release): public release v0.11.43 completing plan v3
+
+- Gate: `/reviewBranch` over the v3 diff → R1–R5 fixed (0.11.40); `/githubAbout` re-checked —
+  About text and the ten topics still match the product and are backed by the repo, left
+  unchanged; vision traceability table re-audited (no requirement changed status: software
+  complete for the applicable scope; §15/§29 real-meal targets **not measured**; learned and
+  image classifiers and depth conditional; Raspberry Pi never); `plan_v2/` re-checked
+  (unchanged since 0.5.13, every item folded into V3-1…V3-6); full local pipeline green on
+  0.11.41/0.11.42 trees (e2e on API 36); remote Actions green up to the pushed commits.
+- Release: tag `v0.11.43` → Actions builds, tests, signs, publishes
+  `ghcr.io/marcelpetrick/forkaroundandfindout:0.11.43` and `latest`, and creates the GitHub
+  release with the signed arm64 APK, its SHA-256 and `docs/release-notes.md`.
+- Honest status: still 0.x — 1.0.0 waits for the hardware protocol's real-meal numbers.
