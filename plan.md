@@ -45,6 +45,15 @@ Decisions (product, design, engineering), each one step below:
   API 36 emulator image as target-SDK evidence if the image can be installed.
 - [ ] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
   creation, boot, install, virtual camera/webcam, demo, e2e, troubleshooting); README link.
+- [ ] V3-6r Self-review of the v3 diff (0272154..bb33681), fix before release:
+  - [ ] R1 (medium) people stepper keeps the engine's old pose limit — reopen the source when
+    the pose limit it was built with differs from what the screen needs.
+  - [ ] R2 (medium) per-seat reminder counts include grace, rest and too-slow episodes —
+    count seats only while the session is reminding.
+  - [ ] R3 (low) pausing/stopping mid-reminder counts it as calm — silence() starts a new
+    calm stretch.
+  - [ ] R4 (low) stored `violations` statistic changed meaning — keep Monitor.violations.
+  - [ ] R5 (low) TOO_MANY unreachable (numPoses = people) — setup screens detect up to four.
 - [ ] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
   screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
 
@@ -75,6 +84,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
 - 2026-09-26 session: "make a plan, get all done" — finish plan v3 (V3-1…V3-6) now. Also
   "write docu: how to run the emulator on a laptop, etc." and hand over a GitHub URL of the
   Android APK package at the end (release asset link).
+- 2026-09-26, after the self-review: "good, put them to the plan and get them fixed".
 
 ## Tasks
 
@@ -792,3 +802,9 @@ is empty; the same method was applied to the session range instead. Findings fix
   CI stays on API 34 (minSdk).
 - Validation: Robolectric shortcut flow (not set up / set up / repeat / plain launch), lint;
   full local pipeline on the API 36 emulator.
+
+### 0.11.39 — docs: record self-review findings R1–R5 for the v3 diff
+
+- Done: `/reviewBranch` over 0272154..bb33681 found two medium and three low issues; the owner
+  asked to put them in the plan and fix them (R1–R5 above).
+- Validation: documentation only; whitespace and link checks.
