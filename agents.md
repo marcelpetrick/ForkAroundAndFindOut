@@ -7,8 +7,9 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 - Read `vision.md` and implement its complete applicable product scope. Make routine
   decisions independently and continue until the product works.
 - Preserve the vision's explicit conditions for later research: learned models need
-  real training sessions; image classifiers, depth, and Raspberry Pi are conditional
-  future work, not claims of delivered capabilities.
+  real training sessions; image classifiers and depth are conditional future work, not
+  claims of delivered capabilities.
+- Never build the Raspberry Pi / multi-camera appliance (owner decision 2026-09-26).
 - Never equate synthetic tests with physical-camera or household validation. Record
   unavailable evidence and remaining acceptance work honestly.
 

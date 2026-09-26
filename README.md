@@ -28,7 +28,8 @@ nothing is uploaded, nobody is identified. Written entirely in Kotlin.
 | Camera, pose model, calibration, per-elbow detection, warnings, pause, settings, diagnostics, training logs, replay tool | Implemented and tested (unit, Robolectric, emulator end-to-end) |
 | Synthetic acceptance scenarios (vision §29) | Automated regression tests pass |
 | Real phone, real table, real meals (false alarms per meal, recall) | **Not yet measured** — see [hardware validation](docs/hardware-validation.md) |
-| Learned classifier, image classifier, depth, Raspberry Pi | Conditional future work per the vision; needs real, consented sessions first |
+| Learned classifier, image classifier, depth | Conditional future work per the vision; needs real, consented sessions first |
+| Raspberry Pi / multi-camera appliance | **Never** — out of scope by owner decision |
 
 Version 1.0.0 is reserved for when the real-meal targets are met and recorded.
 
@@ -159,7 +160,8 @@ Details: [docs/docker.md](docs/docker.md).
 2. Threshold tuning by replaying held-out real sessions.
 3. A small learned landmark classifier once enough labelled sessions exist.
 4. Only if landmarks prove insufficient: a local elbow-image classifier; optional depth.
-5. A Raspberry Pi / multi-camera appliance after the phone version is validated.
+
+Not planned, ever: a Raspberry Pi or multi-camera appliance (owner decision).
 
 ## License and notices
 

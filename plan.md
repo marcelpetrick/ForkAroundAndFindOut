@@ -13,6 +13,39 @@ vision’s Flutter recommendation.
 Docker will serve a downloadable Android APK with source/license links. The Android
 app includes an explicitly labelled synthetic demo for reproducible UI testing.
 
+## Plan v3 — completing plan_v2 (owner request 2026-09-26)
+
+Owner input: "Don't do the Raspberry Pi — mark it as never. Check plan_v2, incorporate it
+into what we have with a plan, overhaul; make all easy decisions as an expert designer,
+developer and product manager; a shiny, great product; follow my patterns. plan_v2 has to be
+done now, then push and make a public GitHub release, and check that CI turns green."
+
+Decisions (product, design, engineering), each one step below:
+
+- **Never:** Raspberry Pi / multi-camera appliance (vision §3.2, §30–31, phase 9) — owner
+  decision; removed from roadmap and traceability. Depth and learned/image classifiers stay
+  conditional as the vision prescribes (they need real data, not engineering).
+- [ ] V3-1 Architecture (plan_v2 §3.2.1): `MonitorSession` in `:core` owns the running meal
+  (monitor, alarm policy, grace, false-alarm rest, thank-you, reminder target, statistics,
+  status kind) and exposes an immutable `MonitorUiState`; the activity only renders it.
+- [ ] V3-2 Setup (plan_v2 screens 01–04): permission rationale card with *Open settings*
+  after a denial; Position screen with a people stepper, lens chips and a *specific* reason
+  when the visibility check fails; a placement illustration; widest rear lens as the default
+  for new setups; a loupe while tapping/dragging corners; seat regions auto-proposed from the
+  table edges (editable, overlap-checked).
+- [ ] V3-3 Monitor (screens 05–06, §8): meal summary card on Stop (duration, reminders per
+  seat colour, longest reminder-free stretch — positive framing); "nobody visible for a
+  while — has the phone moved?" hint with a recalibrate action; long-press volume-down
+  pauses; thermal banner suggesting Lite; 180 ms cross-fade between screens.
+- [ ] V3-4 Settings (screen 07): grouped sections (Reminders, Sensitivity, Camera & model,
+  Data); sensitivity presets Conservative / Normal / Responsive; a choice of three soft
+  generated chimes; processor CPU / GPU (experimental, automatic CPU fallback).
+- [ ] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
+  (Android 13+ `locales_config`); static shortcut "Start dinner"; run the e2e suite on an
+  API 36 emulator image as target-SDK evidence if the image can be installed.
+- [ ] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
+  screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -96,7 +129,7 @@ covered by automated tests; physical-world outcomes are listed separately and ho
 | --- | --- | --- | --- |
 | §1 objective, §2 approach, §34 core decision | CameraX → MediaPipe → seat tracker → table-relative features → rule classifier → temporal filter → warning (`docs/architecture.md`) | unit + Robolectric + emulator e2e | Done |
 | §3 smartphone first | Native Android app (API 34+); Kotlin throughout by owner decision instead of Flutter (§16–17 intent kept: native camera/inference, only results cross into UI) | APK builds, emulator | Done |
-| §3.2, §30–31, phase 9 Raspberry Pi / multi-camera | — | — | Deferred by the vision until the phone version is validated |
+| §3.2, §30–31, phase 9 Raspberry Pi / multi-camera | — | — | **Never** (owner decision 2026-09-26) |
 | §4, §18 framework and configuration | MediaPipe Pose Landmarker Full (Lite selectable), LIVE_STREAM, ≤4 poses, 0.6 gates, pinned SHA-256 models; comparison in `docs/pose-frameworks.md` | `NativeModelTest` (both models, offline) | Done |
 | §5 problem formulation (away / passing / supported) | Conservative supported-elbow rule: stationary, bent, downward upper arm, near/inside table | `DetectorTest` acceptance cases | Done |
 | §6 camera position | Welcome placement copy, visibility-check tips, README/hardware protocol | UI text; real placement **not yet measured** | Done (guidance); physical validation pending |
@@ -669,7 +702,14 @@ is empty; the same method was applied to the session range instead. Findings fix
   release with the signed arm64 APK, its SHA-256 and `docs/release-notes.md`.
 - Honest status: software complete for the vision's applicable scope; phone performance and
   real-meal accuracy (§15 targets, §29 household acceptance) are **not measured** — protocol
-  in `docs/hardware-validation.md`. Learned/image classifiers, depth and Raspberry Pi remain
+  in `docs/hardware-validation.md`. Learned/image classifiers and depth remain (Raspberry Pi: never, owner decision)
   conditional future work as the vision prescribes. Hence 0.x, not 1.0.0.
 - Owner actions: back up `~/.android/fork-around-and-find-out-release.{jks,properties}`;
   run the hardware protocol; answer plan_v2 §9 questions if the defaults do not fit.
+
+### 0.10.33 — docs: plan v3 to complete plan_v2; Raspberry Pi marked never
+
+- Done: consolidated plan (above) folding every open plan_v2 item and the chosen §8 product
+  ideas into steps V3-1…V3-6; Raspberry Pi / multi-camera marked **never** in plan, README,
+  agents.md and pose-framework notes (vision.md stays the unedited original input).
+- Validation: documentation only; link check and whitespace in the pipeline.

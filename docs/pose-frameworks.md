@@ -66,8 +66,9 @@ single-person fitness demos. Warm up and run long enough to expose thermal throt
 Change camera placement before adding model complexity. Compare Full and Lite on
 identical consented sessions. If visible elbows remain unreliable, evaluate RTMPose
 or MoveNet on held-out sessions through the pose adapter. Train a small contact
-classifier only after labelled sessions exist. Crop classification, depth and a Pi
-appliance remain conditional as specified in the vision.
+classifier only after labelled sessions exist. Crop classification and depth remain
+conditional as specified in the vision; a Raspberry Pi appliance will never be built
+(owner decision).
 
 ## Primary sources
 
