@@ -74,10 +74,10 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   to GHCR; verify by pulling and running the published image.
 - [x] Step 09: README (badges, setup, usage, testing, pipeline, Docker, screenshot),
   script docs, architecture, hardware validation checklist, full vision traceability.
-- [ ] Step 10: run `/reviewBranch`, fix confirmed findings, run `/githubAbout`, audit
+- [x] Step 10: run `/reviewBranch`, fix confirmed findings, run `/githubAbout`, audit
   every `vision.md` section, full local pipeline, green Actions, verified GHCR image,
   clean working tree.
-- [ ] Step 11: public GitHub release (tag `v<VERSION>`) with the APK attached and
+- [x] Step 11: public GitHub release (tag `v<VERSION>`) with the APK attached and
   honest release notes separating software evidence from pending household evidence.
 
 ### Coordination
@@ -655,3 +655,21 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: monitor order is now status → Pause → [Stop · Adult diagnostics] → adult panel
   (collapsed) → seat cards → session line.
 - Validation: full local pipeline green; instrumented suite passed twice in a row.
+
+### 0.10.32 — chore(release): first public release v0.10.32
+
+- Gate: self-review done and fixed (0.9.29); `/githubAbout` applied — About text updated to
+  "Offline Android app that gently reminds a family to keep elbows off the dinner table…
+  Software-tested; real-meal validation pending." (topics kept: android, kotlin, mediapipe,
+  camerax, pose-estimation, computer-vision, posture-detection, table-manners, on-device-ml,
+  privacy-first); vision audit in the traceability table; `plan_v2/` re-checked (unchanged
+  since 0.5.13); full local pipeline green; remote Actions green for 0.10.31.
+- Release: tag `v0.10.32` → Actions builds, tests, signs, publishes
+  `ghcr.io/marcelpetrick/forkaroundandfindout:0.10.32` and `latest`, and creates the GitHub
+  release with the signed arm64 APK, its SHA-256 and `docs/release-notes.md`.
+- Honest status: software complete for the vision's applicable scope; phone performance and
+  real-meal accuracy (§15 targets, §29 household acceptance) are **not measured** — protocol
+  in `docs/hardware-validation.md`. Learned/image classifiers, depth and Raspberry Pi remain
+  conditional future work as the vision prescribes. Hence 0.x, not 1.0.0.
+- Owner actions: back up `~/.android/fork-around-and-find-out-release.{jks,properties}`;
+  run the hardware protocol; answer plan_v2 §9 questions if the defaults do not fit.
