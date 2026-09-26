@@ -229,4 +229,6 @@
     <string name="shortcut_start_short">Start dinner</string>
     <string name="shortcut_start_long">Start dinner monitoring</string>
     <string name="shortcut_needs_setup">Set up the camera once, then the shortcut starts dinner directly.</string>
+    <string name="restart_check">Restart the 10-second check</string>
+    <string name="visibility_restarted">Check restarted. Sit as you would during the meal for ten seconds.</string>
 </resources>

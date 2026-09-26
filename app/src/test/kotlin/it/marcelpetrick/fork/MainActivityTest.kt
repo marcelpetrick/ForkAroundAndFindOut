@@ -342,8 +342,10 @@ class MainActivityTest {
             val sources = mutableListOf<FakeSource>()
             lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
             activity.cameraIds = { lensLabels(mapOf("0" to 4.2f, "2" to 2.1f)) }
-            activity.sourceFactory = { view, _, f, _ ->
+            val limits = mutableListOf<Int>()
+            activity.sourceFactory = { view, s, f, _ ->
                 frame = f
+                limits += s.people
                 FakeSource(view).also { sources += it }
             }
             var time = SystemClock.uptimeMillis()
@@ -408,6 +410,15 @@ class MainActivityTest {
             assertTrue(activity.texts().contains("People inside a seat now: 1 of 1"))
             activity.click("Finish setup")
             assertEquals(1, activity.settings.seats.size)
+            // Setup looks for up to four people so an extra diner is noticed; monitoring looks
+            // for exactly the configured number, and recalibrating reopens with four again.
+            assertTrue(limits.all { it == 4 })
+            activity.click("Start dinner")
+            assertEquals(1, limits.last())
+            idle(21_000) // nobody in view: the monitor offers to recalibrate
+            activity.click("Recalibrate camera")
+            assertEquals(MainActivity.Screen.POSITION, activity.screen)
+            assertEquals(4, limits.last())
         }
     }
 
@@ -708,6 +719,16 @@ class MainActivityTest {
                 idle(100)
             }
             assertTrue(activity.texts().contains("People: 1 of 1 · all arms visible in 100 % of frames"))
+            assertTrue(activity.texts().contains("Everyone is visible."))
+            // Someone was still settling: restart the ten seconds; the gate closes until it passes again.
+            activity.click("Restart the 10-second check")
+            assertTrue(activity.texts().contains("Check restarted"))
+            activity.click("Mark table")
+            assertEquals(MainActivity.Screen.POSITION, activity.screen)
+            repeat(95) {
+                frame(listOf(pose()), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
+                idle(100)
+            }
             assertTrue(activity.texts().contains("Everyone is visible."))
             activity.click("Mark table")
             assertEquals(MainActivity.Screen.TABLE, activity.screen)

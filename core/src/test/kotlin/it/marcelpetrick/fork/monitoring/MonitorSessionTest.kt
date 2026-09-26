@@ -107,4 +107,30 @@ class MonitorSessionTest {
         assertEquals(Sound.STOP, session.suspend(12_200))
         assertFalse(session.frame(listOf(clear), 12_300, 12_300, 1.0, 90))
     }
+
+    @Test
+    fun elbowsDuringGraceAreNotCountedAsReminders() {
+        val session = MonitorSession(settings, "grace", 0)
+        session.run(0, 1800, resting) // violation reached and cleared inside the grace period
+        session.run(1800, 3000, clear)
+        val summary = session.summary(4800)
+        assertEquals(0, summary.reminders)
+        assertEquals(emptyMap<Int, Int>(), summary.remindersBySeat)
+        assertTrue("the detector itself did see it", session.monitor.violations > 0)
+    }
+
+    @Test
+    fun pausingDuringAReminderEndsItForTheCalmRecord() {
+        val session = MonitorSession(settings.copy(graceMs = 0), "pause", 0)
+        session.run(0, 5000, clear)
+        assertEquals(Status.REMINDING, session.run(5000, 3000, resting).status)
+        session.togglePause(8000)
+        session.togglePause(9000)
+        session.run(9000, 2000, clear)
+        val summary = session.summary(11_000)
+        assertEquals(1, summary.reminders)
+        assertEquals(mapOf(1 to 1), summary.remindersBySeat)
+        // The calm before the reminder (6–7 s) is the record, not the 10 s that include it.
+        assertTrue("calm ${summary.longestCalmSeconds}", summary.longestCalmSeconds in 5..7)
+    }
 }

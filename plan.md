@@ -43,17 +43,20 @@ Decisions (product, design, engineering), each one step below:
 - [x] V3-5 Platform polish: adaptive launcher icon with monochrome layer; per-app language
   (Android 13+ `locales_config`); static shortcut "Start dinner"; run the e2e suite on an
   API 36 emulator image as target-SDK evidence if the image can be installed.
+- [x] V3-6b Owner request: a *Restart the 10-second check* button on the Position screen.
+- [ ] V3-6c Owner request: `docs/c4-architecture.md` — understandable C4 views (context,
+  containers, components), the runtime workflows and the everyday user workflow.
 - [ ] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
   creation, boot, install, virtual camera/webcam, demo, e2e, troubleshooting); README link.
-- [ ] V3-6r Self-review of the v3 diff (0272154..bb33681), fix before release:
-  - [ ] R1 (medium) people stepper keeps the engine's old pose limit — reopen the source when
+- [x] V3-6r Self-review of the v3 diff (0272154..bb33681), fix before release:
+  - [x] R1 (medium) people stepper keeps the engine's old pose limit — reopen the source when
     the pose limit it was built with differs from what the screen needs.
-  - [ ] R2 (medium) per-seat reminder counts include grace, rest and too-slow episodes —
+  - [x] R2 (medium) per-seat reminder counts include grace, rest and too-slow episodes —
     count seats only while the session is reminding.
-  - [ ] R3 (low) pausing/stopping mid-reminder counts it as calm — silence() starts a new
+  - [x] R3 (low) pausing/stopping mid-reminder counts it as calm — silence() starts a new
     calm stretch.
-  - [ ] R4 (low) stored `violations` statistic changed meaning — keep Monitor.violations.
-  - [ ] R5 (low) TOO_MANY unreachable (numPoses = people) — setup screens detect up to four.
+  - [x] R4 (low) stored `violations` statistic changed meaning — keep Monitor.violations.
+  - [x] R5 (low) TOO_MANY unreachable (numPoses = people) — setup screens detect up to four.
 - [ ] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
   screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
 
@@ -85,6 +88,10 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   "write docu: how to run the emulator on a laptop, etc." and hand over a GitHub URL of the
   Android APK package at the end (release asset link).
 - 2026-09-26, after the self-review: "good, put them to the plan and get them fixed".
+- 2026-09-26: "check what is left for the project and fix those things as well", "all handles,
+  go go go, and make a public release"; "allow to restart the config period of 10 s …
+  a button near that screen"; "add a C4 architecture markdown document … workflows … and the
+  general workflow for the user … make it understandable".
 
 ## Tasks
 
@@ -808,3 +815,21 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: `/reviewBranch` over 0272154..bb33681 found two medium and three low issues; the owner
   asked to put them in the plan and fix them (R1–R5 above).
 - Validation: documentation only; whitespace and link checks.
+
+### 0.11.40 — fix: address self-review R1–R5 and let the visibility check restart
+
+- R1/R5: the pose limit is chosen per screen — setup looks for up to four people (an extra
+  diner now shows "More people are visible…"), monitoring for exactly the configured number;
+  the source reopens when the limit it was built with no longer fits (stepper, recalibrate
+  from the monitor).
+- R2: per-seat reminder counts only while the session reminds (not in grace, rest or on a
+  too-slow phone). R3: pausing/stopping mid-reminder starts a new calm stretch.
+- R4: the stored `violations` statistic stays the per-elbow episode count.
+- Owner request: *Restart the 10-second check* on the Position screen discards the evidence
+  and closes the gate until ten fresh seconds pass.
+- e2e: a tap right after a scroll swipe hit a still-flinging page and only stopped it (the
+  longer welcome screen made it reproducible); the helper now drags slowly and lets the
+  page settle. Failure artefacts now include a UI hierarchy dump next to the screenshot.
+- Validation: new `MonitorSessionTest` cases (grace, pause mid-reminder), Robolectric pose
+  limits per screen and the restart; full local pipeline green except that e2e case, which
+  then passed 4/4 on the API 36 emulator after the fix.

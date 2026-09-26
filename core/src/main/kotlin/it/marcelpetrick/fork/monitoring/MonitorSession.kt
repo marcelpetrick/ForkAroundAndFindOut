@@ -91,14 +91,6 @@ class MonitorSession(
         val accepted = monitor.frame(poses, captured, now, aspect, rotation)
         if (!accepted) return false
         if (monitor.results.any { it.pose != null }) lastSeen = now
-        // A seat counts once per episode, whether one or both elbows are down.
-        val current =
-            monitor.results
-                .filter { it.left.state == ElbowState.VIOLATION || it.right.state == ElbowState.VIOLATION }
-                .map { it.seat }
-                .toSet()
-        (current - violating).forEach { seat -> bySeat[seat] = (bySeat[seat] ?: 0) + 1 }
-        violating = current
         return true
     }
 
@@ -114,6 +106,19 @@ class MonitorSession(
             if (monitor.active && now >= restUntil && monitor.results.isNotEmpty()) thanksUntil = now + THANKS_MS
         }
         alarmingBefore = alarming
+        // A seat counts once per reminder episode, whether one or both elbows are down, and only
+        // while the table is actually reminded (not during grace, a rest or a too-slow phone).
+        val current =
+            if (!alarming) {
+                emptySet()
+            } else {
+                monitor.results
+                    .filter { it.left.state == ElbowState.VIOLATION || it.right.state == ElbowState.VIOLATION }
+                    .map { it.seat }
+                    .toSet()
+            }
+        (current - violating).forEach { seat -> bySeat[seat] = (bySeat[seat] ?: 0) + 1 }
+        violating = current
         val sound = policy.update(alarming, settings.audio, now, settings.repeatMs)
         return state(now, alarming, sound)
     }
@@ -187,7 +192,10 @@ class MonitorSession(
     }
 
     private fun silence(now: Long): Sound {
+        // An interrupted reminder ends here: the next calm stretch starts now, not before it.
+        if (alarmingBefore) calmSince = activeMs(now)
         alarmingBefore = false
+        violating = emptySet()
         thanksUntil = 0L
         policy.update(false, settings.audio, now, settings.repeatMs)
         return Sound.STOP

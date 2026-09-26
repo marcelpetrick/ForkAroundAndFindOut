@@ -40,6 +40,7 @@ class UiFlowTest {
                 description: Description,
             ) {
                 device.executeShellCommand("screencap -p /data/local/tmp/fork-e2e-${description.methodName}.png")
+                device.executeShellCommand("uiautomator dump /data/local/tmp/fork-e2e-${description.methodName}.xml")
             }
 
             // Closing here (not in @After) keeps the app on screen for the failure screenshot.
@@ -107,8 +108,11 @@ class UiFlowTest {
                 if (device.wait(Until.hasObject(By.textContains(text)), 300) || device.hasObject(By.desc(text))) return
                 val area = device.findObject(By.scrollable(true))?.visibleBounds ?: return
                 val (low, high) = area.centerY() + area.height() / 4 to area.centerY() - area.height() / 4
-                device.swipe(area.centerX(), if (down) low else high, area.centerX(), if (down) high else low, 30)
+                // A slow drag barely flings; the pause lets any fling settle, because a tap during
+                // a fling only stops the scrolling and never reaches the button.
+                device.swipe(area.centerX(), if (down) low else high, area.centerX(), if (down) high else low, 60)
                 device.waitForIdle()
+                Thread.sleep(SETTLE_MS)
             }
         }
     }
@@ -207,5 +211,9 @@ class UiFlowTest {
         tap("Delete all")
         tap("Cancel")
         waitFor("Stored records: 0")
+    }
+
+    private companion object {
+        const val SETTLE_MS = 400L
     }
 }

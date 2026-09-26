@@ -367,6 +367,7 @@ class MainActivity : ComponentActivity() {
             Screen.ABOUT -> page(aboutPage())
             Screen.DEMO -> startDemo()
             else -> {
+                if (source != null && sourceLimit != poseLimit(target)) closeCamera()
                 if (preview == null) cameraLayout()
                 panel!!.removeAllViews()
                 stage!!.onTap = null
@@ -608,6 +609,8 @@ class MainActivity : ComponentActivity() {
             lensChips()?.let(::addView)
             status = label(getString(R.string.people_detected, 0), bold = true).also(::addView)
             advice = label(getString(R.string.visibility_tips), color = Palette.muted).also(::addView)
+            // Everyone sits down in their own time: start the ten seconds again once all are settled.
+            addView(action(getString(R.string.restart_check)) { restartVisibilityCheck() })
             addView(
                 action(getString(R.string.mark_table), primary = true) {
                     if (visibilityCheck?.result()?.passed == true) show(Screen.TABLE)
@@ -691,6 +694,17 @@ class MainActivity : ComponentActivity() {
                     else -> getString(R.string.visibility_tips)
                 }
         }
+
+    /** Discards the evidence so far; the check runs its full ten seconds from now. */
+    private fun restartVisibilityCheck() {
+        visibilityCheck?.reset()
+        status?.text = getString(R.string.people_detected, 0)
+        advice?.text = getString(R.string.visibility_restarted)
+        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
+            isEnabled = false
+            alpha = 0.5f
+        }
+    }
 
     private fun refreshVisibility(poses: List<Pose>) {
         val check = visibilityCheck ?: return
@@ -1339,9 +1353,19 @@ class MainActivity : ComponentActivity() {
         show(Screen.WELCOME)
     }
 
+    /**
+     * How many people the pose model looks for. Monitoring needs exactly the configured
+     * number; setup looks for up to four, so an extra person at the table is noticed.
+     */
+    private fun poseLimit(target: Screen) = if (target == Screen.MONITOR) settings.people else MAX_PEOPLE
+
+    /** The pose limit the open source was built with (the engine cannot change it later). */
+    private var sourceLimit = 0
+
     private fun openCamera() {
         val view = preview ?: return
-        source = sourceFactory(view, settings, ::onFrame, ::onCameraError).also { it.start() }
+        sourceLimit = poseLimit(screen)
+        source = sourceFactory(view, settings.copy(people = sourceLimit), ::onFrame, ::onCameraError).also { it.start() }
     }
 
     private fun closeCamera() {
@@ -1378,7 +1402,7 @@ class MainActivity : ComponentActivity() {
                     sessionRecord(
                         current.id,
                         summary.activeMs,
-                        summary.reminders,
+                        current.monitor.violations, // per-elbow episodes, as stored since 0.5.12
                         summary.falseAlarms,
                         summary.missedViolations,
                         summary.meanConfidence,
@@ -1412,6 +1436,7 @@ class MainActivity : ComponentActivity() {
         const val TICK_MS = 100L
         const val DEMO_FRAME_MS = 66L
         const val FADE_MS = 180L
+        const val MAX_PEOPLE = 4
         const val ACTION_START_DINNER = "it.marcelpetrick.fork.action.START_DINNER"
 
         /** Below this the setup suggests the Lite model. */

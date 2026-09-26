@@ -223,4 +223,6 @@
     <string name="shortcut_start_short">Essen starten</string>
     <string name="shortcut_start_long">Essens-Überwachung starten</string>
     <string name="shortcut_needs_setup">Richte die Kamera einmal ein, dann startet die Verknüpfung das Essen direkt.</string>
+    <string name="restart_check">10-Sekunden-Prüfung neu starten</string>
+    <string name="visibility_restarted">Prüfung neu gestartet. Zehn Sekunden so sitzen wie beim Essen.</string>
 </resources>
