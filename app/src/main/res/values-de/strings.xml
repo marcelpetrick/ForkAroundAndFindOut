@@ -179,4 +179,22 @@
     <string name="summary_line">Zeit %1$s · Hinweise: %2$d · längste ruhige Phase: %3$s</string>
     <string name="summary_seat">%1$s Platz: %2$d</string>
     <string name="summary_none">Kein einziger Hinweis. Schön!</string>
+    <string name="permission_rationale">Die Kamera sieht Arme und Tischplatte. Bilder werden nur im Speicher verwendet und nie gespeichert oder gesendet.</string>
+    <string name="open_settings">App-Einstellungen öffnen</string>
+    <string name="continue_label">Weiter</string>
+    <string name="placement_image">Handy auf einem Ständer über Kopfhöhe an einer Tischecke, schräg nach unten auf den Tisch gerichtet</string>
+    <string name="people_count">Personen am Tisch: %1$d</string>
+    <string name="lens_choice">Objektiv %1$s verwenden</string>
+    <string name="visibility_nobody">Noch ist niemand zu sehen. Sitzen alle und sind im Bild?</string>
+    <string name="visibility_too_few">Sichtbare Personen: %1$d von %2$d. Handy höher stellen, nach unten neigen oder weiter weg stellen.</string>
+    <string name="visibility_too_many">Mehr Personen sichtbar (%1$d) als eingestellt (%2$d). Ändere oben die Anzahl der Personen.</string>
+    <string name="visibility_hidden">Bei der Person %1$s im Bild sind die Arme oft verdeckt. Handy höher stellen oder Flaschen und Schüsseln verschieben.</string>
+    <string name="visibility_slow">Die Verarbeitung ist langsam (%1$.0f FPS). Probiere das Lite-Modell in den Einstellungen.</string>
+    <string name="side_left">links</string>
+    <string name="side_middle">in der Mitte</string>
+    <string name="side_right">rechts</string>
+    <string name="suggest_seats">Plätze vorschlagen</string>
+    <string name="seats_suggested">Plätze wurden aus den Tischkanten vorgeschlagen. Prüfe, dass alle in einem Platz sitzen, oder lösche sie.</string>
+    <string name="seats_suggest_failed">Nicht auf jeder sichtbaren Seite ist Platz für einen Sitz. Plätze antippen oder überspringen.</string>
+    <string name="seats_inside">Personen gerade in einem Platz: %1$d von %2$d</string>
 </resources>

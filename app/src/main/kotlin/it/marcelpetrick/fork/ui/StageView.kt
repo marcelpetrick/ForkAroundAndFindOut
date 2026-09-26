@@ -2,6 +2,7 @@
 package it.marcelpetrick.fork.ui
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
@@ -11,6 +12,7 @@ import android.graphics.RectF
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.graphics.withClip
 import it.marcelpetrick.fork.R
 import it.marcelpetrick.fork.detection.ElbowState
 import it.marcelpetrick.fork.detection.Point
@@ -68,6 +70,14 @@ class StageView(
     var onDrag: ((Int, Point) -> Unit)? = null
     private var dragging: Int? = null
 
+    /** A still of the camera preview for the loupe, taken once per press (null: overlay only). */
+    var snapshot: (() -> Bitmap?)? = null
+    private var still: Bitmap? = null
+
+    /** Where the finger rests while marking corners, in view pixels; drives the loupe. */
+    internal var pressAt: FloatArray? = null
+        private set
+
     private val stroke =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -88,6 +98,8 @@ class StageView(
         if (onTap == null || width == 0 || height == 0) return false
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                pressAt = floatArrayOf(event.x, event.y)
+                still = snapshot?.invoke()
                 // Pressing on an existing corner starts adjusting it instead of adding one.
                 val grab = context.dp(GRAB_DP).toFloat()
                 dragging =
@@ -98,8 +110,14 @@ class StageView(
                         ?.first
                         ?.takeIf { onDrag != null }
             }
-            MotionEvent.ACTION_MOVE -> dragging?.let { index -> image(event)?.takeIf { it.inImage() }?.let { onDrag?.invoke(index, it) } }
+            MotionEvent.ACTION_MOVE -> {
+                pressAt = floatArrayOf(event.x, event.y)
+                dragging?.let { index -> image(event)?.takeIf { it.inImage() }?.let { onDrag?.invoke(index, it) } }
+                invalidate()
+            }
+            MotionEvent.ACTION_CANCEL -> endPress()
             MotionEvent.ACTION_UP -> {
+                endPress()
                 if (dragging == null) {
                     val point = image(event)
                     if (point == null || !point.inImage()) onRejectedTap?.invoke() else onTap?.invoke(point)
@@ -109,6 +127,12 @@ class StageView(
             }
         }
         return true
+    }
+
+    private fun endPress() {
+        pressAt = null
+        still = null
+        invalidate()
     }
 
     /** Normalized image coordinates of a touch, or null if the mapping cannot be inverted. */
@@ -161,8 +185,39 @@ class StageView(
             }
         }
         if (dimmed) canvas.drawColor(Color.argb(140, 0, 0, 0))
+        drawLoupe(canvas)
         drawWarning(canvas)
         drawCard(canvas)
+    }
+
+    /**
+     * While a finger marks or drags a corner it hides the very spot being placed: a circle
+     * above the finger shows that spot magnified, with the overlay and a crosshair.
+     */
+    private fun drawLoupe(canvas: Canvas) {
+        val (x, y) = pressAt ?: return
+        if (onTap == null) return
+        val radius = context.dp(LOUPE_DP).toFloat()
+        val cx = x.coerceIn(radius, maxOf(radius, width - radius))
+        val cy = if (y - radius * 2.2f > radius) y - radius * 2.2f else y + radius * 2.2f
+        val clip = Path().apply { addCircle(cx, cy, radius, Path.Direction.CW) }
+        canvas.withClip(clip) {
+            drawColor(Palette.stageBackground)
+            // Magnify around the finger: the loupe centre shows the point under the finger.
+            translate(cx, cy)
+            scale(LOUPE_ZOOM, LOUPE_ZOOM)
+            translate(-x, -y)
+            still?.let { drawBitmap(it, null, RectF(0f, 0f, this@StageView.width.toFloat(), this@StageView.height.toFloat()), null) }
+            table?.let { polygon(canvas, it.points, Color.TRANSPARENT, Color.rgb(255, 214, 102)) }
+            if (taps.isNotEmpty()) polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
+        }
+        stroke.color = Color.WHITE
+        stroke.strokeWidth = context.dp(2).toFloat()
+        val arm = radius / 3
+        canvas.drawLine(cx - arm, cy, cx + arm, cy, stroke)
+        canvas.drawLine(cx, cy - arm, cx, cy + arm, stroke)
+        stroke.strokeWidth = context.dp(3).toFloat()
+        canvas.drawCircle(cx, cy, radius, stroke)
     }
 
     private fun drawWarning(canvas: Canvas) {
@@ -309,6 +364,8 @@ class StageView(
 
     private companion object {
         const val GRAB_DP = 28
+        const val LOUPE_DP = 56
+        const val LOUPE_ZOOM = 2.5f
         const val FADE_IN_MS = 400L
         const val FADE_OUT_MS = 600L
         const val PULSE_MS = 2400.0

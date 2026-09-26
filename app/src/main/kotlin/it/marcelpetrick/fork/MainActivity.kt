@@ -3,6 +3,7 @@ package it.marcelpetrick.fork
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -21,6 +22,7 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -37,6 +39,7 @@ import it.marcelpetrick.fork.detection.ElbowState
 import it.marcelpetrick.fork.detection.Point
 import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
+import it.marcelpetrick.fork.detection.SeatProposal
 import it.marcelpetrick.fork.detection.SeatResult
 import it.marcelpetrick.fork.monitoring.LocalStore
 import it.marcelpetrick.fork.monitoring.MealSummary
@@ -127,6 +130,10 @@ class MainActivity : ComponentActivity() {
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
     private var advice: TextView? = null
+    private var seatCheck: TextView? = null
+
+    /** The camera permission was refused: the welcome card offers Android's app settings. */
+    private var permissionDenied = false
     private var visibilityCheck: VisibilityCheck? = null
     private val taps = mutableListOf<Point>()
     private val seats = mutableListOf<Polygon>()
@@ -171,6 +178,7 @@ class MainActivity : ComponentActivity() {
                 show(target)
             } else {
                 notice = getString(R.string.permission_needed)
+                permissionDenied = true
                 show(Screen.WELCOME)
             }
         }
@@ -245,7 +253,16 @@ class MainActivity : ComponentActivity() {
         if (target == Screen.MONITOR && monitor == null) return show(Screen.WELCOME)
         if (target in CAMERA_SCREENS && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             pendingCamera = target
-            permission.launch(Manifest.permission.CAMERA)
+            if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                AlertDialog
+                    .Builder(this)
+                    .setMessage(R.string.permission_rationale)
+                    .setPositiveButton(R.string.continue_label) { _, _ -> permission.launch(Manifest.permission.CAMERA) }
+                    .setNegativeButton(R.string.cancel) { _, _ -> pendingCamera = null }
+                    .show()
+            } else {
+                permission.launch(Manifest.permission.CAMERA)
+            }
             return
         }
         if (screen == Screen.MONITOR && target != Screen.MONITOR) endSession()
@@ -300,7 +317,14 @@ class MainActivity : ComponentActivity() {
 
     private fun welcome(): View =
         column().apply {
-            notice?.let { addView(card(label(it, color = Palette.red))) }
+            notice?.let {
+                val warning = card(label(it, color = Palette.red))
+                if (permissionDenied) {
+                    warning.addView(label(getString(R.string.permission_rationale), 15f, color = Palette.muted))
+                    warning.addView(action(getString(R.string.open_settings)) { openAppSettings() })
+                }
+                addView(warning)
+            }
             addView(title(getString(R.string.app_name)))
             lastSummary?.let { addView(summaryCard(it)) }
             addView(label(getString(R.string.welcome_intro), 19f))
@@ -355,7 +379,16 @@ class MainActivity : ComponentActivity() {
 
     private fun begin(target: Screen) {
         notice = null
+        permissionDenied = false
         show(target)
+    }
+
+    /** After a refusal Android no longer asks; only the app's system settings can grant it. */
+    private fun openAppSettings() {
+        startActivity(
+            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     private fun settingsPage(): View =
@@ -397,6 +430,8 @@ class MainActivity : ComponentActivity() {
         val view = PreviewView(this)
         frame.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val overlay = StageView(this).also { it.clock = clock }
+        // The loupe magnifies a still of the preview taken when a finger lands on it.
+        overlay.snapshot = { view.bitmap }
         frame.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         splitLayout(frame, landscape)
         preview = view
@@ -453,10 +488,20 @@ class MainActivity : ComponentActivity() {
 
     /** Vision §19 as a gate: the table is marked once everyone's arms are reliably visible. */
     private fun positionPanel() {
+        chooseWidestLens()
         visibilityCheck = VisibilityCheck(settings.people)
         panel!!.apply {
             addView(title(getString(R.string.position_title)))
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.placement)
+                    adjustViewBounds = true
+                    contentDescription = getString(R.string.placement_image)
+                },
+            )
             addView(label(getString(R.string.position_help)))
+            addView(peopleStepper())
+            lensChips()?.let(::addView)
             status = label(getString(R.string.people_detected, 0), bold = true).also(::addView)
             advice = label(getString(R.string.visibility_tips), color = Palette.muted).also(::addView)
             addView(
@@ -473,6 +518,76 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** People at the table, right where the check needs it; a change restarts the check. */
+    private fun peopleStepper(): View {
+        val name = getString(R.string.option_people)
+
+        fun change(delta: Int) {
+            val people = (settings.people + delta).coerceIn(1, 4)
+            if (people == settings.people) return
+            updateSettings(settings.copy(people = people, seats = if (settings.seats.size == people) settings.seats else emptyList()))
+            show(Screen.POSITION)
+        }
+        return row(
+            action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
+            label(getString(R.string.people_count, settings.people), 18f, bold = true).apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
+            action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
+        )
+    }
+
+    /** One chip per rear lens (Wide / Main / Tele); switching lens invalidates the table outline. */
+    private fun lensChips(): View? {
+        val lenses = cameraIds()
+        if (lenses.size < 2) return null
+        return row(
+            *lenses
+                .map { lens ->
+                    action(getString(lens.label), primary = lens.id == settings.camera) { selectLens(lens.id) }.apply {
+                        contentDescription = getString(R.string.lens_choice, getString(lens.label))
+                    }
+                }.toTypedArray(),
+        )
+    }
+
+    private fun selectLens(id: String) {
+        if (id == settings.camera) return
+        updateSettings(settings.copy(camera = id, table = null, seats = emptyList(), calibrationAspect = 0.0, calibrationRotation = -1))
+        closeCamera()
+        show(Screen.POSITION)
+    }
+
+    /** A new setup starts on the widest rear lens: from a corner it sees the most of the table. */
+    private fun chooseWidestLens() {
+        if (settings.table != null || settings.camera.isNotEmpty()) return
+        val wide = cameraIds().firstOrNull { it.label == R.string.lens_wide } ?: return
+        updateSettings(settings.copy(camera = wide.id))
+        closeCamera()
+    }
+
+    private fun visibilityAdvice(result: VisibilityCheck.Result): String =
+        when {
+            result.passed -> getString(R.string.visibility_passed)
+            fps > 0 && fps < SLOW_FPS && result.seconds >= 3 -> getString(R.string.visibility_slow, fps)
+            else ->
+                when (result.reason) {
+                    VisibilityCheck.Reason.NOBODY -> getString(R.string.visibility_nobody)
+                    VisibilityCheck.Reason.TOO_FEW -> getString(R.string.visibility_too_few, result.detected, settings.people)
+                    VisibilityCheck.Reason.TOO_MANY -> getString(R.string.visibility_too_many, result.detected, settings.people)
+                    VisibilityCheck.Reason.ARMS_HIDDEN ->
+                        getString(
+                            R.string.visibility_hidden,
+                            getString(
+                                when (result.hiddenSide) {
+                                    VisibilityCheck.Side.LEFT -> R.string.side_left
+                                    VisibilityCheck.Side.RIGHT -> R.string.side_right
+                                    else -> R.string.side_middle
+                                },
+                            ),
+                        )
+                    else -> getString(R.string.visibility_tips)
+                }
+        }
+
     private fun refreshVisibility(poses: List<Pose>) {
         val check = visibilityCheck ?: return
         check.add(poses, lastFrame)
@@ -486,7 +601,7 @@ class MainActivity : ComponentActivity() {
                 fps,
                 result.seconds,
             )
-        advice?.text = getString(if (result.passed) R.string.visibility_passed else R.string.visibility_tips)
+        advice?.update(visibilityAdvice(result))
         panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
             isEnabled = result.passed
             alpha = if (result.passed) 1f else 0.5f
@@ -566,11 +681,40 @@ class MainActivity : ComponentActivity() {
                     action(getString(R.string.add_seat)) { addSeat() },
                 ),
             )
-            addView(action(getString(R.string.clear_seats)) { edit { seats.clear() } })
+            addView(
+                row(
+                    action(getString(R.string.suggest_seats)) { suggestSeats() },
+                    action(getString(R.string.clear_seats)) { edit { seats.clear() } },
+                ),
+            )
+            seatCheck = label("", 15f, color = Palette.muted).also(::addView)
             addView(action(getString(R.string.finish_setup), primary = true) { finishSetup() })
             addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
         }
         tapInput { if (taps.size < 4 && seats.size < settings.people) taps += it }
+    }
+
+    /** One region per person, proposed from the table edges; the live count shows whether it fits. */
+    private fun suggestSeats() {
+        val table = settings.table ?: return
+        val proposed = SeatProposal.propose(table, settings.people)
+        if (proposed.size < settings.people) {
+            status?.text = getString(R.string.seats_suggest_failed)
+            return
+        }
+        edit {
+            seats.clear()
+            seats += proposed
+            taps.clear()
+        }
+        seatCheck?.text = getString(R.string.seats_suggested)
+    }
+
+    /** Seats only assign people inside them: count who currently falls in exactly one. */
+    private fun refreshSeatCheck(poses: List<Pose>) {
+        if (seats.isEmpty()) return
+        val inside = poses.count { pose -> pose.center()?.let { c -> seats.count { it.contains(c) } == 1 } == true }
+        seatCheck?.update(getString(R.string.seats_inside, inside, settings.people))
     }
 
     private fun addSeat() {
@@ -1045,6 +1189,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (screen == Screen.POSITION) refreshVisibility(poses)
+        if (screen == Screen.SEATS) refreshSeatCheck(poses)
         stage?.refresh()
     }
 
@@ -1129,6 +1274,9 @@ class MainActivity : ComponentActivity() {
         val CAMERA_SCREENS = setOf(Screen.POSITION, Screen.TABLE, Screen.SEATS, Screen.MONITOR)
         const val TICK_MS = 100L
         const val DEMO_FRAME_MS = 66L
+
+        /** Below this the setup suggests the Lite model. */
+        const val SLOW_FPS = 5.0
         const val PAUSE_TAG = "pause"
         const val DIAGNOSTICS_TAG = "diagnostics"
         const val TRAINING_TAG = "training"

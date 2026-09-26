@@ -7,6 +7,8 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Looper
@@ -27,6 +29,7 @@ import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.Sound
 import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.ui.Speaker
+import it.marcelpetrick.fork.ui.lensLabels
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -313,6 +316,83 @@ class MainActivityTest {
         }
     }
 
+    @Test
+    fun setupGuidesPlacementPeopleLensVisibilityAndSuggestedSeats() {
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
+        launch().use { controller ->
+            val activity = controller.get()
+            val sources = mutableListOf<FakeSource>()
+            lateinit var frame: (List<Pose>, Long, FrameInfo) -> Unit
+            activity.cameraIds = { lensLabels(mapOf("0" to 4.2f, "2" to 2.1f)) }
+            activity.sourceFactory = { view, _, f, _ ->
+                frame = f
+                FakeSource(view).also { sources += it }
+            }
+            var time = SystemClock.uptimeMillis()
+
+            fun feed(
+                poses: List<Pose>,
+                count: Int,
+                step: Long = 100,
+            ) = repeat(count) {
+                time += step
+                frame(poses, time, FrameInfo(1.0, 90, 5))
+            }
+            activity.click("Set up camera")
+            // A new setup starts on the widest lens, with the placement picture and a people stepper.
+            assertEquals("2", activity.settings.camera)
+            assertTrue(activity.texts().contains("People at the table: 4"))
+            feed(emptyList(), 5)
+            assertTrue(activity.texts().contains("Nobody is visible yet"))
+            activity.click("Decrease People")
+            assertEquals(3, activity.settings.people)
+            assertEquals(1, sources.size) // the camera stays open while the check restarts
+            feed(listOf(pose()), 5)
+            assertTrue(activity.texts().contains("People visible: 1 of 3"))
+            activity.click("Decrease People")
+            activity.click("Decrease People")
+            activity.click("Decrease People") // already one: nothing changes
+            assertEquals(1, activity.settings.people)
+            feed(listOf(pose(), pose(offset = 0.3)), 5)
+            assertTrue(activity.texts().contains("More people are visible (2) than set (1)"))
+            val hidden = Pose(pose().landmarks.toMutableList().apply { this[13] = this[13].copy(confidence = 0.1) })
+            feed(listOf(hidden), 40)
+            assertTrue(activity.texts().contains("The person on the middle of the picture often has hidden arms"))
+            feed(listOf(pose()), 20, step = 400)
+            assertTrue(activity.texts().contains("Processing is slow"))
+
+            // Switching lens changes the geometry: the camera reopens on the chosen lens.
+            activity.click("Main")
+            assertEquals("0", activity.settings.camera)
+            assertEquals(2, sources.size)
+            assertEquals(1, sources.first().closed)
+            activity.click("Main") // already selected
+            assertEquals(2, sources.size)
+
+            activity.click("Mark table without the check")
+            feed(listOf(pose()), 1)
+            // Pressing on the image shows the loupe until the finger lifts.
+            val stage = activity.stage!!
+            stage.dispatchTouchEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 20f, 400f, 0))
+            stage.dispatchTouchEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_MOVE, 30f, 20f, 0))
+            assertNotNull(stage.pressAt)
+            stage.draw(Canvas(Bitmap.createBitmap(stage.width, stage.height, Bitmap.Config.ARGB_8888)))
+            stage.dispatchTouchEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_CANCEL, 30f, 20f, 0))
+            assertNull(stage.pressAt)
+            activity.click("Undo")
+            corners.forEach { activity.tap(it) }
+            activity.click("Save table")
+            assertEquals(MainActivity.Screen.SEATS, activity.screen)
+            activity.click("Suggest seats")
+            assertTrue(activity.texts().contains("Seats were suggested"))
+            assertTrue(activity.texts().contains("Seats: 1 of 1"))
+            feed(listOf(pose()), 1)
+            assertTrue(activity.texts().contains("People inside a seat now: 1 of 1"))
+            activity.click("Finish setup")
+            assertEquals(1, activity.settings.seats.size)
+        }
+    }
+
     @Suppress("DEPRECATION")
     private fun MainActivity.answerPermission(grant: Int) {
         val request = shadowOf(this).lastRequestedPermission
@@ -334,6 +414,11 @@ class MainActivityTest {
             activity.answerPermission(PackageManager.PERMISSION_DENIED)
             assertEquals(MainActivity.Screen.WELCOME, activity.screen)
             assertTrue(activity.texts().contains("Camera permission is needed"))
+            // Android no longer asks after a refusal: the card leads to the app's system settings.
+            activity.click("Open app settings")
+            val settingsIntent = shadowOf(activity).nextStartedActivity
+            assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, settingsIntent.action)
+            assertEquals("package:${activity.packageName}", settingsIntent.data.toString())
             // Granted later in Android settings: no further prompt is necessary.
             shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.CAMERA)
             activity.click("Set up camera")

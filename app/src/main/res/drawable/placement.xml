@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later. -->
+<!-- Camera placement, side view: phone above head height at a table corner, tilted down so
+     every shoulder, elbow and wrist and the whole tabletop are in view. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp" android:height="88dp"
+    android:viewportWidth="320" android:viewportHeight="140">
+    <!-- floor -->
+    <path android:strokeColor="@color/line" android:strokeWidth="2" android:pathData="M8,132H312" />
+    <!-- field of view -->
+    <path android:fillColor="@color/green_soft" android:fillAlpha="0.7" android:pathData="M44,24L300,70L300,100L150,100Z" />
+    <path android:strokeColor="@color/green" android:strokeWidth="1.5" android:strokeLineCap="round"
+        android:pathData="M44,24L300,70M44,24L150,100" />
+    <!-- stand and phone -->
+    <path android:strokeColor="@color/muted" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M36,32V132M24,132L36,110L48,132" />
+    <path android:fillColor="@color/ink" android:pathData="M30,14L46,20L42,34L26,28Z" />
+    <path android:fillColor="@color/green" android:pathData="M40,24m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <!-- table -->
+    <path android:fillColor="@color/amber_soft" android:strokeColor="@color/amber" android:strokeWidth="2"
+        android:pathData="M150,96H292V102H150Z" />
+    <path android:strokeColor="@color/amber" android:strokeWidth="3" android:pathData="M160,102V132M282,102V132" />
+    <!-- two people, near and far side -->
+    <path android:fillColor="@color/seat2" android:pathData="M138,58m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path android:strokeColor="@color/seat2" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M138,70V100M138,76L156,90L172,92" />
+    <path android:fillColor="@color/seat3" android:pathData="M304,58m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path android:strokeColor="@color/seat3" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M304,70V100M304,76L284,90L268,92" />
+</vector>

@@ -185,4 +185,22 @@
     <string name="summary_line">Time %1$s · reminders: %2$d · longest calm stretch: %3$s</string>
     <string name="summary_seat">%1$s seat: %2$d</string>
     <string name="summary_none">No reminders at all. Lovely!</string>
+    <string name="permission_rationale">The camera sees arms and the tabletop. Pictures are only used in memory and never saved or sent.</string>
+    <string name="open_settings">Open app settings</string>
+    <string name="continue_label">Continue</string>
+    <string name="placement_image">Phone on a stand above head height at a table corner, tilted down at the table</string>
+    <string name="people_count">People at the table: %1$d</string>
+    <string name="lens_choice">Use the %1$s lens</string>
+    <string name="visibility_nobody">Nobody is visible yet. Is everyone seated and inside the picture?</string>
+    <string name="visibility_too_few">People visible: %1$d of %2$d. Raise the phone, tilt it down or move it further away.</string>
+    <string name="visibility_too_many">More people are visible (%1$d) than set (%2$d). Change the number of people above.</string>
+    <string name="visibility_hidden">The person on the %1$s of the picture often has hidden arms. Raise the phone or move bottles and bowls.</string>
+    <string name="visibility_slow">Processing is slow (%1$.0f FPS). Try the Lite model in Settings.</string>
+    <string name="side_left">left</string>
+    <string name="side_middle">middle</string>
+    <string name="side_right">right</string>
+    <string name="suggest_seats">Suggest seats</string>
+    <string name="seats_suggested">Seats were suggested from the table edges. Check that everyone sits inside one, or clear them.</string>
+    <string name="seats_suggest_failed">No room for a seat on every side in view. Mark the seats by tapping, or skip them.</string>
+    <string name="seats_inside">People inside a seat now: %1$d of %2$d</string>
 </resources>

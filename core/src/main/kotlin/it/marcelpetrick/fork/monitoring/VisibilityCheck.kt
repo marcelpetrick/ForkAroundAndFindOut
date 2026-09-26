@@ -16,7 +16,15 @@ class VisibilityCheck(
         val time: Long,
         val detected: Int,
         val visible: Int,
+        /** Horizontal image position of each person missing an arm joint. */
+        val hiddenAt: List<Double>,
     )
+
+    /** Why the check has not passed (or [PASSED]), so the screen can say what to change. */
+    enum class Reason { PASSED, MEASURING, NOBODY, TOO_FEW, TOO_MANY, ARMS_HIDDEN }
+
+    /** Where in the picture the person with hidden arms is. */
+    enum class Side { LEFT, MIDDLE, RIGHT }
 
     private val samples = ArrayDeque<Sample>()
 
@@ -28,6 +36,9 @@ class VisibilityCheck(
         /** Seconds of evidence collected, capped at the window. */
         val seconds: Double,
         val passed: Boolean,
+        val reason: Reason = Reason.MEASURING,
+        /** For [Reason.ARMS_HIDDEN]: where the person whose arms are most often hidden sits. */
+        val hiddenSide: Side? = null,
     )
 
     fun add(
@@ -35,8 +46,16 @@ class VisibilityCheck(
         timeMs: Long,
     ) {
         if (samples.isNotEmpty() && timeMs <= samples.last().time) return
-        val visible = poses.count { pose -> ARM_JOINTS.all { pose.joint(it) != null } }
-        samples.addLast(Sample(timeMs, poses.size, visible))
+        val (visible, hidden) = poses.partition { pose -> ARM_JOINTS.all { pose.joint(it) != null } }
+        val hiddenAt =
+            hidden.mapNotNull { pose ->
+                pose.landmarks
+                    .filter { it.visible() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.map { it.point.x }
+                    ?.average()
+            }
+        samples.addLast(Sample(timeMs, poses.size, visible.size, hiddenAt))
         while (timeMs - samples.first().time > windowMs) samples.removeFirst()
     }
 
@@ -52,8 +71,36 @@ class VisibilityCheck(
                 .key
         val armsVisible = samples.count { it.visible >= people }.toDouble() / samples.size
         val seconds = (samples.last().time - samples.first().time) / 1000.0
-        val passed = seconds * 1000 >= windowMs * 0.8 && detected == people && armsVisible >= REQUIRED_SHARE
-        return Result(detected, armsVisible, seconds, passed)
+        val enough = seconds * 1000 >= windowMs * 0.8
+        val reason =
+            when {
+                detected == 0 -> Reason.NOBODY
+                detected < people -> Reason.TOO_FEW
+                detected > people -> Reason.TOO_MANY
+                armsVisible < REQUIRED_SHARE -> Reason.ARMS_HIDDEN
+                !enough -> Reason.MEASURING
+                else -> Reason.PASSED
+            }
+        val hiddenSide =
+            if (reason != Reason.ARMS_HIDDEN) {
+                null
+            } else {
+                samples
+                    .flatMap { it.hiddenAt }
+                    .map { x ->
+                        if (x < 1.0 / 3) {
+                            Side.LEFT
+                        } else if (x > 2.0 / 3) {
+                            Side.RIGHT
+                        } else {
+                            Side.MIDDLE
+                        }
+                    }.groupingBy { it }
+                    .eachCount()
+                    .maxByOrNull { it.value }
+                    ?.key
+            }
+        return Result(detected, armsVisible, seconds, reason == Reason.PASSED, reason, hiddenSide)
     }
 
     companion object {

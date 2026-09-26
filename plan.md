@@ -28,7 +28,7 @@ Decisions (product, design, engineering), each one step below:
 - [x] V3-1 Architecture (plan_v2 §3.2.1): `MonitorSession` in `:core` owns the running meal
   (monitor, alarm policy, grace, false-alarm rest, thank-you, reminder target, statistics,
   status kind) and exposes an immutable `MonitorUiState`; the activity only renders it.
-- [ ] V3-2 Setup (plan_v2 screens 01–04): permission rationale card with *Open settings*
+- [x] V3-2 Setup (plan_v2 screens 01–04): permission rationale card with *Open settings*
   after a denial; Position screen with a people stepper, lens chips and a *specific* reason
   when the visibility check fails; a placement illustration; widest rear lens as the default
   for new setups; a loupe while tapping/dragging corners; seat regions auto-proposed from the
@@ -732,3 +732,21 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: `MonitorSessionTest` (grace → reminder → thank-you → rest → pause → summary;
   nobody hint; slow/too-slow; suspend), Robolectric flows extended (summary card, hint);
   full local pipeline.
+
+### 0.11.35 — feat: guided setup with placement picture, people and lens choice, loupe and seat suggestions (V3-2)
+
+- Done: Position screen shows a placement illustration, a people stepper and Wide/Main/Tele
+  lens chips (new setups start on the widest rear lens; a lens change reopens the camera and
+  clears the outline); the visibility check now names the reason (nobody, too few, too many,
+  arms hidden with left/middle/right of the picture, slow processing → Lite). A refused camera
+  permission shows the rationale and *Open app settings*; Android's rationale case asks first.
+  A loupe magnifies a still of the preview while a corner is pressed or dragged.
+  *Suggest seats* proposes one region per person from the table edges (`SeatProposal`:
+  people spread by edge length, bands mitred so neighbours never overlap, clipped to the
+  image) with a live "people inside a seat now: n of m" check.
+- Decision: seat proposals are a button, not automatic — zones restrict who is watched, so a
+  wrong automatic proposal could silently leave someone unwatched; automatic assignment
+  stays the default.
+- Validation: `SeatProposalTest`, `VisibilityCheckTest` (reasons, sides), Robolectric
+  setup flow (stepper, lens chips, every advice text, loupe, suggestion, seat check,
+  settings intent); full local pipeline.
