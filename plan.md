@@ -44,9 +44,9 @@ Decisions (product, design, engineering), each one step below:
   (Android 13+ `locales_config`); static shortcut "Start dinner"; run the e2e suite on an
   API 36 emulator image as target-SDK evidence if the image can be installed.
 - [x] V3-6b Owner request: a *Restart the 10-second check* button on the Position screen.
-- [ ] V3-6c Owner request: `docs/c4-architecture.md` — understandable C4 views (context,
+- [x] V3-6c Owner request: `docs/c4-architecture.md` — understandable C4 views (context,
   containers, components), the runtime workflows and the everyday user workflow.
-- [ ] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
+- [x] V3-6a Docs: `docs/emulator.md` — run the app on a laptop emulator (SDK install, AVD
   creation, boot, install, virtual camera/webcam, demo, e2e, troubleshooting); README link.
 - [x] V3-6r Self-review of the v3 diff (0272154..bb33681), fix before release:
   - [x] R1 (medium) people stepper keeps the engine's old pose limit — reopen the source when
@@ -201,9 +201,9 @@ require consented physical sessions and must not be fabricated.
 
 ## New ideas backlog
 
-- [ ] Deterministic synthetic scenario replay shared by demo and regression tests.
-- [ ] Calibration reminder after camera/model changes and orientation handling.
-- [ ] Session-separated export metadata for future classifier training without leakage.
+- [x] Deterministic synthetic scenario replay shared by demo and regression tests (`SyntheticDemo` drives the demo, `SyntheticDemoTest` and `replay.sh demo-log`).
+- [x] Calibration reminder after camera/model changes and orientation handling (aspect/rotation invalidation since 0.6.15, lens change clears the outline).
+- [x] Session-separated export metadata for future classifier training without leakage (session id in every log header; whole-session evaluation in `docs/data.md`).
 
 ### 0.0.2 — docs: select native Kotlin and MediaPipe after framework comparison
 
@@ -833,3 +833,9 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: new `MonitorSessionTest` cases (grace, pause mid-reminder), Robolectric pose
   limits per screen and the restart; full local pipeline green except that e2e case, which
   then passed 4/4 on the API 36 emulator after the fix.
+
+### 0.11.41 — fix: keep the people stepper label readable on phones
+
+- Done: the refreshed screenshots showed "People at the table: n" wrapping between the − and +
+  buttons; the label now sits above them.
+- Validation: Robolectric setup flow; full local pipeline green (e2e 4/4 on API 36).

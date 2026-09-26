@@ -635,11 +635,16 @@ class MainActivity : ComponentActivity() {
             updateSettings(settings.copy(people = people, seats = if (settings.seats.size == people) settings.seats else emptyList()))
             show(Screen.POSITION)
         }
-        return row(
-            action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
-            label(getString(R.string.people_count, settings.people), 18f, bold = true).apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
-            action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
-        )
+        // The label sits above the buttons: squeezed between them it would wrap on phones.
+        return column(0).apply {
+            addView(label(getString(R.string.people_count, settings.people), 18f, bold = true))
+            addView(
+                row(
+                    action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
+                    action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
+                ),
+            )
+        }
     }
 
     /** One chip per rear lens (Wide / Main / Tele); switching lens invalidates the table outline. */
