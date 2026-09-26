@@ -112,6 +112,11 @@ least 95 %, part of the pipeline"; "get all done, make a plan, then public relea
 - [ ] L5 Coverage: keep the merged Kover gate (≥ 95 % lines, `koverVerifyAll`, already a
   pipeline stage and CI gate); cover all new code; publish the coverage figure in the summary
   and the release notes.
+- [ ] L7 Linters for the whole stack in the pipeline and CI, before the release (owner
+  request): detekt (Kotlin static analysis, alongside ktlint and Android lint), ruff (Python),
+  ShellCheck (kept), actionlint (GitHub workflow), hadolint (Dockerfile), yamllint, xmllint
+  (well-formed XML resources), markdownlint (docs) — each pinned, each a numbered stage or
+  part of one, failures fail the pipeline.
 - [ ] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
   full pipeline, green CI, public release.
 
@@ -154,6 +159,8 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   "everything SPDX tagged, and create an SBOM as part of the release pipeline"; "everything
   tested and covered, at least 95 %, coverage part of the pipeline"; "get all done, make a
   plan"; "then public release, again".
+- 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
+  release"; "big plan, then iterate and get it done".
 
 ## Tasks
 
