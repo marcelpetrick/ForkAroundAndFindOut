@@ -85,6 +85,36 @@ empty table. Decisions, all conservative (missing evidence still never *starts* 
 - [ ] O5 Tests (synthetic occlusion scenarios), docs (detection, C4 workflow, README), full
   pipeline, then `/updateDependencies`, then a public release.
 
+## Plan v5 — licensing, SBOM, About screen, repository metadata (owner request 2026-09-26)
+
+Owner input: "run /githubAbout and make decisions what to remove and what to add — reflect the
+current state"; "make sure we obey GPLv3"; "the app has an info screen which tells who made it
+and what dependencies are used, with their license"; "make sure everything is SPDX tagged and
+create an SBOM as part of the release pipeline"; "everything tested and covered, coverage at
+least 95 %, part of the pipeline"; "get all done, make a plan, then public release again".
+
+- [ ] L1 SPDX everywhere: every authored text file carries `SPDX-License-Identifier`; binary
+  and generated files (PNG, WAV, models, wrapper JAR) are annotated in `REUSE.toml`;
+  `scripts/spdx.py` checks it and runs in the pipeline (Python stage), so a new untagged file
+  fails CI.
+- [ ] L2 SBOM: CycloneDX JSON for the release runtime classpath (`org.cyclonedx.bom` Gradle
+  plugin, pinned), plus the bundled models as components; built by the pipeline, attached to
+  every GitHub release, served by the Docker image and uploaded as a CI artifact.
+- [ ] L3 About screen: author and copyright, GPL notice with warranty disclaimer (GPLv3 §§ 0,
+  15–16 "appropriate legal notices" for an interactive program), then every bundled
+  third-party component with version, license and link — generated from the SBOM into a
+  checked-in asset (`scripts/licenses.py`, `--check` in the pipeline, so the screen can never
+  drift from what is shipped); full license texts (GPL-3.0, Apache-2.0) readable in the app.
+- [ ] L4 GPLv3 audit: `LICENSE` (full text), `LICENSES/` (GPL-3.0-or-later, Apache-2.0), headers,
+  corresponding source for every binary (release notes and Docker install page link the exact
+  tag), third-party license texts shipped with the APK and the image, Apache-2.0 compatibility
+  recorded in `NOTICES.md`, and `docs/licensing.md` explaining it.
+- [ ] L5 Coverage: keep the merged Kover gate (≥ 95 % lines, `koverVerifyAll`, already a
+  pipeline stage and CI gate); cover all new code; publish the coverage figure in the summary
+  and the release notes.
+- [ ] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
+  full pipeline, green CI, public release.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -119,6 +149,11 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   general workflow for the user … make it understandable".
 - 2026-09-26: "is this also considering stuff on the table? … pot or plates occlude … can we
   improve this. consider a non-empty table as well"; "also run once /updateDependencies".
+- 2026-09-26: "/githubAbout … decide what to remove and what to add … reflect the current
+  state"; "obey GPLv3"; "info screen: who made it, which dependencies, with their license";
+  "everything SPDX tagged, and create an SBOM as part of the release pipeline"; "everything
+  tested and covered, at least 95 %, coverage part of the pipeline"; "get all done, make a
+  plan"; "then public release, again".
 
 ## Tasks
 
@@ -911,4 +946,10 @@ is empty; the same method was applied to the session range instead. Findings fix
 ### 0.11.45 — docs: plan v4 for a set table (occlusion by pots, plates, glasses)
 
 - Done: assessment and decisions O1–O5 above; owner input recorded.
+- Validation: documentation only; whitespace and link checks.
+
+### 0.11.46 — docs: plan v5 for licensing, SBOM, About screen and repository metadata
+
+- Done: decisions L1–L6 above; owner input recorded. Order: v4 (O1–O5), then v5, then
+  dependency update, GitHub About, release.
 - Validation: documentation only; whitespace and link checks.
