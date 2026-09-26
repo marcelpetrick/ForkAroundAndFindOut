@@ -9,10 +9,10 @@ Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 
 | Module | Kind | Content |
 | --- | --- | --- |
-| `:detection` | Kotlin/JVM, no Android | `Geometry` (points, convex polygons, signed distance, overlap), `Pose`/`ArmClassifier` (features and the conservative rule), `SeatTracker` (seat association without identity), `TemporalFilter` (UNKNOWN/CLEAR/SUSPECT/VIOLATION with hysteresis), `Detector`. Shared synthetic fixtures in `testFixtures`. |
-| `:core` | Kotlin/JVM, no Android | `Settings` model, `Monitor` (session owner: freshness/continuity budgets, health, grace, violation counting), `AlarmPolicy`, `VisibilityCheck`, `SessionLog` + `Replay`, `Json`, `SyntheticDemo`. |
+| `:detection` | Kotlin/JVM, no Android | `Geometry` (points, convex polygons, signed distance, overlap), `Pose`/`ArmClassifier` (features and the conservative rule), `SeatTracker` (seat association without identity), `SeatProposal` (seat regions suggested from the table edges), `TemporalFilter` (UNKNOWN/CLEAR/SUSPECT/VIOLATION with hysteresis), `Detector`. Shared synthetic fixtures in `testFixtures`. |
+| `:core` | Kotlin/JVM, no Android | `Settings` model (with `Sensitivity` presets, `Chime`, `Processor`), `MonitorSession` (one meal: grace, reminders, false-alarm rest, thank-you, status, summary; emits an immutable `MonitorUiState` the activity only renders), `Monitor` (freshness/continuity budgets, health, violation counting), `AlarmPolicy`, `VisibilityCheck` (with the reason it fails), `SessionLog` + `Replay`, `Json`, `SyntheticDemo`. |
 | `:tools` | JVM application | `replay` / `demo-log` command line over session logs (`scripts/replay.sh`). |
-| `:app` | Android (API 34+, target 37) | `CameraSession` (CameraX preview + analysis), `FrameAnalyzer` (allocation-free frame copy/rotation), `MediaPipeEngine`, `StageView` (overlay, taps, drags, warnings), `ChimeSpeaker`, `LocalStore`, `SessionRecorder`, `SettingsCodec`, `MainActivity` (screens). |
+| `:app` | Android (API 34+, target 37) | `CameraSession` (CameraX preview + analysis), `FrameAnalyzer` (allocation-free frame copy/rotation), `MediaPipeEngine` (CPU, or GPU with CPU fallback), `StageView` (overlay, taps, drags, loupe, warnings), `ChimeSpeaker`, `LocalStore`, `SessionRecorder`, `SettingsCodec`, `MainActivity` (screens). |
 
 Kover merges all four modules into one report; the 95 % line gate applies to the total.
 
@@ -31,10 +31,10 @@ Kover merges all four modules into one report; the 95 % line gate applies to the
    ▼ main thread
  MainActivity.onFrame(poses, capture time, FrameInfo(aspect, rotation, latency))
    ├─ Position: VisibilityCheck (10 s: people, arms visible, FPS)
-   ├─ Monitor.frame → Detector.process → per-seat, per-arm states
+   ├─ MonitorSession.frame → Monitor.frame → Detector.process → per-seat, per-arm states
    │     └─ SessionRecorder (training mode only): landmarks + live states
    └─ StageView (image→view matrix) draws skeletons, table, seats, warnings
- 100 ms watchdog tick: Monitor.tick → AlarmPolicy → ChimeSpeaker / visual warning
+ 100 ms watchdog tick: MonitorSession.tick → MonitorUiState → StageView, ChimeSpeaker
 ```
 
 ## One coordinate system

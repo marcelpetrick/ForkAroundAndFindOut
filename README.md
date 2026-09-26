@@ -25,7 +25,7 @@ nothing is uploaded, nobody is identified. Written entirely in Kotlin.
 
 | Area | State |
 | --- | --- |
-| Camera, pose model, calibration, per-elbow detection, warnings, pause, settings, diagnostics, training logs, replay tool | Implemented and tested (unit, Robolectric, emulator end-to-end) |
+| Camera, pose model, guided setup with visibility check, calibration, per-elbow detection, warnings, pause, meal summary, settings, diagnostics, training logs, replay tool | Implemented and tested (unit, Robolectric, emulator end-to-end on API 34 and 36) |
 | Synthetic acceptance scenarios (vision §29) | Automated regression tests pass |
 | Real phone, real table, real meals (false alarms per meal, recall) | **Not yet measured** — see [hardware validation](docs/hardware-validation.md) |
 | Learned classifier, image classifier, depth | Conditional future work per the vision; needs real, consented sessions first |
@@ -40,7 +40,11 @@ stick figures, never camera footage; the setup screen shows the emulator's virtu
 
 | Welcome | Synthetic demo with warning | Camera setup with visibility check | Settings |
 | --- | --- | --- | --- |
-| ![Welcome screen](docs/screenshots/welcome.png) | ![Synthetic demo: seat 2 rests the left elbow, red border warning](docs/screenshots/demo-synthetic-warning.png) | ![Position screen with the ten-second visibility check](docs/screenshots/setup-visibility-check.png) | ![Settings screen](docs/screenshots/settings.png) |
+| ![Welcome screen](docs/screenshots/welcome.png) | ![Synthetic demo: seat 2 rests the left elbow, red border warning](docs/screenshots/demo-synthetic-warning.png) | ![Position screen with placement picture and the ten-second visibility check](docs/screenshots/setup-visibility-check.png) | ![Grouped settings screen](docs/screenshots/settings.png) |
+
+| Dark ("dim room") theme | Landscape |
+| --- | --- |
+| ![Synthetic demo in the dark theme with the reminder card](docs/screenshots/demo-dark.png) | ![Synthetic demo in landscape: preview left, seat cards right](docs/screenshots/demo-landscape.png) |
 
 ## How it works
 
@@ -54,6 +58,7 @@ camera (CameraX, 640×360 analysis) → MediaPipe Pose Landmarker (≤ 4 people,
 
 A reminder needs about one second of steady evidence; reaching, passing food and brief
 crossings do not trigger it. Hidden elbows are "Not visible", never "good posture".
+Start with the plain-language [C4 architecture and workflows](docs/c4-architecture.md).
 Details: [architecture](docs/architecture.md), [detection rules](docs/detection.md),
 [framework choice](docs/pose-frameworks.md), [UX](docs/ux.md).
 
@@ -65,21 +70,34 @@ works well). Avoid backlight. The setup's visibility check confirms the placemen
 
 ## Usage
 
-1. **Set up camera** → the **visibility check** runs for 10 s with everyone seated.
-2. **Mark table**: tap the four tabletop corners (drag a corner to adjust).
-3. Optional **seats**: one region per place keeps assignments stable when people lean.
-4. **Start monitoring.** A short grace period, then reminders. **Pause** is always one tap.
-5. Adults can open **diagnostics**: FPS, latency, scores, *False alarm* (silences and
-   rests reminders for 30 s), *Missed violation*, and the opt-in **training mode**.
+1. **Set up camera**: set the number of people, pick the **Wide** lens if offered, and let
+   the **visibility check** run for 10 s with everyone seated. It says what is wrong
+   (nobody, too few or too many people, arms hidden on the left/right, slow phone).
+   **Restart the 10-second check** once everyone has settled.
+2. **Mark table**: tap the four tabletop corners; drag a corner to adjust, a loupe magnifies.
+3. Optional **seats**: **Suggest seats** proposes one region per person from the table
+   edges, with a live "people inside a seat" count; or tap them yourself.
+4. **Start dinner** (also a launcher shortcut). A short grace period, then reminders.
+   **Pause** is always one tap, or hold **volume-down**. A warm or slow phone is offered
+   the Lite model in one tap; "nobody visible for a while" offers to recalibrate.
+5. Adults can open **diagnostics**: FPS, latency, processor, scores, *False alarm*
+   (silences and rests reminders for 30 s), *Missed violation*, and the opt-in
+   **training mode**.
+6. **Stop** shows a friendly summary: time, reminders, longest calm stretch, per seat.
 
-Try it without a camera: **Try demo (synthetic)**.
+Try it without a camera: **Try demo (synthetic)**. Without a phone: run it in an
+[emulator on a laptop](docs/emulator.md).
 
 ## Settings
 
-People (1–4), rear lens (Wide/Main/Tele), model (Full/Lite), evidence threshold, warning
-delay, clearing delay, cooldown, start grace, visual warning, sound (off / once / repeat /
-continuous chime), volume with *Test sound*, repeat interval, skeleton overlay, session
-statistics. Changing the lens clears the calibration.
+Grouped into **Reminders** (visual warning, sound off / once / repeat / continuous, chime
+Bell / Marimba / Glass, volume with *Test sound*, repeat interval, start grace),
+**Sensitivity** (presets Conservative / Normal / Responsive plus the raw evidence
+threshold, warning delay, clearing delay and cooldown), **Camera and model** (people 1–4,
+rear lens Wide/Main/Tele, model Full/Lite, processor CPU / GPU experimental with automatic
+CPU fallback) and **Data** (skeleton overlay, session statistics, local data). Changing
+the lens clears the calibration. The app follows the system language (English, German) or
+a per-app language on Android 13+.
 
 ## Privacy
 
@@ -108,7 +126,8 @@ Evaluate by whole sessions, never by frames of the same meal ([data.md](docs/dat
 
 Requirements: Java 21, Android SDK (`ANDROID_HOME`, platform 37 and build-tools),
 Python 3, ShellCheck, Docker (optional, for the Docker stage), an emulator or phone
-(optional, for end-to-end tests).
+(optional, for end-to-end tests). Step-by-step emulator setup on a laptop (Linux, macOS,
+Windows): [docs/emulator.md](docs/emulator.md).
 
 ```sh
 git clone https://github.com/marcelpetrick/ForkAroundAndFindOut.git
@@ -128,7 +147,7 @@ Release APKs are arm64-only and signed with the project key when it is configure
 | JVM unit | `./gradlew :detection:test :core:test :tools:test` | geometry, rules, seat tracking, temporal filter, acceptance scenarios, monitor budgets, visibility check, session logs, replay |
 | Robolectric | `./gradlew :app:testDebugUnitTest` | every screen flow, calibration, alarms, pause, stale data, permissions, storage, export, German locale, privacy guard |
 | Coverage | `./gradlew :app:koverHtmlReportAll` | merged over all modules; gate ≥ 95 % lines (currently 98 %) |
-| End-to-end | `scripts/emulator.sh && ./gradlew :app:connectedDebugAndroidTest` | real MediaPipe models offline, UI flows with real touches on the emulator camera |
+| End-to-end | `scripts/emulator.sh && ./gradlew :app:connectedDebugAndroidTest` | real MediaPipe models offline (CPU, and a GPU request with fallback), UI flows with real touches on the emulator camera; verified on API 34 and API 36 |
 | Docker | `scripts/docker-smoke.sh` | image serves APK with correct type and checksum, license, notices |
 
 ## Pipeline and CI

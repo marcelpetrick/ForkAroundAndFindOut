@@ -839,3 +839,16 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: the refreshed screenshots showed "People at the table: n" wrapping between the − and +
   buttons; the label now sits above them.
 - Validation: Robolectric setup flow; full local pipeline green (e2e 4/4 on API 36).
+
+### 0.11.42 — docs: C4 architecture and workflows, laptop emulator guide, refreshed screenshots
+
+- Done: `docs/c4-architecture.md` (owner request: understandable C4 context, containers and
+  components, runtime workflows — setup, per-frame, elbow states, training/replay, release —
+  and the everyday family workflow); `docs/emulator.md` (owner request: SDK, AVD for
+  x86_64/Apple Silicon, virtual camera or webcam, boot, install, demo, e2e, troubleshooting);
+  README (new features, grouped settings, docs links, dark and landscape screenshots);
+  architecture and scripts docs follow MonitorSession, SeatProposal, GPU fallback and the
+  extended screenshot script. Genuine screenshots re-captured on the API 36 emulator
+  (welcome, demo warning, setup check, settings, dark, landscape). Backlog items from 0.0.1
+  closed with references.
+- Validation: link check, ShellCheck, whitespace; full local pipeline green on this tree.
