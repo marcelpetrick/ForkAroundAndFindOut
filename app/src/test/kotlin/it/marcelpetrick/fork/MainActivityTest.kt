@@ -228,9 +228,14 @@ class MainActivityTest {
             activity.tap(seat.last())
             activity.click("Add seat")
             assertTrue(activity.texts().contains("Seats: 1 of 4"))
+            // One region for four people would leave three people unwatched: refused.
+            activity.click("Finish setup")
+            assertEquals(MainActivity.Screen.SEATS, activity.screen)
+            assertTrue(activity.texts().contains("Mark a seat for every person (4)"))
+            activity.click("Clear seats")
             activity.click("Finish setup")
             assertEquals(MainActivity.Screen.WELCOME, activity.screen)
-            assertEquals(1, activity.settings.seats.size)
+            assertEquals(0, activity.settings.seats.size) // automatic assignment
             assertEquals(1, sources.single().closed)
 
             activity.click("Start monitoring")

@@ -42,6 +42,7 @@
     <string name="clear_seats">Plätze löschen</string>
     <string name="finish_setup">Einrichtung abschließen</string>
     <string name="seat_overlap">Plätze dürfen sich nicht überlappen. Bitte neu tippen.</string>
+    <string name="seats_incomplete">Markiere einen Platz für jede Person (%1$d) oder lösche die Plätze für die automatische Zuordnung.</string>
     <string name="seats_full">Alle Plätze sind markiert.</string>
 
     <string name="monitor_title">Überwachung</string>

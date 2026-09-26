@@ -530,6 +530,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun finishSetup() {
+        // Seat regions assign people only inside them: partial regions would leave people unwatched.
+        if (seats.isNotEmpty() && seats.size != settings.people) {
+            status?.text = getString(R.string.seats_incomplete, settings.people)
+            return
+        }
         updateSettings(settings.copy(seats = seats.toList()))
         show(Screen.WELCOME)
     }
@@ -928,8 +933,10 @@ class MainActivity : ComponentActivity() {
         stage?.poses = poses
         if (screen == Screen.MONITOR) {
             monitor?.let { active ->
-                active.frame(poses, time, now, info.aspect, info.rotation)
-                if (active.active) recorder?.frame(SessionLog.frame(time, info.aspect, poses, active.results))
+                // Only frames the monitor accepted are logged, so replay sees exactly what it decided on.
+                if (active.frame(poses, time, now, info.aspect, info.rotation)) {
+                    recorder?.frame(SessionLog.frame(time, info.aspect, poses, active.results))
+                }
             }
         }
         if (screen == Screen.POSITION) refreshVisibility(poses)

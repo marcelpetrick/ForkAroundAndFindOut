@@ -44,6 +44,7 @@
     <string name="clear_seats">Clear seats</string>
     <string name="finish_setup">Finish setup</string>
     <string name="seat_overlap">Seats must not overlap. Tap again.</string>
+    <string name="seats_incomplete">Mark a seat for every person (%1$d), or clear the seats to use automatic assignment.</string>
     <string name="seats_full">All seats are marked.</string>
 
     <string name="monitor_title">Monitoring</string>

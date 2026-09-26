@@ -173,9 +173,11 @@ class CameraSession(
         poses: List<Pose>,
         time: Long,
     ) {
+        // Take this frame's geometry before freeing the analyzer: the next frame overwrites it.
+        val snapshot = input
         // Free the analyzer on the callback thread so UI work never lengthens the inference period.
         analyzer?.completed()
-        val snapshot = input ?: return
+        if (snapshot == null) return
         main.execute {
             try {
                 if (!closed) {

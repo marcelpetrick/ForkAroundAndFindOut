@@ -81,22 +81,23 @@ class Monitor(
         previouslyViolating = emptySet()
     }
 
+    /** Returns true if the frame was fresh and processed (false: paused, stale, duplicate or invalid). */
     fun frame(
         poses: List<Pose>,
         captured: Long,
         now: Long,
         aspect: Double,
         rotation: Int = settings.calibrationRotation,
-    ) {
-        if (!active) return
+    ): Boolean {
+        if (!active) return false
         val aspectChanged = settings.calibrationAspect > 0 && abs(aspect - settings.calibrationAspect) > 0.03
         val rotationChanged = settings.calibrationRotation >= 0 && rotation != settings.calibrationRotation
         if (!aspect.isFinite() || aspect <= 0 || aspectChanged || rotationChanged) {
             calibrationInvalid = true
             pause(now)
-            return
+            return false
         }
-        if (captured > now || now - captured > freshnessMs || (lastFrame != null && captured <= lastFrame!!)) return
+        if (captured > now || now - captured > freshnessMs || (lastFrame != null && captured <= lastFrame!!)) return false
         lastFrame?.let {
             periods.addLast(captured - it)
             if (periods.size > WINDOW) periods.removeFirst()
@@ -115,6 +116,7 @@ class Monitor(
         }
         violations += (current - previouslyViolating).size
         previouslyViolating = current
+        return true
     }
 
     fun tick(now: Long): Boolean {

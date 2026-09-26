@@ -1,7 +1,6 @@
 // Copyright (C) 2026 Marcel Petrick. SPDX-License-Identifier: GPL-3.0-or-later.
 package it.marcelpetrick.fork.monitoring
 
-import it.marcelpetrick.fork.detection.Detector
 import it.marcelpetrick.fork.detection.ElbowState
 import it.marcelpetrick.fork.detection.Landmark
 import it.marcelpetrick.fork.detection.Point
@@ -43,7 +42,10 @@ object SessionLog {
     ): String {
         val landmarks =
             poses.joinToString(",", "[", "]") { pose ->
-                pose.landmarks.joinToString(",", "[", "]") { "${n(it.point.x)},${n(it.point.y)},${n(it.confidence)}" }
+                pose.landmarks.joinToString(",", "[", "]") {
+                    // A non-finite coordinate would make the line invalid JSON: store it as unseen.
+                    if (it.point.x.isFinite() && it.point.y.isFinite()) "${n(it.point.x)},${n(it.point.y)},${n(it.confidence)}" else "0,0,0"
+                }
             }
         val arms =
             seats.flatMap { seat ->
@@ -64,11 +66,15 @@ object SessionLog {
     }
 
     private fun n(value: Double): String =
-        String
-            .format(Locale.ROOT, "%.4f", value)
-            .trimEnd('0')
-            .trimEnd('.')
-            .ifEmpty { "0" }
+        if (!value.isFinite()) {
+            "0"
+        } else {
+            String
+                .format(Locale.ROOT, "%.4f", value)
+                .trimEnd('0')
+                .trimEnd('.')
+                .ifEmpty { "0" }
+        }
 
     private fun polygon(polygon: Polygon): String = polygon.points.joinToString(",", "[", "]") { "[${n(it.x)},${n(it.y)}]" }
 
@@ -77,20 +83,20 @@ object SessionLog {
         var header: Map<*, *>? = null
         val frames = mutableListOf<Frame>()
         val labels = mutableListOf<Label>()
-        val iterator = lines.filter { it.isNotBlank() }.iterator()
+        val iterator = lines.filter { it.isNotBlank() }.withIndex().iterator()
         while (iterator.hasNext()) {
-            val line = iterator.next()
-            val entry =
-                try {
-                    Json.parse(line) as Map<*, *>
-                } catch (error: IllegalArgumentException) {
-                    if (!iterator.hasNext()) break
-                    throw error
+            val (index, line) = iterator.next()
+            try {
+                val entry = Json.parse(line) as Map<*, *>
+                when (entry["type"]) {
+                    "header" -> header = entry
+                    "frame" -> frames += frame(entry)
+                    "label" -> labels += Label(long(entry["t"]), entry["label"] as String, int(entry["seat"]))
                 }
-            when (entry["type"]) {
-                "header" -> header = entry
-                "frame" -> frames += frame(entry)
-                "label" -> labels += Label(long(entry["t"]), entry["label"] as String, int(entry["seat"]))
+            } catch (error: RuntimeException) {
+                // Only the last line may be cut off (app killed mid-write); anything else is corrupt.
+                if (!iterator.hasNext()) break
+                throw IllegalArgumentException("Malformed session log line ${index + 1}: ${error.message}", error)
             }
         }
         val h = requireNotNull(header) { "Session log has no header" }
@@ -200,7 +206,11 @@ data class ReplayReport(
         )
 }
 
-/** Deterministic replay of a recording through [Detector]; [timing] allows tuning experiments. */
+/**
+ * Deterministic replay of a recording through the same [Monitor] the phone runs (freshness
+ * and gap budgets from the measured frame period, detector rebuild after stale gaps), so
+ * desktop results match live decisions; [timing] allows tuning experiments.
+ */
 object Replay {
     /** One second of motion history plus the default one-second dwell. */
     const val WARMUP_MS = 2_000L
@@ -211,9 +221,10 @@ object Replay {
         windowMs: Long = 5_000,
         warmupMs: Long = WARMUP_MS,
     ): ReplayReport {
-        val settings = recording.settings
-        val table = requireNotNull(settings.table) { "Recording has no table calibration" }
-        val detector = Detector(table, settings.people, settings.seats, timing)
+        requireNotNull(recording.settings.table) { "Recording has no table calibration" }
+        val settings = recording.settings.copy(timing = timing, graceMs = 0)
+        val monitor = Monitor(settings)
+        monitor.start(recording.frames.firstOrNull()?.timeMs ?: 0)
         val onsets = mutableListOf<Triple<Long, Int, Boolean>>()
         val violating = mutableMapOf<Pair<Int, Boolean>, MutableList<Long>>()
         var previous = emptySet<Pair<Int, Boolean>>()
@@ -222,9 +233,11 @@ object Replay {
         var compared = 0
         var agreed = 0
         for (frame in recording.frames) {
-            val results = detector.process(frame.poses, frame.timeMs, frame.aspect)
+            // The phone's 100 ms watchdog would have expired stale evidence before this frame.
+            monitor.tick(frame.timeMs)
+            if (!monitor.frame(frame.poses, frame.timeMs, frame.timeMs, frame.aspect)) continue
             val current = mutableSetOf<Pair<Int, Boolean>>()
-            for (seat in results) {
+            for (seat in monitor.results) {
                 for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
                     val key = seat.seat to left
                     armFrames++

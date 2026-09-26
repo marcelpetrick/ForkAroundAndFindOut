@@ -3,6 +3,9 @@ package it.marcelpetrick.fork.monitoring
 
 import it.marcelpetrick.fork.demo.SyntheticDemo
 import it.marcelpetrick.fork.detection.ElbowState
+import it.marcelpetrick.fork.detection.Landmark
+import it.marcelpetrick.fork.detection.Point
+import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.Timing
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.detection.table
@@ -99,6 +102,23 @@ class SessionLogTest {
         assertThrows(IllegalArgumentException::class.java) { SessionLog.read(sequenceOf(lines[1])) }
         assertThrows(IllegalArgumentException::class.java) { SessionLog.read(sequenceOf(lines[0].replace("\"schema\":1", "\"schema\":9"))) }
         assertThrows(IllegalArgumentException::class.java) { SessionLog.read(sequenceOf(lines[0], "garbage", lines[1])) }
+        val wrongShape = assertThrows(IllegalArgumentException::class.java) { SessionLog.read(sequenceOf(lines[0], "[]", lines[1])) }
+        assertTrue(wrongShape.message!!.contains("line 2"))
+        // A non-finite landmark never produces invalid JSON; it is stored as unseen.
+        val broken = Pose(pose().landmarks.toMutableList().apply { this[13] = Landmark(Point(Double.NaN, 0.5), 0.9) })
+        val nanLine = SessionLog.frame(5, Double.POSITIVE_INFINITY, listOf(broken), results)
+        val parsed = SessionLog.read(sequenceOf(lines[0], nanLine, lines[1]))
+        assertEquals(
+            0.0,
+            parsed.frames
+                .first()
+                .poses
+                .single()
+                .landmarks[13]
+                .confidence,
+            0.0,
+        )
+        assertEquals(0.0, parsed.frames.first().aspect, 0.0)
         val untabled = SessionLog.read(sequenceOf(SessionLog.header("s2", "x", Settings())))
         assertThrows(IllegalArgumentException::class.java) { Replay.run(untabled) }
         val empty = Replay.run(SessionLog.read(sequenceOf(SessionLog.header("s3", "x", Settings(table = table)))))
@@ -106,5 +126,29 @@ class SessionLogTest {
         assertEquals(0.0, empty.unknownFraction, 0.0)
         assertEquals(1.0, empty.agreement, 0.0)
         assertFalse(empty.describe().isEmpty())
+    }
+
+    @Test
+    fun replayMirrorsTheMonitorOnASlowPhone() {
+        // 2.5 FPS: the live monitor widens its gap budget to 1.2 s; a bare detector would not.
+        val settings = Settings(people = 1, table = table, graceMs = 0, calibrationAspect = 1.0, calibrationRotation = 90)
+        val live = Monitor(settings)
+        live.start(0)
+        val lines = mutableListOf(SessionLog.header("slow", "test", settings))
+        for (time in 0L..8000L step 400) {
+            if (live.frame(listOf(pose()), time, time + 300, 1.0, 90)) lines += SessionLog.frame(time, 1.0, listOf(pose()), live.results)
+            live.tick(time + 300)
+        }
+        assertTrue(
+            live.results
+                .single()
+                .left.state == ElbowState.VIOLATION,
+        )
+        val report = Replay.run(SessionLog.read(lines.asSequence()), warmupMs = 0)
+        assertEquals(1.0, report.agreement, 0.0)
+        assertEquals(live.violations, report.reminders)
+        // A long silence (camera covered) expires evidence exactly as the phone's watchdog does.
+        val gap = lines + SessionLog.frame(20_000, 1.0, listOf(pose()), emptyList())
+        assertEquals(live.violations, Replay.run(SessionLog.read(gap.asSequence())).reminders)
     }
 }

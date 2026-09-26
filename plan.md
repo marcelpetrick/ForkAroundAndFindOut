@@ -577,3 +577,31 @@ require consented physical sessions and must not be fabricated.
   no Heavy model download; new project-specific release key; registry name as proposed.
 - Validation: full pipeline green (51 tests, 98.2 %, E2E 4/4, Docker PASS, 16 Markdown
   files with valid links).
+
+### 0.9.29 — fix: address self-review findings (replay fidelity, log robustness, partial seats)
+
+Self-review of everything committed in this session (`574f87b..0a19011`, 82 files).
+`/reviewBranch` itself resolves base = head on `main` (all work is on main), so its diff
+is empty; the same method was applied to the session range instead. Findings fixed:
+
+1. MEDIUM — `Replay` used a bare `Detector` with the fixed 500 ms gap while the phone's
+   `Monitor` widens budgets from the measured frame period and rebuilds after stale gaps,
+   so slow-phone sessions (the ones tuning matters for) replayed differently. Replay now
+   runs the same `Monitor` (tick before each frame); `Monitor.frame` reports acceptance
+   and only accepted frames are logged. Test: a 2.5 FPS recording replays with 100 %
+   agreement and identical reminder count, including a long-gap expiry.
+2. MEDIUM — non-finite numbers were written as `NaN` (invalid JSON; a corrupt middle line
+   makes the whole log unreadable) and non-object lines crashed the reader with a raw
+   exception. Non-finite landmarks are stored as unseen (0,0,0); malformed lines raise a
+   message with the line number (the tool prints usage instead of a stack trace).
+3. MEDIUM — seat regions for only some people left the others permanently unmonitored
+   (the tracker assigns only inside regions). Finish setup now requires a region for every
+   person or none (automatic assignment), with an explanation (en/de).
+4. LOW — `CameraSession.result` freed the analyzer before taking the frame geometry, so the
+   next frame could overwrite it; the snapshot is now taken first.
+
+- Validation: 52 tests, 98.2 % merged lines, E2E 4/4, Docker PASS.
+- Reviewed and kept (documented, not defects): recorder writes on the main thread (a few
+  KB/s gzip), activity recreation on system config changes during a meal ends the session
+  safely (silence, statistics saved), MediaPipe result-never-arrives is not observed with
+  one frame in flight.
