@@ -60,6 +60,31 @@ Decisions (product, design, engineering), each one step below:
 - [x] V3-6 Quality and release: self-review of the whole v3 diff, fixes, refreshed genuine
   screenshots (light, dark, landscape), README/docs, full pipeline, public release, green CI.
 
+## Plan v4 — a set table: pots, plates and glasses in the view (owner request 2026-09-26)
+
+Owner input: "Is this also considering stuff on the table? … a pot or plates occlude the direct
+view of the pose … can we improve this. Consider a non-empty table as well." Then: "also run
+once /updateDependencies".
+
+Assessment: an occluded joint (confidence < 0.7) makes that arm UNKNOWN — safe (no false
+reminder) but blind: an elbow on the table with the hand behind a bottle is never reminded, a
+dish passed in front drops and restarts a running reminder, and the setup check runs on an
+empty table. Decisions, all conservative (missing evidence still never *starts* a reminder):
+
+- [ ] O1 Brief-occlusion hold: a running VIOLATION survives up to 600 ms of hidden joints
+  (a dish passed in front) instead of flickering off; frame gaps and invalid scores still
+  reset at once. New `Timing.holdMs`, persisted.
+- [ ] O2 Hidden-hand bridge: after full supported evidence (shoulder, elbow, wrist), the arm
+  stays "supported" while only the wrist is hidden, the elbow stays within a small radius of
+  where it rested and is still, for at most 10 s. A hand hidden from the start is *not*
+  guessed — that needs real labelled sessions (training mode + replay) first.
+- [ ] O3 Occlusion hint: when an arm of a present seat is hidden most of the time for 20 s,
+  the monitor says which seat and side and suggests moving the pot/bottle or the phone.
+- [ ] O4 Set-table setup: the visibility check and placement copy ask to run it with the table
+  set as for dinner; hardware protocol gains set-table and occlusion scenarios.
+- [ ] O5 Tests (synthetic occlusion scenarios), docs (detection, C4 workflow, README), full
+  pipeline, then `/updateDependencies`, then a public release.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -92,6 +117,8 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   go go go, and make a public release"; "allow to restart the config period of 10 s …
   a button near that screen"; "add a C4 architecture markdown document … workflows … and the
   general workflow for the user … make it understandable".
+- 2026-09-26: "is this also considering stuff on the table? … pot or plates occlude … can we
+  improve this. consider a non-empty table as well"; "also run once /updateDependencies".
 
 ## Tasks
 
@@ -880,3 +907,8 @@ is empty; the same method was applied to the session range instead. Findings fix
   status, hints, banner, diagnostics and seat cards follow below them.
 - Release: `docs/release-notes.md` for 0.11.44; tag `v0.11.44` after green `main` CI.
 - Validation: Robolectric, lint; full local pipeline (e2e on the API 36 emulator).
+
+### 0.11.45 — docs: plan v4 for a set table (occlusion by pots, plates, glasses)
+
+- Done: assessment and decisions O1–O5 above; owner input recorded.
+- Validation: documentation only; whitespace and link checks.
