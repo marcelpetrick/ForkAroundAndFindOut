@@ -118,7 +118,7 @@ least 95 %, part of the pipeline"; "get all done, make a plan, then public relea
   ShellCheck (kept), actionlint (GitHub workflow), hadolint (Dockerfile), yamllint, xmllint
   (well-formed XML resources), markdownlint (docs) — each pinned, each a numbered stage or
   part of one, failures fail the pipeline.
-- [ ] L8 Owner request: collect all of today's guidelines in `agents.md` as a real working guide
+- [x] L8 Owner request: collect all of today's guidelines in `agents.md` as a real working guide
   (plan first, reviews into the plan, product principles, quality gates, licensing, docs,
   release procedure).
 - [ ] L9 Backlog: split `MainActivity` (single-activity UI, excluded from detekt's LargeClass)
@@ -1011,3 +1011,13 @@ is empty; the same method was applied to the session range instead. Findings fix
 - L5 coverage: gate unchanged (≥ 95 % lines, `koverVerifyAll`); new code covered.
 - Validation: `reuse lint` compliant (all files), all 7 container linters clean, detekt 0
   findings, full local pipeline.
+
+### 0.13.49 — docs: collect the owner's guidelines in agents.md
+
+- Done: `agents.md` rewritten as the project's working guide — every earlier rule kept, and
+  today's instructions added: plan first and iterate, review findings into the plan, product
+  principles (conservative, set table, fixed controls, restartable checks), quality gates
+  (all linters, detekt, coverage ≥ 95 %, e2e habits), licensing (GPLv3 notices and source,
+  REUSE, SBOM, compatible licences), documentation (understandable C4, emulator, licensing),
+  release procedure (tag after green CI, failed tag → new version, hand over the APK URL).
+- Validation: markdownlint, link check, REUSE.
