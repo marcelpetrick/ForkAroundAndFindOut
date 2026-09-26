@@ -58,34 +58,96 @@ class DetectorTest {
     }
 
     @Test
-    fun occlusionLeavesUnknownAndRecoveryNeedsNewEvidence() {
+    fun occlusionHoldsBrieflyThenLeavesUnknownAndRecoveryNeedsNewEvidence() {
         val detector = Detector(table, 1)
         for (time in 0L..2000L step 100) detector.process(listOf(pose()), time)
-        val hidden = pose().landmarks.toMutableList().apply { this[13] = this[13].copy(confidence = 0.2) }
-        val result = detector.process(listOf(Pose(hidden)), 2100).single()
-        assertEquals(ElbowState.UNKNOWN, result.left.state)
-        assertEquals(ElbowState.VIOLATION, result.right.state)
+        val hidden = Pose(pose().landmarks.toMutableList().apply { this[13] = this[13].copy(confidence = 0.2) })
+        // A dish passed in front of the left elbow: its reminder holds for a moment.
+        val brief = detector.process(listOf(hidden), 2100).single()
+        assertEquals(ElbowState.VIOLATION, brief.left.state)
+        assertEquals(ElbowState.VIOLATION, brief.right.state)
+        for (time in 2200L..2700L step 100) detector.process(listOf(hidden), time)
         assertEquals(
             ElbowState.UNKNOWN,
             detector
-                .process(listOf(pose()), 2200)
+                .process(listOf(hidden), 2800)
                 .single()
                 .left.state,
         )
+        // Visible again: new evidence is needed before anything is reminded.
         assertEquals(
             ElbowState.UNKNOWN,
             detector
-                .process(emptyList(), 2300)
+                .process(listOf(pose()), 2900)
+                .single()
+                .left.state,
+        )
+        // The person leaves: nothing is held for a seat nobody occupies.
+        assertEquals(
+            ElbowState.UNKNOWN,
+            detector
+                .process(emptyList(), 3000)
                 .single()
                 .right.state,
         )
         assertEquals(
             ElbowState.UNKNOWN,
             detector
-                .process(listOf(pose()), 2400)
+                .process(listOf(pose()), 3100)
                 .single()
                 .right.state,
         )
+    }
+
+    @Test
+    fun aHandHiddenBehindAGlassKeepsAFullySeenRestButIsNeverGuessed() {
+        val handHidden = Pose(pose().landmarks.toMutableList().apply { this[15] = this[15].copy(confidence = 0.1) })
+        // Seen resting first, then the hand disappears behind a glass: the reminder continues.
+        val seen = Detector(table, 1)
+        for (time in 0L..2000L step 100) seen.process(listOf(pose()), time)
+        for (time in 2100L..9000L step 100) {
+            assertEquals(
+                "t=$time",
+                ElbowState.VIOLATION,
+                seen
+                    .process(listOf(handHidden), time)
+                    .single()
+                    .left.state,
+            )
+        }
+        // At most ten seconds after the rest was last fully seen (then the short hold runs out).
+        for (time in 9100L..12_600L step 100) seen.process(listOf(handHidden), time)
+        assertEquals(
+            ElbowState.UNKNOWN,
+            seen
+                .process(listOf(handHidden), 12_700)
+                .single()
+                .left.state,
+        )
+        // The elbow moves away while the hand is hidden: the bridge ends at once.
+        val moved = Detector(table, 1)
+        for (time in 0L..2000L step 100) moved.process(listOf(pose()), time)
+        val lifted = Pose(handHidden.landmarks.toMutableList().apply { this[13] = this[13].copy(point = Point(0.3, 0.45)) })
+        moved.process(listOf(lifted), 2100)
+        for (time in 2200L..2800L step 100) moved.process(listOf(lifted), time)
+        assertEquals(
+            ElbowState.UNKNOWN,
+            moved
+                .process(listOf(lifted), 2900)
+                .single()
+                .left.state,
+        )
+        // Hidden from the start: never a reminder, however long the elbow rests.
+        val never = Detector(table, 1)
+        for (time in 0L..20_000L step 100) {
+            assertEquals(
+                ElbowState.UNKNOWN,
+                never
+                    .process(listOf(handHidden), time)
+                    .single()
+                    .left.state,
+            )
+        }
     }
 
     @Test

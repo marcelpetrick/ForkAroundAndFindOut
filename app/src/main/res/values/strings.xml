@@ -18,12 +18,12 @@
     <string name="calibration_changed">The camera view changed, so the table outline no longer fits. Recalibrate the table, and do so whenever the phone is moved.</string>
 
     <string name="position_title">Position the phone</string>
-    <string name="position_help">Check that shoulders, elbows and wrists of everyone, and the whole tabletop, are visible. Lines appear on detected people.</string>
+    <string name="position_help">Set the table first, as for dinner: pots, bottles and plates can hide arms. Then check that shoulders, elbows and wrists of everyone, and the whole tabletop, are visible. Lines appear on detected people.</string>
     <string name="mark_table">Mark table</string>
     <string name="people_detected">People detected: %1$d</string>
     <string name="visibility_status">People: %1$d of %2$d · all arms visible in %3$d %% of frames · %4$.0f FPS · checked %5$.0f of 10 s</string>
     <string name="visibility_passed">Everyone is visible. Continue with the table.</string>
-    <string name="visibility_tips">Checking for 10 seconds with everyone seated. If this does not pass, raise the phone or move it further away so every shoulder, elbow and wrist stays visible, avoid backlight, and keep bowls from hiding elbows.</string>
+    <string name="visibility_tips">Checking for 10 seconds with everyone seated at the set table. If this does not pass, raise the phone or move it further away so every shoulder, elbow and wrist stays visible, avoid backlight, and move tall pots and bottles away from the arms.</string>
     <string name="continue_anyway">Mark table without the check</string>
 
     <string name="table_title">Mark the table</string>
@@ -230,5 +230,8 @@
     <string name="shortcut_start_long">Start dinner monitoring</string>
     <string name="shortcut_needs_setup">Set up the camera once, then the shortcut starts dinner directly.</string>
     <string name="restart_check">Restart the 10-second check</string>
-    <string name="visibility_restarted">Check restarted. Sit as you would during the meal for ten seconds.</string>
+    <string name="visibility_restarted">Check restarted. Sit as you would during the meal, with the table set, for ten seconds.</string>
+    <string name="hidden_arm">%1$s seat · the %2$s arm is often hidden, perhaps by a pot or bottle. Move it or the phone so elbow and hand stay visible.</string>
+    <string name="arm_left">left</string>
+    <string name="arm_right">right</string>
 </resources>

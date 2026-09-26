@@ -71,19 +71,19 @@ reminder) but blind: an elbow on the table with the hand behind a bottle is neve
 dish passed in front drops and restarts a running reminder, and the setup check runs on an
 empty table. Decisions, all conservative (missing evidence still never *starts* a reminder):
 
-- [ ] O1 Brief-occlusion hold: a running VIOLATION survives up to 600 ms of hidden joints
+- [x] O1 Brief-occlusion hold: a running VIOLATION survives up to 600 ms of hidden joints
   (a dish passed in front) instead of flickering off; frame gaps and invalid scores still
   reset at once. New `Timing.holdMs`, persisted.
-- [ ] O2 Hidden-hand bridge: after full supported evidence (shoulder, elbow, wrist), the arm
+- [x] O2 Hidden-hand bridge: after full supported evidence (shoulder, elbow, wrist), the arm
   stays "supported" while only the wrist is hidden, the elbow stays within a small radius of
   where it rested and is still, for at most 10 s. A hand hidden from the start is *not*
   guessed — that needs real labelled sessions (training mode + replay) first.
-- [ ] O3 Occlusion hint: when an arm of a present seat is hidden most of the time for 20 s,
+- [x] O3 Occlusion hint: when an arm of a present seat is hidden most of the time for 20 s,
   the monitor says which seat and side and suggests moving the pot/bottle or the phone.
-- [ ] O4 Set-table setup: the visibility check and placement copy ask to run it with the table
+- [x] O4 Set-table setup: the visibility check and placement copy ask to run it with the table
   set as for dinner; hardware protocol gains set-table and occlusion scenarios.
-- [ ] O5 Tests (synthetic occlusion scenarios), docs (detection, C4 workflow, README), full
-  pipeline, then `/updateDependencies`, then a public release.
+- [x] O5 Tests (synthetic occlusion scenarios), docs (detection, C4 workflow, README), full
+  pipeline; `/updateDependencies` and the release continue as L6.
 
 ## Plan v5 — licensing, SBOM, About screen, repository metadata (owner request 2026-09-26)
 
@@ -960,3 +960,18 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: decisions L1–L6 above; owner input recorded. Order: v4 (O1–O5), then v5, then
   dependency update, GitHub About, release.
 - Validation: documentation only; whitespace and link checks.
+
+### 0.12.47 — feat: a set table — brief-occlusion hold, hidden-hand bridge and occlusion hint (plan v4)
+
+- Done: O1 `Timing.holdMs` (600 ms) keeps a running VIOLATION while joints are hidden in
+  fresh frames (never SUSPECT, never across frame gaps, never for sparse-frame history —
+  evidence now says *why* it is missing); O2 `ArmClassifier` bridges a fully seen rest while
+  only the wrist is hidden, the elbow stays still within 0.15 shoulder widths, ≤ 10 s; a hand
+  hidden from the start is never guessed; O3 `MonitorUiState.hiddenArm` names an arm hidden
+  in ≥ 70 % of in-view frames for 20 s; O4 setup copy asks for the set table; `holdMs`
+  persisted in settings and session logs (older logs replay with 0 ms, as decided live);
+  `replay --hold-ms`. Docs: detection, C4, hardware protocol scenarios, README.
+- Note: the plan-only commit ee589e8 did not bump VERSION; this one continues the sequence.
+- Validation: TemporalFilter (hold, no hold for SUSPECT/gaps/sparse history, zero hold),
+  Detector (brief occlusion, hidden hand bridge, moved elbow, expiry, hidden from start),
+  MonitorSession and Robolectric hint, replay option; full local pipeline.

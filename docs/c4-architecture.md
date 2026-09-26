@@ -193,6 +193,12 @@ stateDiagram-v2
 outline, the arm is bent, the upper arm points down, and the arm is still. Reaching for
 the salt, passing a plate or a brief touch does not qualify.
 
+**A set table.** Pots, plates and glasses hide arms. A dish passed in front of a resting
+elbow does not interrupt its reminder (up to 0.6 s). If the elbow was clearly seen resting
+and then only the hand disappears behind a glass, the reminder continues while the elbow
+stays still, for up to 10 s. If an arm stays hidden for a long time, the monitor says which
+one, so the pot can be moved. A hand hidden from the very start is not guessed.
+
 A **reminder** is shown while any elbow is in VIOLATION, except
 
 - during the **start grace** (a few seconds after Start or Resume),
@@ -231,7 +237,8 @@ flowchart LR
    small tripod works well. Avoid a bright window behind the table.
 3. Open the app and tap **Set up camera**. Allow the camera.
 4. Set the number of people with **−/+**. If the phone has several lenses, pick **Wide**.
-5. Everyone sits as they would during a meal. The **10-second check** tells you when all
+5. **Set the table first** – plates, pots and bottles where they will be during dinner.
+   Everyone sits as they would during a meal. The **10-second check** tells you when all
    shoulders, elbows and wrists are visible. If someone was still moving, tap
    **Restart the 10-second check**.
 6. **Mark table**: tap the four corners of the tabletop. Drag a corner to fine-tune.
@@ -255,6 +262,7 @@ flowchart LR
 | The app says | What to do |
 | --- | --- |
 | "Nobody has been visible for a while. Has the phone moved?" | Tap **Recalibrate camera** and mark the table again. |
+| "Blue seat · the left arm is often hidden" | Move the pot or bottle in front of that arm, or raise the phone. |
 | "The phone is getting warm" or "Processing is slow" | Tap **Use the Lite model**. Dinner continues. |
 | "The camera view changed, so the table outline no longer fits" | Run the setup again; the old outline no longer fits the picture. |
 | "Camera permission is needed" | Tap **Open app settings** and allow the camera. |

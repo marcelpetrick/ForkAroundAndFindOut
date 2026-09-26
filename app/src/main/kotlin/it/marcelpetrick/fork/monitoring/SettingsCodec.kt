@@ -23,6 +23,7 @@ fun Settings.encode(): String =
             put("clearMs", timing.clearMs)
             put("cooldownMs", timing.cooldownMs)
             put("maxGapMs", timing.maxGapMs)
+            put("holdMs", timing.holdMs)
             put("visual", visual.name)
             put("audio", audio.name)
             put("volume", volume)
@@ -62,6 +63,7 @@ fun Settings.Companion.decode(text: String): Settings {
                 j.getLong("clearMs"),
                 j.getLong("cooldownMs"),
                 j.optLong("maxGapMs", Timing().maxGapMs),
+                j.optLong("holdMs", Timing().holdMs),
             ),
         visual = VisualMode.valueOf(j.getString("visual")),
         audio = AudioMode.valueOf(j.getString("audio")),

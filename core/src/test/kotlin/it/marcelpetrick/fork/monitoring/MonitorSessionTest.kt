@@ -133,4 +133,18 @@ class MonitorSessionTest {
         // The calm before the reminder (6–7 s) is the record, not the 10 s that include it.
         assertTrue("calm ${summary.longestCalmSeconds}", summary.longestCalmSeconds in 5..7)
     }
+
+    @Test
+    fun anArmHiddenMostOfTheTimeIsNamedSoThePotCanBeMoved() {
+        val session = MonitorSession(settings.copy(graceMs = 0), "pot", 0)
+        val potInFront = Pose(clear.landmarks.toMutableList().apply { this[13] = this[13].copy(confidence = 0.1) })
+        assertNull("not before the person was in view long enough", session.run(0, 15_000, potInFront).hiddenArm)
+        assertEquals(1 to true, session.run(15_000, 10_000, potInFront).hiddenArm)
+        // The pot is moved: the hint fades once the arm is seen again.
+        assertNull(session.run(25_000, 15_000, clear).hiddenArm)
+        // Paused: no hints.
+        session.run(40_000, 25_000, potInFront)
+        session.togglePause(65_000)
+        assertNull(session.tick(65_100).hiddenArm)
+    }
 }

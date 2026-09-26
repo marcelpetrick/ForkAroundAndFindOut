@@ -15,7 +15,7 @@ import java.util.zip.GZIPOutputStream
 import kotlin.system.exitProcess
 
 const val USAGE = """Usage:
-  replay [--trigger-ms N] [--clear-ms N] [--cooldown-ms N] [--window-ms N] SESSION.jsonl[.gz]...
+  replay [--trigger-ms N] [--clear-ms N] [--cooldown-ms N] [--hold-ms N] [--window-ms N] SESSION.jsonl[.gz]...
       Re-run the detector over recorded sessions and print reminders, reminders near
       FALSE_ALARM/NORMAL labels, detected positive labels, UNKNOWN fraction and
       live/replay agreement per session and in total. Split train/validation/test by
@@ -67,7 +67,7 @@ private fun replay(
     }
     require(
         options.keys.all {
-            it in setOf("--trigger-ms", "--clear-ms", "--cooldown-ms", "--window-ms")
+            it in setOf("--trigger-ms", "--clear-ms", "--cooldown-ms", "--hold-ms", "--window-ms")
         },
     ) { "Unknown option in ${options.keys}" }
     require(files.isNotEmpty()) { "No session files given" }
@@ -83,6 +83,7 @@ private fun replay(
                 triggerMs = options["--trigger-ms"] ?: base.triggerMs,
                 clearMs = options["--clear-ms"] ?: base.clearMs,
                 cooldownMs = options["--cooldown-ms"] ?: base.cooldownMs,
+                holdMs = options["--hold-ms"] ?: base.holdMs,
             )
         val report = Replay.run(recording, timing, options["--window-ms"] ?: 5_000)
         out.println(report.describe())

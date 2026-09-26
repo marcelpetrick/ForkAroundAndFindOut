@@ -139,6 +139,7 @@ class MainActivity : ComponentActivity() {
     private var seatCards: LinearLayout? = null
     private var sessionLine: TextView? = null
     private var banner: LinearLayout? = null
+    private var hiddenHint: TextView? = null
     private var diagnosticsText: TextView? = null
     private var trainingStatus: TextView? = null
     private var advice: TextView? = null
@@ -904,6 +905,7 @@ class MainActivity : ComponentActivity() {
             )
             status = label("", 19f, bold = true).also(::addView)
             addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
+            hiddenHint = label("", 15f, bold = true, color = Palette.amber).apply { visibility = View.GONE }.also(::addView)
             banner =
                 card(
                     label("", 15f, bold = true, color = Palette.amber),
@@ -955,6 +957,20 @@ class MainActivity : ComponentActivity() {
         )
         renderSeats(state.seats)
         renderBanner(state)
+        // A pot, bottle or glass in the way: say which arm, so the table can be rearranged.
+        hiddenHint?.apply {
+            val arm = state.hiddenArm
+            visibility = if (arm == null) View.GONE else View.VISIBLE
+            if (arm != null) {
+                update(
+                    getString(
+                        R.string.hidden_arm,
+                        getString(SEAT_COLOURS.getOrElse(arm.first - 1) { R.string.seat_colour_1 }),
+                        getString(if (arm.second) R.string.arm_left else R.string.arm_right),
+                    ),
+                )
+            }
+        }
         sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
         if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))

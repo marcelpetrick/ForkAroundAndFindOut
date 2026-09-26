@@ -42,7 +42,7 @@ class Detector(
                     return ArmResult(ElbowState.UNKNOWN, null, null)
                 }
                 val evidence = classifiers.getOrPut(key) { ArmClassifier() }.evaluate(pose, left, table, timeMs, aspect, maxGapMs)
-                val state = filters.getOrPut(key) { TemporalFilter(timing) }.update(timeMs, evidence.score, maxGapMs)
+                val state = filters.getOrPut(key) { TemporalFilter(timing) }.update(timeMs, evidence.score, maxGapMs, evidence.hidden)
                 return ArmResult(state, evidence.score, evidence.features)
             }
             SeatResult(seat + 1, pose, arm(true), arm(false))

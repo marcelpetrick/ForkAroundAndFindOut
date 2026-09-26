@@ -31,7 +31,7 @@ object SessionLog {
             """"model":"${settings.model.name}","people":${settings.people},"aspect":${n(settings.calibrationAspect)},""" +
             """"rotation":${settings.calibrationRotation},"table":$table,"seats":$seats,""" +
             """"timing":{"trigger":${n(t.trigger)},"clear":${n(t.clear)},"triggerMs":${t.triggerMs},"clearMs":${t.clearMs},""" +
-            """"cooldownMs":${t.cooldownMs},"maxGapMs":${t.maxGapMs}},"imageRecorded":false}"""
+            """"cooldownMs":${t.cooldownMs},"maxGapMs":${t.maxGapMs},"holdMs":${t.holdMs}},"imageRecorded":false}"""
     }
 
     fun frame(
@@ -119,6 +119,8 @@ object SessionLog {
                     long(t["clearMs"]),
                     long(t["cooldownMs"]),
                     long(t["maxGapMs"]),
+                    // Logs from before the occlusion hold (0.12.47) were decided without it.
+                    (t["holdMs"] as Number?)?.toLong() ?: 0,
                 ),
             calibrationAspect = double(h["aspect"]),
             calibrationRotation = int(h["rotation"]),

@@ -22,6 +22,11 @@ data class MonitorUiState(
     val activeSeconds: Long,
     val reminders: Int,
     val sound: Sound,
+    /**
+     * Seat number and side (true = left) of an arm that has been hidden most of the time
+     * although its person is in view — likely a pot or bottle in the way — or null.
+     */
+    val hiddenArm: Pair<Int, Boolean>? = null,
 )
 
 /** Positive end-of-meal summary. */
@@ -66,6 +71,11 @@ class MonitorSession(
     private val bySeat = mutableMapOf<Int, Int>()
     private var violating = emptySet<Int>()
     private var reminders = 0
+
+    /** Per seat and side: smoothed share of frames with the person in view but the arm hidden. */
+    private val hiddenShare = mutableMapOf<Pair<Int, Boolean>, Double>()
+    private val inViewMs = mutableMapOf<Pair<Int, Boolean>, Long>()
+    private var lastAccepted: Long? = null
     var falseAlarms = 0
         private set
     var missedViolations = 0
@@ -91,8 +101,37 @@ class MonitorSession(
         val accepted = monitor.frame(poses, captured, now, aspect, rotation)
         if (!accepted) return false
         if (monitor.results.any { it.pose != null }) lastSeen = now
+        trackHiddenArms(captured)
         return true
     }
+
+    /** Exponential average over about [HIDDEN_TAU_MS]; only frames with the person in view count. */
+    private fun trackHiddenArms(captured: Long) {
+        val dt = lastAccepted?.let { (captured - it).coerceIn(0, 1000) } ?: 0
+        lastAccepted = captured
+        val weight = 1 - kotlin.math.exp(-dt / HIDDEN_TAU_MS.toDouble())
+        for (seat in monitor.results) {
+            for ((left, arm) in listOf(true to seat.left, false to seat.right)) {
+                val key = seat.seat to left
+                if (seat.pose == null) {
+                    inViewMs.remove(key)
+                    hiddenShare.remove(key)
+                    continue
+                }
+                val hidden = if (arm.state == ElbowState.UNKNOWN && arm.features == null) 1.0 else 0.0
+                val share = hiddenShare[key]
+                hiddenShare[key] = if (share == null) hidden else share + (hidden - share) * weight
+                inViewMs[key] = (inViewMs[key] ?: 0) + dt
+            }
+        }
+    }
+
+    /** The arm hidden longest (most often) while its person is in view, if it passes the bar. */
+    private fun hiddenArm(): Pair<Int, Boolean>? =
+        hiddenShare.entries
+            .filter { (key, share) -> share >= HIDDEN_SHARE && (inViewMs[key] ?: 0) >= HIDDEN_MIN_MS }
+            .maxByOrNull { it.value }
+            ?.key
 
     fun tick(now: Long): MonitorUiState {
         val alarming = monitor.tick(now) && now >= restUntil
@@ -158,6 +197,7 @@ class MonitorSession(
             activeSeconds = activeMs(now) / 1000,
             reminders = reminders,
             sound = sound,
+            hiddenArm = if (monitor.active) hiddenArm() else null,
         )
     }
 
@@ -170,6 +210,7 @@ class MonitorSession(
         monitor.start(now)
         resumedAt = now
         lastSeen = now
+        lastAccepted = null // the pause is not time "in view"
         restUntil = 0L
         return Sound.NONE
     }
@@ -219,6 +260,13 @@ class MonitorSession(
         const val REST_MS = 30_000L
         const val THANKS_MS = 2_000L
         const val NOBODY_MS = 20_000L
+
+        /** An arm hidden in this share of recent in-view frames is reported. */
+        const val HIDDEN_SHARE = 0.7
+
+        /** ... once its person has been in view at least this long. */
+        const val HIDDEN_MIN_MS = 20_000L
+        const val HIDDEN_TAU_MS = 10_000L
 
         fun firstViolation(results: List<SeatResult>): Pair<Int, Boolean>? =
             results.firstNotNullOfOrNull { seat ->

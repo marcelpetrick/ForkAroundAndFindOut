@@ -45,9 +45,18 @@ data class Features(
 data class Evidence(
     val score: Double?,
     val features: Features?,
+    /** True when the score is missing because arm joints are hidden (not for lack of history). */
+    val hidden: Boolean = false,
 )
 
-/** A rolling second of normalized motion distinguishes a reach from supported posture. */
+/**
+ * A rolling second of normalized motion distinguishes a reach from supported posture.
+ *
+ * A set table hides hands: when an arm was *fully* seen resting (shoulder, elbow and wrist)
+ * and then only the wrist disappears behind a glass, pot or plate, the evidence is bridged —
+ * as long as the elbow stays still, near where it rested, for at most [BRIDGE_MS]. A hand
+ * hidden from the start is never guessed.
+ */
 class ArmClassifier {
     private data class Sample(
         val time: Long,
@@ -55,6 +64,10 @@ class ArmClassifier {
     )
 
     private val history = ArrayDeque<Sample>()
+
+    /** Where the elbow rested at the last fully supported frame, and when. */
+    private var restedAt: Point? = null
+    private var restedTime = 0L
 
     fun evaluate(
         pose: Pose,
@@ -68,15 +81,14 @@ class ArmClassifier {
         val elbow = pose.joint(if (left) 13 else 14)
         val wrist = pose.joint(if (left) 15 else 16)
         val opposite = pose.joint(if (left) 12 else 11)
-        if (shoulder == null || elbow == null || wrist == null || opposite == null || aspect <= 0 || !aspect.isFinite()) {
-            history.clear()
-            return Evidence(null, null)
+        if (shoulder == null || elbow == null || opposite == null || aspect <= 0 || !aspect.isFinite()) {
+            forget()
+            return Evidence(null, null, hidden = true)
         }
         val s = shoulder.point.metric(aspect)
         val e = elbow.point.metric(aspect)
-        val w = wrist.point.metric(aspect)
         val scale = max(s.distance(opposite.point.metric(aspect)), 0.05)
-        if (history.isNotEmpty() && (timeMs <= history.last().time || timeMs - history.last().time > maxGapMs)) history.clear()
+        if (history.isNotEmpty() && (timeMs <= history.last().time || timeMs - history.last().time > maxGapMs)) forget()
         history.addLast(Sample(timeMs, e))
         while (history.size > 1 && timeMs - history.first().time > 1000) history.removeFirst()
         val mean = Point(history.sumOf { it.point.x } / history.size, history.sumOf { it.point.y } / history.size)
@@ -86,6 +98,16 @@ class ArmClassifier {
                 d * d
             } / history.size
         val speeds = history.zipWithNext { a, b -> a.point.distance(b.point) / scale * 1000 / (b.time - a.time) }
+        if (wrist == null) {
+            // Only the hand is hidden: bridge a rest that was fully seen, never start one.
+            val rested = restedAt
+            val bridged =
+                rested != null && timeMs - restedTime <= BRIDGE_MS && rested.distance(e) / scale <= BRIDGE_RADIUS &&
+                    (speeds.maxOrNull() ?: 0.0) < 0.4 && variance < 0.015
+            if (!bridged) restedAt = null
+            return Evidence(if (bridged) 0.95 else null, null, hidden = !bridged)
+        }
+        val w = wrist.point.metric(aspect)
         val hip = pose.joint(if (left) 23 else 24)?.point?.metric(aspect)
         val features =
             Features(
@@ -110,7 +132,26 @@ class ArmClassifier {
             features.elbowDistance >= -0.03 && features.elbowAngle in 25.0..155.0 &&
                 features.shoulderHeight > 0.15 && features.upperLength > 0.15 && features.foreLength > 0.1 &&
                 features.wristHeight < 0.5 && features.speed < 0.18 && features.maxSpeed < 0.4 && features.variance < 0.015
+        if (supported) {
+            restedAt = e
+            restedTime = timeMs
+        } else {
+            restedAt = null
+        }
         // Deliberately conservative heuristic, not a calibrated probability of physical contact.
         return Evidence(if (supported) 0.95 else 0.05, features)
+    }
+
+    private fun forget() {
+        history.clear()
+        restedAt = null
+    }
+
+    companion object {
+        /** Longest time a hidden hand keeps a fully seen rest alive. */
+        const val BRIDGE_MS = 10_000L
+
+        /** How far (in shoulder widths) the elbow may drift while the hand is hidden. */
+        const val BRIDGE_RADIUS = 0.15
     }
 }

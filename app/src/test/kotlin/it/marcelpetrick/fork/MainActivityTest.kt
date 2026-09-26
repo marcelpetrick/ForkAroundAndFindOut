@@ -443,6 +443,13 @@ class MainActivityTest {
             activity.click("Finish setup")
             activity.click("Start dinner")
             assertTrue(activity.texts().contains("hold volume-down to pause"))
+            // A pot hides seat 1's left elbow for a while: the monitor says which arm to free.
+            val potInFront = Pose(pose().landmarks.toMutableList().apply { this[13] = this[13].copy(confidence = 0.1) })
+            repeat(260) {
+                frame(listOf(potInFront), SystemClock.uptimeMillis(), FrameInfo(1.0, 90, 5))
+                idle(100)
+            }
+            assertTrue(activity.texts().contains("Green seat · the left arm is often hidden"))
             idle(200)
             assertFalse(activity.texts().contains("Use the Lite model"))
             thermal = PowerManager.THERMAL_STATUS_MODERATE

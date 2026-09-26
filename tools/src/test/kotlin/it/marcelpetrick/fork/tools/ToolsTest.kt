@@ -39,6 +39,8 @@ class ToolsTest {
                 "250",
                 "--cooldown-ms",
                 "0",
+                "--hold-ms",
+                "300",
                 "--window-ms",
                 "2000",
                 log,

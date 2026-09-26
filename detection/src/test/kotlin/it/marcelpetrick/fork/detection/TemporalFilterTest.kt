@@ -34,8 +34,41 @@ class TemporalFilterTest {
     }
 
     @Test
-    fun missingMalformedStaleOrBackwardsEvidenceSilencesImmediately() {
-        for (bad in listOf(null, Double.NaN, Double.POSITIVE_INFINITY, -0.1, 1.1)) {
+    fun hiddenJointsHoldARunningReminderBrieflyButNeverBuildOne() {
+        val filter = TemporalFilter(Timing(triggerMs = 0))
+        filter.update(0, 0.99)
+        assertEquals(ElbowState.VIOLATION, filter.update(100, 0.99))
+        // A dish passes in front for half a second: the reminder stays on, without flicker.
+        for (time in 200L..700L step 100) assertEquals(ElbowState.VIOLATION, filter.update(time, null))
+        assertEquals(ElbowState.VIOLATION, filter.update(800, 0.99))
+        // Hidden for longer than the hold: the reminder ends.
+        for (time in 900L..1500L step 100) filter.update(time, null)
+        assertEquals(ElbowState.UNKNOWN, filter.update(1600, null))
+        // Hidden while only suspected: nothing is held, nothing builds up.
+        val suspect = TemporalFilter()
+        assertEquals(ElbowState.SUSPECT, suspect.update(0, 0.99))
+        assertEquals(ElbowState.UNKNOWN, suspect.update(100, null))
+        // Without a hold, hidden joints silence at once.
+        val strict = TemporalFilter(Timing(triggerMs = 0, holdMs = 0))
+        strict.update(0, 0.99)
+        strict.update(100, 0.99)
+        assertEquals(ElbowState.UNKNOWN, strict.update(200, null))
+        // A frame gap is never bridged by the hold.
+        val gap = TemporalFilter(Timing(triggerMs = 0))
+        gap.update(0, 0.99)
+        gap.update(100, 0.99)
+        assertEquals(ElbowState.UNKNOWN, gap.update(700, null))
+        // Too little evidence (sparse frames, not hidden joints) is never held either.
+        val sparse = TemporalFilter(Timing(triggerMs = 0))
+        sparse.update(0, 0.99)
+        sparse.update(100, 0.99)
+        assertEquals(ElbowState.UNKNOWN, sparse.update(200, null, hidden = false))
+        assertThrows(IllegalArgumentException::class.java) { Timing(holdMs = -1) }
+    }
+
+    @Test
+    fun malformedStaleOrBackwardsEvidenceSilencesImmediately() {
+        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, -0.1, 1.1)) {
             val filter = TemporalFilter(Timing(triggerMs = 0))
             assertEquals(ElbowState.SUSPECT, filter.update(0, 0.99))
             assertEquals(ElbowState.VIOLATION, filter.update(100, 0.99))

@@ -57,7 +57,10 @@ camera (CameraX, 640×360 analysis) → MediaPipe Pose Landmarker (≤ 4 people,
 ```
 
 A reminder needs about one second of steady evidence; reaching, passing food and brief
-crossings do not trigger it. Hidden elbows are "Not visible", never "good posture".
+crossings do not trigger it. Hidden elbows are "Not visible", never "good posture". On a
+set table a dish passed in front does not interrupt a reminder, a hand hidden behind a glass
+keeps a clearly seen rest for up to 10 s, and an arm that stays hidden is named so the pot
+can be moved ([detection](docs/detection.md#a-set-table-pots-plates-glasses)).
 Start with the plain-language [C4 architecture and workflows](docs/c4-architecture.md).
 Details: [architecture](docs/architecture.md), [detection rules](docs/detection.md),
 [framework choice](docs/pose-frameworks.md), [UX](docs/ux.md).

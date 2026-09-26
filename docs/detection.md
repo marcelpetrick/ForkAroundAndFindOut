@@ -31,8 +31,30 @@ Freshness and continuity are separate budgets: a result may be up to
 max(1500 ms, 3 × median frame period) old on arrival, and the stream may have gaps of
 up to max(configured floor 500 ms, 3 × median period). Above a 200 ms median period the
 UI reports slow processing; above 700 ms it reports "too slow" and never warns.
-A single frame never triggers, even with zero configured dwell. Occlusion, invalid
-scores, duplicate/backward timestamps or gaps over 500ms clear evidence to UNKNOWN.
+A single frame never triggers, even with zero configured dwell. Invalid scores,
+duplicate/backward timestamps or gaps over 500ms clear evidence to UNKNOWN at once.
+
+## A set table: pots, plates, glasses
+
+A set table hides arms. Missing evidence still never *starts* a reminder, but three rules
+keep the app useful at a real dinner:
+
+- **Brief-occlusion hold** (`Timing.holdMs`, default 600 ms): when an arm's joints are
+  hidden in otherwise fresh frames — a dish passed in front — a *running* VIOLATION stays
+  on instead of flickering off and rebuilding. It never holds SUSPECT, never bridges a
+  frame gap, and never holds for missing history (sparse frames on a slow phone).
+- **Hidden-hand bridge** (`ArmClassifier.BRIDGE_MS` 10 s, `BRIDGE_RADIUS` 0.15 shoulder
+  widths): after the arm was fully seen resting (shoulder, elbow and wrist), only the wrist
+  may disappear — behind a glass or a pot — while the elbow stays still within the radius.
+  The rest continues for at most 10 s after it was last fully seen. An elbow that moves, a
+  hidden elbow or shoulder, or a hand hidden *from the start* gives no evidence: the latter
+  would need a learned rule trained on real labelled sessions (training mode + replay).
+- **Occlusion hint**: when an arm of a person in view is hidden in ≥ 70 % of recent frames
+  (exponential average, τ = 10 s) for at least 20 s, the monitor names the seat colour and
+  side and suggests moving the pot/bottle or the phone.
+
+Setup asks for the visibility check to run at the set table. Session logs record `holdMs`;
+logs from before 0.12.47 replay with a hold of 0 ms, as they were decided live.
 The UI must also expire results when no callback arrives; that watchdog belongs to
 the monitoring controller, because the detector runs only when frames arrive.
 

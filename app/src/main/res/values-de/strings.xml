@@ -16,12 +16,12 @@
     <string name="calibration_changed">Das Kamerabild hat sich verändert, der Tischumriss passt nicht mehr. Markiere den Tisch neu – und immer dann, wenn das Handy bewegt wurde.</string>
 
     <string name="position_title">Handy ausrichten</string>
-    <string name="position_help">Prüfe, dass Schultern, Ellbogen und Handgelenke aller Personen und die ganze Tischplatte sichtbar sind. Erkannte Personen bekommen Linien.</string>
+    <string name="position_help">Decke zuerst den Tisch wie zum Essen: Töpfe, Flaschen und Teller können Arme verdecken. Prüfe dann, dass Schultern, Ellbogen und Handgelenke aller Personen und die ganze Tischplatte sichtbar sind. Erkannte Personen bekommen Linien.</string>
     <string name="mark_table">Tisch markieren</string>
     <string name="people_detected">Erkannte Personen: %1$d</string>
     <string name="visibility_status">Personen: %1$d von %2$d · alle Arme sichtbar in %3$d %% der Bilder · %4$.0f FPS · %5$.0f von 10 s geprüft</string>
     <string name="visibility_passed">Alle sind gut sichtbar. Weiter mit dem Tisch.</string>
-    <string name="visibility_tips">Die Prüfung läuft 10 Sekunden, während alle sitzen. Klappt sie nicht, stelle das Handy höher oder weiter weg, damit alle Schultern, Ellbogen und Handgelenke sichtbar bleiben, vermeide Gegenlicht und achte darauf, dass Schüsseln keine Ellbogen verdecken.</string>
+    <string name="visibility_tips">Die Prüfung läuft 10 Sekunden, während alle am gedeckten Tisch sitzen. Klappt sie nicht, stelle das Handy höher oder weiter weg, damit alle Schultern, Ellbogen und Handgelenke sichtbar bleiben, vermeide Gegenlicht und rücke hohe Töpfe und Flaschen von den Armen weg.</string>
     <string name="continue_anyway">Tisch ohne Prüfung markieren</string>
 
     <string name="table_title">Tisch markieren</string>
@@ -224,5 +224,8 @@
     <string name="shortcut_start_long">Essens-Überwachung starten</string>
     <string name="shortcut_needs_setup">Richte die Kamera einmal ein, dann startet die Verknüpfung das Essen direkt.</string>
     <string name="restart_check">10-Sekunden-Prüfung neu starten</string>
-    <string name="visibility_restarted">Prüfung neu gestartet. Zehn Sekunden so sitzen wie beim Essen.</string>
+    <string name="visibility_restarted">Prüfung neu gestartet. Zehn Sekunden so sitzen wie beim Essen, am gedeckten Tisch.</string>
+    <string name="hidden_arm">%1$s Platz · der %2$s Arm ist oft verdeckt, vielleicht durch einen Topf oder eine Flasche. Verschiebe ihn oder das Handy, damit Ellbogen und Hand sichtbar bleiben.</string>
+    <string name="arm_left">linke</string>
+    <string name="arm_right">rechte</string>
 </resources>
