@@ -126,6 +126,29 @@ least 95 %, part of the pipeline"; "get all done, make a plan, then public relea
 - [x] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
   full pipeline, green CI, public release.
 
+## Plan v6 — review of the current state (owner request 2026-09-27)
+
+Owner input: "/reviewBranch against the current state. Fix all findings: architecture, code,
+documentation, everything which is off." Then "get all done … fixed, then push and make a
+public release". Review range bb33681..77e41f5 (everything since the previous review).
+
+- [ ] R6-1 (medium, architecture) `MainActivity` is 1600 lines and 143 members with detekt's
+  LargeClass/MagicNumber off for it — extract the screens (setup, monitor, settings, data,
+  About) into classes behind a small host interface and drop the exclusions (closes L9).
+- [ ] R6-2 (medium, code) `scripts/sbom.py` passes unknown POM licence names through as free
+  text (invalid SPDX) and enforces no GPLv3-compatible allowlist — map, allowlist, fail.
+- [ ] R6-3 (medium, docs) `docs/ux.md` contradicts the shipped monitor layout and misses the
+  newer setup, settings and About behaviour — rewrite to match.
+- [ ] R6-4 (low) the About text claims all licences are GPL-compatible while
+  `docs/licensing.md` records an open question — limit the claim (en, de).
+- [ ] R6-5 (low) Docker staging needs the SBOM, so a standalone `docker-smoke.sh` fails on a
+  fresh clone; `docs/scripts.md` lists old pipeline stages — generate when missing, fix docs.
+- [ ] R6-6 (low) `sbom.py notices` may reuse a stale SBOM — always rebuild first.
+- [ ] R6-7 (low) `docs/data.md` header example lacks `holdMs` and its replay rule.
+- [ ] R6-8 (low) `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` can drift — identity check.
+- [ ] R6-9 (low) `plan.md` "Validation boundaries" is stale — rewrite.
+- [ ] R6-10 full pipeline, green CI, public release; APK URL to the owner.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -167,6 +190,9 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   plan"; "then public release, again".
 - 2026-09-26: "yes, REUSE is a good thing, make sure we have a badge for the README"; "also mark
   all the guidelines I gave today in agents.md, so that we collect some really good guide".
+- 2026-09-27: "/reviewBranch against the current state; fix all findings — architecture, code,
+  documentation, everything which is off"; "get all done"; "fixed, then push and make a
+  public release".
 - 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
   release"; "big plan, then iterate and get it done".
 
@@ -1052,3 +1078,9 @@ is empty; the same method was applied to the session range instead. Findings fix
   (whose run is green). The local check had seen the working tree, not the commit. `lint.sh`
   now prints reuse's full report on failure.
 - Release: tag `v0.13.51` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
+
+### 0.13.52 — docs: plan v6 from the review of the current state
+
+- Done: `/reviewBranch` over bb33681..77e41f5 → nine findings R6-1…R6-9 (three medium, six
+  low) recorded above with the release as R6-10; owner input logged.
+- Validation: documentation only; whitespace, link and markdown checks.
