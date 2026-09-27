@@ -86,7 +86,7 @@ and have no Android code at all, so they are tested quickly and thoroughly on a 
 ```mermaid
 flowchart TB
     subgraph app[":app – Android"]
-        ui["MainActivity<br/>screens: Welcome, Position, Mark table,<br/>Seats, Monitor, Settings, Data, About"]
+        ui["MainActivity (host)<br/>lifecycle, navigation, camera, frame loop<br/>+ screens: Welcome, Setup, Monitor,<br/>Settings, Data, About"]
         stage["StageView<br/>draws camera overlay, table,<br/>skeletons, warnings, loupe"]
         camera["CameraSession + FrameAnalyzer<br/>CameraX preview and 640×360 analysis,<br/>one frame at a time"]
         engine["MediaPipeEngine<br/>pose landmarks (Full/Lite, CPU/GPU)"]

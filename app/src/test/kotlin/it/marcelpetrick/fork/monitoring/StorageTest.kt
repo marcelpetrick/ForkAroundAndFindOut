@@ -8,8 +8,6 @@ import it.marcelpetrick.fork.detection.Pose
 import it.marcelpetrick.fork.detection.Timing
 import it.marcelpetrick.fork.detection.pose
 import it.marcelpetrick.fork.detection.table
-import it.marcelpetrick.fork.monitoring.Chime
-import it.marcelpetrick.fork.monitoring.Processor
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

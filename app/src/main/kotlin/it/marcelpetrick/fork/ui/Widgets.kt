@@ -3,7 +3,6 @@
 package it.marcelpetrick.fork.ui
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
@@ -13,7 +12,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import it.marcelpetrick.fork.R
 import it.marcelpetrick.fork.detection.ElbowState
 
 fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

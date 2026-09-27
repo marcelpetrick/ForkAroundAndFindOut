@@ -121,7 +121,7 @@ least 95 %, part of the pipeline"; "get all done, make a plan, then public relea
 - [x] L8 Owner request: collect all of today's guidelines in `agents.md` as a real working guide
   (plan first, reviews into the plan, product principles, quality gates, licensing, docs,
   release procedure).
-- [ ] L9 Backlog: split `MainActivity` (single-activity UI, excluded from detekt's LargeClass)
+- [x] L9 Backlog: split `MainActivity` (done in 0.13.55, R6-1) (single-activity UI, excluded from detekt's LargeClass)
   into per-screen classes.
 - [x] L6 `/updateDependencies` once, `/githubAbout` with decisions reflecting the current state,
   full pipeline, green CI, public release.
@@ -132,12 +132,12 @@ Owner input: "/reviewBranch against the current state. Fix all findings: archite
 documentation, everything which is off." Then "get all done … fixed, then push and make a
 public release". Review range bb33681..77e41f5 (everything since the previous review).
 
-- [ ] R6-1 (medium, architecture) `MainActivity` is 1600 lines and 143 members with detekt's
+- [x] R6-1 (medium, architecture) `MainActivity` is 1600 lines and 143 members with detekt's
   LargeClass/MagicNumber off for it — extract the screens (setup, monitor, settings, data,
   About) into classes behind a small host interface and drop the exclusions (closes L9).
 - [x] R6-2 (medium, code) `scripts/sbom.py` passes unknown POM licence names through as free
   text (invalid SPDX) and enforces no GPLv3-compatible allowlist — map, allowlist, fail.
-- [ ] R6-3 (medium, docs) `docs/ux.md` contradicts the shipped monitor layout and misses the
+- [x] R6-3 (medium, docs) `docs/ux.md` contradicts the shipped monitor layout and misses the
   newer setup, settings and About behaviour — rewrite to match.
 - [x] R6-4 (low) the About text claims all licences are GPL-compatible while
   `docs/licensing.md` records an open question — limit the claim (en, de).
@@ -1108,3 +1108,19 @@ is empty; the same method was applied to the session range instead. Findings fix
   breaks resource compilation; the commit was pushed because the command chain did not gate
   on the Gradle exit code (its CI run is red). Fixed; the Gradle result now gates every commit.
 - Validation: Robolectric tests and Android lint pass (exit 0).
+
+### 0.13.55 — refactor: split the single activity into screen classes (R6-1) and match the UX spec (R6-3)
+
+- R6-1: `MainActivity` 1600 → 687 lines. Six screen classes (`WelcomeScreen`, `SetupScreen`,
+  `MonitorScreen`, `SettingsScreen`, `DataScreen`, `AboutScreen`) own their views and state;
+  their functions are member extensions of the activity, which stays the single host for the
+  lifecycle, navigation, camera, frame loop, demo and session end. Visibility narrowed to real
+  cross-file use (67 declarations private again). detekt now checks the activity without the
+  LargeClass exclusion (TooManyFunctions ignores framework overrides and allows 15 for the
+  host API; MagicNumber stays off only for drawing/layout code); `UnusedImports` enabled,
+  because ktlint 1.x no longer removes them (four old ones removed).
+- R6-3: `docs/ux.md` rewritten to the shipped app (fixed monitor controls, set-table setup,
+  people/lens, restartable check, seats suggestion, grouped settings, chimes, About);
+  architecture and C4 docs name the screen classes.
+- Validation: all JVM/Robolectric tests, Android lint, detekt 0, coverage 97.6 %; full local
+  pipeline with e2e.

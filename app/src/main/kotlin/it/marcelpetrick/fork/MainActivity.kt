@@ -11,21 +11,17 @@ import android.content.res.Configuration
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
-import android.net.Uri
-import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
-import android.text.util.Linkify
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -37,54 +33,34 @@ import it.marcelpetrick.fork.camera.CameraSession
 import it.marcelpetrick.fork.camera.FrameInfo
 import it.marcelpetrick.fork.camera.FrameSource
 import it.marcelpetrick.fork.demo.SyntheticDemo
-import it.marcelpetrick.fork.detection.ArmResult
 import it.marcelpetrick.fork.detection.ElbowState
-import it.marcelpetrick.fork.detection.Point
-import it.marcelpetrick.fork.detection.Polygon
 import it.marcelpetrick.fork.detection.Pose
-import it.marcelpetrick.fork.detection.SeatProposal
 import it.marcelpetrick.fork.detection.SeatResult
 import it.marcelpetrick.fork.monitoring.LocalStore
 import it.marcelpetrick.fork.monitoring.MealSummary
 import it.marcelpetrick.fork.monitoring.Monitor
 import it.marcelpetrick.fork.monitoring.MonitorSession
-import it.marcelpetrick.fork.monitoring.MonitorUiState
-import it.marcelpetrick.fork.monitoring.PoseModel
-import it.marcelpetrick.fork.monitoring.SessionFiles
 import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.SessionRecorder
 import it.marcelpetrick.fork.monitoring.Settings
 import it.marcelpetrick.fork.monitoring.Sound
-import it.marcelpetrick.fork.monitoring.Status
-import it.marcelpetrick.fork.monitoring.VisibilityCheck
 import it.marcelpetrick.fork.monitoring.VisualMode
-import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.monitoring.sessionRecord
 import it.marcelpetrick.fork.ui.ChimeSpeaker
-import it.marcelpetrick.fork.ui.Group
-import it.marcelpetrick.fork.ui.LICENSE_TEXTS
 import it.marcelpetrick.fork.ui.Lens
-import it.marcelpetrick.fork.ui.Option
 import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.Speaker
 import it.marcelpetrick.fork.ui.StageView
 import it.marcelpetrick.fork.ui.action
-import it.marcelpetrick.fork.ui.asset
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.chip
 import it.marcelpetrick.fork.ui.column
-import it.marcelpetrick.fork.ui.dp
 import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.lensLabels
-import it.marcelpetrick.fork.ui.licenseAsset
 import it.marcelpetrick.fork.ui.row
-import it.marcelpetrick.fork.ui.settingsOptions
-import it.marcelpetrick.fork.ui.thirdParty
 import it.marcelpetrick.fork.ui.title
-import it.marcelpetrick.fork.ui.update
 import org.json.JSONObject
 import java.io.File
-import java.io.OutputStream
 import java.util.UUID
 
 internal fun thermalLabel(status: Int): String =
@@ -109,9 +85,9 @@ class MainActivity : ComponentActivity() {
 
     internal lateinit var store: LocalStore
     internal var settings = Settings()
-        private set
+        internal set
     internal var screen = Screen.WELCOME
-        private set
+        internal set
     internal var notice: String? = null
     internal var sourceFactory: SourceFactory = { view, s, frame, error -> CameraSession(this, this, view, s, frame, error) }
     internal var speaker: Speaker = ChimeSpeaker(this)
@@ -125,70 +101,65 @@ class MainActivity : ComponentActivity() {
 
     /** The running meal, or null. */
     internal var meal: MonitorSession? = null
-        private set
+        internal set
     internal val monitor: Monitor?
         get() = meal?.monitor
 
     /** Summary of the last finished meal, shown on the welcome screen. */
     internal var lastSummary: MealSummary? = null
-        private set
+        internal set
     internal var stage: StageView? = null
-        private set
+        internal set
 
-    private val handler = Handler(Looper.getMainLooper())
+    // One object per screen family; each owns its views and state (see the *Screen.kt files).
+    private val welcomeScreen = WelcomeScreen()
+    private val settingsScreen = SettingsScreen()
+    private val setupScreen = SetupScreen()
+    private val monitorScreen = MonitorScreen()
+    private val dataScreen = DataScreen()
+    private val aboutScreen = AboutScreen()
+
+    internal val handler = Handler(Looper.getMainLooper())
     private val ticker = Runnable { tick() }
-    private var source: FrameSource? = null
-    private var preview: PreviewView? = null
-    private var panel: LinearLayout? = null
-    private var status: TextView? = null
-    private var seatCards: LinearLayout? = null
-    private var sessionLine: TextView? = null
-    private var banner: LinearLayout? = null
-    private var hiddenHint: TextView? = null
-    private var diagnosticsText: TextView? = null
-    private var trainingStatus: TextView? = null
-    private var advice: TextView? = null
-    private var seatCheck: TextView? = null
+    internal var source: FrameSource? = null
+    internal var preview: PreviewView? = null
+    internal var panel: LinearLayout? = null
+    internal var status: TextView? = null
+    internal var seatCards: LinearLayout? = null
+    internal var trainingStatus: TextView? = null
 
     /** The camera permission was refused: the welcome card offers Android's app settings. */
-    private var permissionDenied = false
-    private var visibilityCheck: VisibilityCheck? = null
-    private val taps = mutableListOf<Point>()
-    private val seats = mutableListOf<Polygon>()
-    private var lastFrame = 0L
-    private var fps = 0.0
-    private val latencies = ArrayDeque<Long>()
-    private var frameInfo: FrameInfo? = null
+    internal var permissionDenied = false
+    internal var lastFrame = 0L
+    internal var fps = 0.0
+    internal val latencies = ArrayDeque<Long>()
+    internal var frameInfo: FrameInfo? = null
 
     /** True once a frame (and with it the image geometry and view mapping) has arrived. */
     internal val cameraReady: Boolean
         get() = frameInfo != null && stage?.mapping != null
     private var demoMonitor: Monitor? = null
     private var demoStart = 0L
-    private var diagnosticsOpen = false
     private var pendingCamera: Screen? = null
-    private var adult: LinearLayout? = null
-    private var training = false
-    private var trainingSeat = 1
     internal var recorder: SessionRecorder? = null
-        private set
-    private var exportLog: File? = null
+        internal set
+    internal var exportLog: File? = null
     internal val sessionsDir: File
         get() = File(filesDir, "sessions")
 
-    private val exporter =
+    internal val exporter =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-            if (uri != null) exportTo(uri) { it.write(store.export().toByteArray()) }
+            if (uri != null) with(dataScreen) { exportTo(uri) { it.write(store.export().toByteArray()) } }
         }
 
-    private val logExporter =
+    internal val logExporter =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
             val log = exportLog
             exportLog = null
-            if (uri != null && log != null) exportTo(uri) { out -> log.inputStream().use { it.copyTo(out) } }
+            if (uri != null && log != null) with(dataScreen) { exportTo(uri) { out -> log.inputStream().use { it.copyTo(out) } } }
         }
 
-    private val permission =
+    internal val permission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val target = pendingCamera ?: return@registerForActivityResult
             pendingCamera = null
@@ -260,7 +231,7 @@ class MainActivity : ComponentActivity() {
         show(screen)
     }
 
-    private val monitoring: Boolean
+    internal val monitoring: Boolean
         get() = screen == Screen.MONITOR && meal != null
 
     /**
@@ -283,7 +254,7 @@ class MainActivity : ComponentActivity() {
         event: KeyEvent,
     ): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && monitoring) {
-            if (meal?.active == true) togglePause()
+            if (meal?.active == true) with(monitorScreen) { togglePause() }
             return true
         }
         return super.onKeyLongPress(keyCode, event)
@@ -321,7 +292,7 @@ class MainActivity : ComponentActivity() {
         meal?.let { current ->
             val now = clock()
             speaker.play(current.suspend(now), settings.volume)
-            render(current.tick(now)) // show "Paused" / "Resume" when the user returns
+            with(monitorScreen) { render(current.tick(now)) } // show "Paused" / "Resume" when the user returns
         }
         silence()
         closeCamera()
@@ -346,15 +317,15 @@ class MainActivity : ComponentActivity() {
         if (screen == Screen.MONITOR && target != Screen.MONITOR) endSession()
         if (target !in CAMERA_SCREENS) closeCamera()
         handler.removeCallbacks(ticker)
-        taps.clear()
+        setupScreen.taps.clear()
         screen = target
         holdStill(target)
         when (target) {
-            Screen.WELCOME -> page(welcome())
-            Screen.SETTINGS -> page(settingsPage())
-            Screen.DATA -> page(dataPage())
-            Screen.ABOUT -> page(aboutPage())
-            Screen.TEXT -> page(textPage())
+            Screen.WELCOME -> page(with(welcomeScreen) { welcome() })
+            Screen.SETTINGS -> page(with(settingsScreen) { settingsPage() })
+            Screen.DATA -> page(with(dataScreen) { dataPage() })
+            Screen.ABOUT -> page(with(aboutScreen) { aboutPage() })
+            Screen.TEXT -> page(with(aboutScreen) { textPage() })
             Screen.DEMO -> startDemo()
             else -> cameraScreen(target)
         }
@@ -402,146 +373,26 @@ class MainActivity : ComponentActivity() {
             skeleton = settings.debug || target != Screen.MONITOR
         }
         when (target) {
-            Screen.POSITION -> positionPanel()
-            Screen.TABLE -> tablePanel()
-            Screen.SEATS -> seatsPanel()
-            else -> monitorPanel()
+            Screen.POSITION -> with(setupScreen) { positionPanel() }
+            Screen.TABLE -> with(setupScreen) { tablePanel() }
+            Screen.SEATS -> with(setupScreen) { seatsPanel() }
+            else -> with(monitorScreen) { monitorPanel() }
         }
         stage!!.refresh()
         if (source == null) openCamera()
     }
 
-    private fun page(content: View) {
+    internal fun page(content: View) {
         stage = null
         preview = null
         panel = null
         setContentView(fadeIn(insetAware(ScrollView(this).apply { setBackgroundColor(Palette.surface) }.also { it.addView(content) })))
     }
 
-    private fun welcome(): View =
-        column().apply {
-            notice?.let {
-                val warning = card(label(it, color = Palette.red))
-                if (permissionDenied) {
-                    warning.addView(label(getString(R.string.permission_rationale), 15f, color = Palette.muted))
-                    warning.addView(action(getString(R.string.open_settings)) { openAppSettings() })
-                }
-                addView(warning)
-            }
-            addView(title(getString(R.string.app_name)))
-            lastSummary?.let { addView(summaryCard(it)) }
-            addView(label(getString(R.string.welcome_intro), 19f))
-            addView(
-                card(
-                    label(getString(R.string.welcome_privacy)),
-                    label(getString(R.string.welcome_placement)),
-                    label(getString(R.string.welcome_limits), color = Palette.muted),
-                ),
-            )
-            if (settings.table != null) {
-                val lens =
-                    cameraIds().firstOrNull { it.id == settings.camera }?.let { getString(it.label) }
-                        ?: getString(R.string.camera_automatic)
-                addView(label(getString(R.string.ready_line, settings.people, settings.seats.size, settings.model.name, lens), bold = true))
-                addView(action(getString(R.string.start_monitoring), primary = true) { startMonitoring() })
-                addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) })
-            } else {
-                addView(label(getString(R.string.needs_setup), color = Palette.muted))
-                addView(action(getString(R.string.setup_camera), primary = true) { begin(Screen.POSITION) })
-            }
-            addView(action(getString(R.string.try_demo)) { begin(Screen.DEMO) })
-            addView(action(getString(R.string.settings)) { begin(Screen.SETTINGS) })
-            addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
-            addView(action(getString(R.string.about)) { begin(Screen.ABOUT) })
-        }
-
-    /** Positive end-of-meal card: time, reminders, the calm record, per-seat counts. */
-    private fun summaryCard(summary: MealSummary): View =
-        card(
-            label(getString(R.string.summary_title), 19f, bold = true, color = Palette.green),
-            label(
-                getString(
-                    R.string.summary_line,
-                    clockText(summary.activeSeconds),
-                    summary.reminders,
-                    clockText(summary.longestCalmSeconds),
-                ),
-            ),
-            label(
-                if (summary.remindersBySeat.isEmpty()) {
-                    getString(R.string.summary_none)
-                } else {
-                    summary.remindersBySeat.entries.joinToString(" · ") { (seat, count) ->
-                        getString(R.string.summary_seat, getString(SEAT_COLOURS.getOrElse(seat - 1) { R.string.seat_colour_1 }), count)
-                    }
-                },
-                15f,
-                color = Palette.muted,
-            ),
-        )
-
-    private fun begin(target: Screen) {
+    internal fun begin(target: Screen) {
         notice = null
         permissionDenied = false
         show(target)
-    }
-
-    /** After a refusal Android no longer asks; only the app's system settings can grant it. */
-    private fun openAppSettings() {
-        startActivity(
-            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    }
-
-    private fun settingsPage(): View =
-        column().apply {
-            addView(title(getString(R.string.settings_title)))
-            addView(label(getString(R.string.settings_help), color = Palette.muted))
-            val options = settingsOptions(cameraIds())
-            val refreshers = mutableListOf<() -> Unit>()
-            for (group in Group.entries) {
-                addView(label(getString(group.label), 20f, bold = true, color = Palette.green).apply { setPadding(0, dp(20), 0, 0) })
-                if (group == Group.REMINDERS) {
-                    addView(
-                        action(getString(R.string.test_sound)) {
-                            speaker.prepare(settings.chime)
-                            speaker.play(Sound.BEEP, settings.volume)
-                        },
-                    )
-                }
-                if (group == Group.DATA) addView(action(getString(R.string.local_data)) { begin(Screen.DATA) })
-                for (option in options.filter { it.group == group }) addView(settingCard(option, refreshers))
-            }
-            addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
-        }
-
-    /**
-     * One setting: name, a one-line explanation and − value + controls. [refresh] updates every
-     * shown value, because a sensitivity preset also changes the raw timings below it.
-     */
-    private fun settingCard(
-        option: Option,
-        refreshers: MutableList<() -> Unit>,
-    ): View {
-        val name = getString(option.label)
-        val value = label(option.display(this, settings), 18f, bold = true)
-        refreshers += { value.update(option.display(this, settings)) }
-
-        fun change(delta: Int) {
-            settings = option.change(settings, delta)
-            store.save(settings)
-            refreshers.forEach { it() }
-        }
-        return card(
-            label(name, bold = true),
-            label(getString(option.explanation), 14f, color = Palette.muted),
-            row(
-                action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
-                value.apply { textAlignment = View.TEXT_ALIGNMENT_CENTER },
-                action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
-            ),
-        )
     }
 
     private fun cameraLayout(landscape: Boolean = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -612,529 +463,26 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    /** Vision §19 as a gate: the table is marked once everyone's arms are reliably visible. */
-    private fun positionPanel() {
-        chooseWidestLens()
-        visibilityCheck = VisibilityCheck(settings.people)
-        panel!!.apply {
-            addView(title(getString(R.string.position_title)))
-            addView(
-                ImageView(this@MainActivity).apply {
-                    setImageResource(R.drawable.placement)
-                    adjustViewBounds = true
-                    contentDescription = getString(R.string.placement_image)
-                },
-            )
-            addView(label(getString(R.string.position_help)))
-            addView(peopleStepper())
-            lensChips()?.let(::addView)
-            status = label(getString(R.string.people_detected, 0), bold = true).also(::addView)
-            advice = label(getString(R.string.visibility_tips), color = Palette.muted).also(::addView)
-            // Everyone sits down in their own time: start the ten seconds again once all are settled.
-            addView(action(getString(R.string.restart_check)) { restartVisibilityCheck() })
-            addView(
-                action(getString(R.string.mark_table), primary = true) {
-                    if (visibilityCheck?.result()?.passed == true) show(Screen.TABLE)
-                }.apply {
-                    tag = CONTINUE_TAG
-                    isEnabled = false
-                    alpha = 0.5f
-                },
-            )
-            addView(action(getString(R.string.continue_anyway)) { show(Screen.TABLE) })
-            addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
-        }
-    }
-
-    /** People at the table, right where the check needs it; a change restarts the check. */
-    private fun peopleStepper(): View {
-        val name = getString(R.string.option_people)
-
-        fun change(delta: Int) {
-            val people = (settings.people + delta).coerceIn(1, 4)
-            if (people == settings.people) return
-            updateSettings(settings.copy(people = people, seats = if (settings.seats.size == people) settings.seats else emptyList()))
-            show(Screen.POSITION)
-        }
-        // The label sits above the buttons: squeezed between them it would wrap on phones.
-        return column(0).apply {
-            addView(label(getString(R.string.people_count, settings.people), 18f, bold = true))
-            addView(
-                row(
-                    action("−") { change(-1) }.apply { contentDescription = getString(R.string.decrease, name) },
-                    action("+") { change(1) }.apply { contentDescription = getString(R.string.increase, name) },
-                ),
-            )
-        }
-    }
-
-    /** One chip per rear lens (Wide / Main / Tele); switching lens invalidates the table outline. */
-    private fun lensChips(): View? {
-        val lenses = cameraIds()
-        if (lenses.size < 2) return null
-        return row(
-            lenses.map { lens ->
-                action(getString(lens.label), primary = lens.id == settings.camera) { selectLens(lens.id) }.apply {
-                    contentDescription = getString(R.string.lens_choice, getString(lens.label))
-                }
-            },
-        )
-    }
-
-    private fun selectLens(id: String) {
-        if (id == settings.camera) return
-        updateSettings(settings.copy(camera = id, table = null, seats = emptyList(), calibrationAspect = 0.0, calibrationRotation = -1))
-        closeCamera()
-        show(Screen.POSITION)
-    }
-
-    /** A new setup starts on the widest rear lens: from a corner it sees the most of the table. */
-    private fun chooseWidestLens() {
-        if (settings.table != null || settings.camera.isNotEmpty()) return
-        val wide = cameraIds().firstOrNull { it.label == R.string.lens_wide } ?: return
-        updateSettings(settings.copy(camera = wide.id))
-        closeCamera()
-    }
-
-    private fun visibilityAdvice(result: VisibilityCheck.Result): String =
-        when {
-            result.passed -> {
-                getString(R.string.visibility_passed)
-            }
-
-            fps > 0 && fps < SLOW_FPS && result.seconds >= 3 -> {
-                getString(R.string.visibility_slow, fps)
-            }
-
-            else -> {
-                when (result.reason) {
-                    VisibilityCheck.Reason.NOBODY -> {
-                        getString(R.string.visibility_nobody)
-                    }
-
-                    VisibilityCheck.Reason.TOO_FEW -> {
-                        getString(R.string.visibility_too_few, result.detected, settings.people)
-                    }
-
-                    VisibilityCheck.Reason.TOO_MANY -> {
-                        getString(R.string.visibility_too_many, result.detected, settings.people)
-                    }
-
-                    VisibilityCheck.Reason.ARMS_HIDDEN -> {
-                        getString(
-                            R.string.visibility_hidden,
-                            getString(
-                                when (result.hiddenSide) {
-                                    VisibilityCheck.Side.LEFT -> R.string.side_left
-                                    VisibilityCheck.Side.RIGHT -> R.string.side_right
-                                    else -> R.string.side_middle
-                                },
-                            ),
-                        )
-                    }
-
-                    else -> {
-                        getString(R.string.visibility_tips)
-                    }
-                }
-            }
-        }
-
-    /** Discards the evidence so far; the check runs its full ten seconds from now. */
-    private fun restartVisibilityCheck() {
-        visibilityCheck?.reset()
-        status?.text = getString(R.string.people_detected, 0)
-        advice?.text = getString(R.string.visibility_restarted)
-        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
-            isEnabled = false
-            alpha = 0.5f
-        }
-    }
-
-    private fun refreshVisibility(poses: List<Pose>) {
-        val check = visibilityCheck ?: return
-        check.add(poses, lastFrame)
-        val result = check.result()
-        status?.text =
-            getString(
-                R.string.visibility_status,
-                result.detected,
-                settings.people,
-                (result.armsVisible * 100).toInt(),
-                fps,
-                result.seconds,
-            )
-        advice?.update(visibilityAdvice(result))
-        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
-            isEnabled = result.passed
-            alpha = if (result.passed) 1f else 0.5f
-        }
-    }
-
-    private fun tablePanel() {
-        stage!!.table = null
-        stage!!.seats = emptyList()
-        panel!!.apply {
-            addView(title(getString(R.string.table_title)))
-            addView(label(getString(R.string.table_help)))
-            status = label(getString(R.string.table_progress, 0), bold = true).also(::addView)
-            addView(
-                row(
-                    action(getString(R.string.undo)) { edit { taps.removeLastOrNull() } },
-                    action(getString(R.string.reset)) { edit { taps.clear() } },
-                ),
-            )
-            addView(action(getString(R.string.save_table), primary = true) { saveTable() })
-            addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
-        }
-        tapInput { if (taps.size < 4) taps += it }
-    }
-
-    private fun tapInput(onPoint: (Point) -> Unit) {
-        stage!!.onTap = { point ->
-            // Until the first frame the image-to-view mapping is unknown; a tap cannot be placed.
-            if (!cameraReady) status?.text = getString(R.string.waiting_for_image) else edit { onPoint(point) }
-        }
-        stage!!.onRejectedTap = { status?.text = getString(R.string.tap_inside_image) }
-        stage!!.onDrag = { index, point -> edit { taps[index] = point } }
-    }
-
-    private fun edit(change: () -> Unit) {
-        change()
-        stage!!.taps = taps.toList()
-        stage!!.seats = if (screen == Screen.SEATS) seats.toList() else emptyList()
-        status?.text =
-            if (screen == Screen.TABLE) {
-                getString(R.string.table_progress, taps.size)
-            } else {
-                getString(R.string.seats_progress, seats.size, settings.people, taps.size)
-            }
-        stage!!.refresh()
-    }
-
-    private fun saveTable() {
-        // Calibration is stored in image space together with the geometry it depends on.
-        val geometry = frameInfo
-        if (geometry == null) {
-            status?.text = getString(R.string.waiting_for_image)
-            return
-        }
-        val table =
-            try {
-                Polygon(taps.toList())
-            } catch (error: IllegalArgumentException) {
-                status?.text = error.message
-                return
-            }
-        updateSettings(
-            settings.copy(table = table, seats = emptyList(), calibrationAspect = geometry.aspect, calibrationRotation = geometry.rotation),
-        )
-        show(Screen.SEATS)
-    }
-
-    private fun seatsPanel() {
-        seats.clear()
-        panel!!.apply {
-            addView(title(getString(R.string.seats_title)))
-            addView(label(getString(R.string.seats_help, settings.people)))
-            status = label(getString(R.string.seats_progress, 0, settings.people, 0), bold = true).also(::addView)
-            addView(
-                row(
-                    action(getString(R.string.undo)) { edit { taps.removeLastOrNull() } },
-                    action(getString(R.string.add_seat)) { addSeat() },
-                ),
-            )
-            addView(
-                row(
-                    action(getString(R.string.suggest_seats)) { suggestSeats() },
-                    action(getString(R.string.clear_seats)) { edit { seats.clear() } },
-                ),
-            )
-            seatCheck = label("", 15f, color = Palette.muted).also(::addView)
-            addView(action(getString(R.string.finish_setup), primary = true) { finishSetup() })
-            addView(action(getString(R.string.back)) { show(Screen.WELCOME) })
-        }
-        tapInput { if (taps.size < 4 && seats.size < settings.people) taps += it }
-    }
-
-    /** One region per person, proposed from the table edges; the live count shows whether it fits. */
-    private fun suggestSeats() {
-        val table = settings.table ?: return
-        val proposed = SeatProposal.propose(table, settings.people)
-        if (proposed.size < settings.people) {
-            status?.text = getString(R.string.seats_suggest_failed)
-            return
-        }
-        edit {
-            seats.clear()
-            seats += proposed
-            taps.clear()
-        }
-        seatCheck?.text = getString(R.string.seats_suggested)
-    }
-
-    /** Seats only assign people inside them: count who currently falls in exactly one. */
-    private fun refreshSeatCheck(poses: List<Pose>) {
-        if (seats.isEmpty()) return
-        val inside = poses.count { pose -> pose.center()?.let { c -> seats.count { it.contains(c) } == 1 } == true }
-        seatCheck?.update(getString(R.string.seats_inside, inside, settings.people))
-    }
-
-    private fun addSeat() {
-        if (seats.size >= settings.people) {
-            status?.text = getString(R.string.seats_full)
-            return
-        }
-        val seat =
-            try {
-                Polygon(taps.toList())
-            } catch (error: IllegalArgumentException) {
-                status?.text = error.message
-                return
-            }
-        if (seats.any { it.overlaps(seat) }) {
-            taps.clear()
-            stage!!.taps = emptyList()
-            stage!!.refresh()
-            status?.text = getString(R.string.seat_overlap)
-            return
-        }
-        edit {
-            seats += seat
-            taps.clear()
-        }
-    }
-
-    private fun finishSetup() {
-        // Seat regions assign people only inside them: partial regions would leave people unwatched.
-        if (seats.isNotEmpty() && seats.size != settings.people) {
-            status?.text = getString(R.string.seats_incomplete, settings.people)
-            return
-        }
-        updateSettings(settings.copy(seats = seats.toList()))
-        show(Screen.WELCOME)
-    }
-
-    private fun updateSettings(next: Settings) {
+    internal fun updateSettings(next: Settings) {
         settings = next
         store.save(next)
     }
 
-    private fun startMonitoring() {
+    internal fun startMonitoring() {
         notice = null
         meal = MonitorSession(settings, UUID.randomUUID().toString(), clock())
         lastSummary = null
-        diagnosticsOpen = false // adult tools start collapsed in every session
+        monitorScreen.diagnosticsOpen = false // adult tools start collapsed in every session
         speaker.prepare(settings.chime)
         show(Screen.MONITOR)
     }
 
-    private fun monitorPanel() {
-        panel!!.apply {
-            addView(title(getString(R.string.monitor_title)))
-            // Pause, Stop and the adult toggle come first and never move: everything whose size
-            // changes during the meal (status, hints, banner, diagnostics, seats) sits below them,
-            // so a control never shifts under a finger that is about to tap it.
-            addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
-            addView(
-                row(
-                    action(getString(R.string.stop)) { show(Screen.WELCOME) },
-                    action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG },
-                ),
-            )
-            status = label("", 19f, bold = true).also(::addView)
-            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
-            hiddenHint = label("", 15f, bold = true, color = Palette.amber).apply { visibility = View.GONE }.also(::addView)
-            banner =
-                card(
-                    label("", 15f, bold = true, color = Palette.amber),
-                    action(getString(R.string.use_lite)) { switchToLite() },
-                ).apply { visibility = View.GONE }.also(::addView)
-            adult = adultPanel().also(::addView)
-            seatCards = column(0).also(::addView)
-            sessionLine = label("", 15f, color = Palette.muted).also(::addView)
-            addView(label(getString(R.string.volume_pause_hint), 14f, color = Palette.muted))
-        }
-        tick()
-    }
-
-    private fun togglePause() {
-        val current = meal ?: return
-        val sound = current.togglePause(clock())
-        if (!current.active) silence()
-        speaker.play(sound, settings.volume)
-        tick()
-    }
-
-    private fun toggleDiagnostics() {
-        diagnosticsOpen = !diagnosticsOpen
-        tick()
-    }
-
-    /** Renders one [MonitorUiState]; all decisions were made by [MonitorSession]. */
-    private fun render(state: MonitorUiState) {
-        val current = meal ?: return
-        if (screen != Screen.MONITOR || panel == null) return
-        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.update(getString(if (state.paused) R.string.resume else R.string.pause))
-        panel!!.findViewWithTag<TextView>(DIAGNOSTICS_TAG)?.update(
-            getString(if (diagnosticsOpen) R.string.hide_diagnostics else R.string.show_diagnostics),
-        )
-        panel!!.findViewWithTag<View>(RECALIBRATE_TAG)?.visibility =
-            if (state.status == Status.NOBODY_FOR_A_WHILE) View.VISIBLE else View.GONE
-        status?.update(statusText(state))
-        renderSeats(state.seats)
-        renderBanner(state)
-        renderHiddenArm(state)
-        sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
-        renderAdult(current)
-    }
-
-    private fun statusText(state: MonitorUiState): String =
-        when (state.status) {
-            Status.PAUSED -> getString(R.string.paused)
-            Status.GRACE -> getString(R.string.grace, state.countdown)
-            Status.TOO_SLOW -> getString(R.string.too_slow, fps)
-            Status.RESTING -> getString(R.string.snoozed, state.countdown)
-            Status.NOBODY_FOR_A_WHILE -> getString(R.string.nobody_for_a_while)
-            Status.WAITING -> getString(R.string.waiting)
-            Status.SLOW -> getString(R.string.slow_processing, fps)
-            Status.REMINDING -> getString(R.string.warning_text)
-            Status.WATCHING -> getString(R.string.watching)
-        }
-
-    /** A pot, bottle or glass in the way: say which arm, so the table can be rearranged. */
-    private fun renderHiddenArm(state: MonitorUiState) {
-        hiddenHint?.apply {
-            val arm = state.hiddenArm
-            visibility = if (arm == null) View.GONE else View.VISIBLE
-            if (arm != null) {
-                update(
-                    getString(
-                        R.string.hidden_arm,
-                        getString(SEAT_COLOURS.getOrElse(arm.first - 1) { R.string.seat_colour_1 }),
-                        getString(if (arm.second) R.string.arm_left else R.string.arm_right),
-                    ),
-                )
-            }
-        }
-    }
-
-    /** Adult tools: diagnostics readout and the training controls. */
-    private fun renderAdult(current: MonitorSession) {
-        adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
-        if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))
-        adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
-        adult?.findViewWithTag<TextView>(SEAT_TAG)?.update(getString(R.string.training_seat, trainingSeat))
-        adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
-    }
-
-    /**
-     * A warm or slow phone gets an explanation and a one-tap switch to the lighter model;
-     * only offered while the Full model runs.
-     */
-    private fun renderBanner(state: MonitorUiState) {
-        val card = banner ?: return
-        val warm = thermalStatus() >= PowerManager.THERMAL_STATUS_MODERATE
-        val slow = state.status == Status.SLOW || state.status == Status.TOO_SLOW
-        val show = settings.model == PoseModel.FULL && !state.paused && (warm || slow)
-        card.visibility = if (show) View.VISIBLE else View.GONE
-        val message = card.getChildAt(0) as TextView
-        if (show) message.update(if (warm) getString(R.string.banner_warm) else getString(R.string.banner_slow, fps))
-    }
-
-    /** Restarts inference with the Lite model; the meal and its calibration continue. */
-    private fun switchToLite() {
-        updateSettings(settings.copy(model = PoseModel.LITE))
-        closeCamera()
-        openCamera()
-        tick()
-    }
-
-    private fun clockText(seconds: Long) = "%d:%02d".format(seconds / 60, seconds % 60)
-
-    /** Adult-only tools, collapsed by default: diagnostics, feedback, explicit training. */
-    private fun adultPanel(): LinearLayout =
-        column(0).apply {
-            diagnosticsText = label("", 14f, color = Palette.muted).also(::addView)
-            addView(
-                row(
-                    action(getString(R.string.false_alarm)) { feedback("FALSE_ALARM") },
-                    action(getString(R.string.missed_violation)) { feedback("MISSED_VIOLATION") },
-                ),
-            )
-            addView(action(getString(R.string.training_off)) { toggleTraining() }.apply { tag = TRAINING_TAG })
-            addView(
-                column(0).apply {
-                    tag = LABELS_TAG
-                    addView(label(getString(R.string.training_help), 14f, color = Palette.muted))
-                    addView(
-                        action(getString(R.string.training_seat, 1)) {
-                            trainingSeat = trainingSeat % settings.people + 1
-                            tick()
-                        }.apply { tag = SEAT_TAG },
-                    )
-                    addView(
-                        row(
-                            action(getString(R.string.label_normal)) { labelEvent("NORMAL") },
-                            action(getString(R.string.label_left)) { labelEvent("LEFT") },
-                        ),
-                    )
-                    addView(
-                        row(
-                            action(getString(R.string.label_right)) { labelEvent("RIGHT") },
-                            action(getString(R.string.label_both)) { labelEvent("BOTH") },
-                        ),
-                    )
-                },
-            )
-            trainingStatus = label("", 15f, bold = true).also(::addView)
-        }
-
-    /** Training mode records this session's landmarks (never images) into a local log. */
-    private fun toggleTraining() {
-        training = !training
-        if (training) {
-            recorder =
-                try {
-                    SessionRecorder(sessionsDir, meal?.id ?: UUID.randomUUID().toString(), BuildConfig.VERSION_NAME, settings)
-                } catch (error: IllegalStateException) {
-                    training = false
-                    trainingStatus?.text = getString(R.string.storage_failed, error.message)
-                    null
-                }
-        } else {
-            closeRecorder()
-        }
-        tick()
-    }
-
-    private fun closeRecorder() {
+    internal fun closeRecorder() {
         recorder?.close()
         recorder = null
     }
 
-    private fun feedback(label: String) {
-        val current = meal ?: return
-        val now = clock()
-        if (label == "FALSE_ALARM") {
-            // The adult corrected a wrong reminder: stop it now and give the table a short rest.
-            silence()
-            speaker.play(current.falseAlarm(now), settings.volume)
-        } else {
-            current.missedViolation()
-        }
-        recorder?.label(SessionLog.label(now, label, 0))
-        persist(listOf(sampleRecord(current.id, now, label, current.monitor.results, 0)), label)
-        tick()
-    }
-
-    private fun labelEvent(label: String) {
-        val log = recorder ?: return
-        log.label(SessionLog.label(clock(), label, trainingSeat))
-        trainingStatus?.text = getString(if (log.full) R.string.log_full else R.string.labelled, label, trainingSeat)
-    }
-
-    private fun persist(
+    internal fun persist(
         records: List<JSONObject>,
         label: String,
     ): Boolean =
@@ -1147,167 +495,12 @@ class MainActivity : ComponentActivity() {
             false
         }
 
-    private fun dataPage(): View =
-        column().apply {
-            addView(title(getString(R.string.data_title)))
-            addView(label(getString(R.string.data_help)))
-            val count = store.records().length()
-            store.notice?.let { addView(card(label(it, color = Palette.red))) }
-            notice?.let { addView(label(it, bold = true)) }
-            addView(label(getString(R.string.data_count, count), 19f, bold = true))
-            addView(action(getString(R.string.export)) { exporter.launch("fork-around-samples.json") })
-            val logs = SessionFiles.list(sessionsDir)
-            addView(label(getString(R.string.session_logs, logs.size, SessionFiles.totalBytes(sessionsDir) / 1024), 19f, bold = true))
-            for (log in logs) {
-                addView(
-                    card(
-                        label(getString(R.string.session_entry, log.name, log.length() / 1024)),
-                        row(
-                            action(getString(R.string.export_log)) {
-                                exportLog = log
-                                logExporter.launch(log.name)
-                            },
-                            action(getString(R.string.delete_log)) {
-                                confirm(R.string.delete_log_confirm) {
-                                    log.delete()
-                                    notice = getString(R.string.deleted_log)
-                                }
-                            },
-                        ),
-                    ),
-                )
-            }
-            addView(
-                action(getString(R.string.delete)) {
-                    confirm(R.string.delete_confirm) {
-                        store.delete()
-                        SessionFiles.deleteAll(sessionsDir)
-                        notice = getString(R.string.deleted)
-                    }
-                },
-            )
-            addView(action(getString(R.string.back), primary = true) { begin(Screen.WELCOME) })
-        }
-
-    /**
-     * Who made it, the GPL's "appropriate legal notices" (copyright, no warranty, how to read the
-     * licence), the source of this exact version, and every bundled component with its licence.
-     */
-    private fun aboutPage(): View =
-        column().apply {
-            addView(title(getString(R.string.about)))
-            addView(label(getString(R.string.about_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE), 19f, bold = true))
-            addView(
-                card(
-                    label(getString(R.string.about_author), bold = true),
-                    label(getString(R.string.about_copyright)),
-                    label(getString(R.string.about_license), 15f),
-                    action(getString(R.string.read_gpl)) { showText(getString(R.string.gpl_title), licenseAsset(LICENSE_TEXTS.first())) },
-                ),
-            )
-            addView(
-                card(
-                    label(getString(R.string.about_source_version, "$SOURCE_URL/tree/v${BuildConfig.VERSION_NAME}"), 15f).apply {
-                        autoLinkMask = Linkify.WEB_URLS
-                    },
-                    label(getString(R.string.welcome_privacy), 15f),
-                ),
-            )
-            val components = thirdParty(this@MainActivity)
-            addView(label(getString(R.string.third_party_title, components.size), 20f, bold = true, color = Palette.green))
-            addView(label(getString(R.string.third_party_help), 15f, color = Palette.muted))
-            for (component in components) addView(componentEntry(component))
-            addView(label(getString(R.string.license_texts_title), 20f, bold = true, color = Palette.green))
-            for (id in LICENSE_TEXTS.drop(1)) addView(action(getString(R.string.read_license, id)) { showText(id, licenseAsset(id)) })
-            addView(label(getString(R.string.welcome_limits), color = Palette.muted))
-            addView(action(getString(R.string.back), primary = true) { show(Screen.WELCOME) })
-        }
-
-    private fun componentEntry(component: it.marcelpetrick.fork.ui.ThirdPartyComponent): View =
-        column(0).apply {
-            addView(label(getString(R.string.third_party_entry, component.name, component.version, component.license), 15f, bold = true))
-            addView(label("${component.group} · ${component.url}", 13f, color = Palette.muted).apply { autoLinkMask = Linkify.WEB_URLS })
-            component.notice?.let { notice ->
-                addView(action(getString(R.string.read_notice, component.name)) { showText(component.name, notice) })
-            }
-        }
-
-    private var textTitle = ""
-    private var textAsset = ""
-    private var textPage = 0
-
-    /** Shows a licence or notice text from the assets; Back returns to About. */
-    private fun showText(
-        title: String,
-        asset: String,
-    ) {
-        textTitle = title
-        textAsset = asset
-        textPage = 0
-        show(Screen.TEXT)
-    }
-
-    /** Long notices (MediaPipe's lists 187 native libraries) are shown in pages, not at once. */
-    private fun textPage(): View =
-        column().apply {
-            val pages = asset(textAsset).chunked(TEXT_PAGE_CHARS)
-            addView(title(textTitle))
-            if (pages.size > 1) addView(label(getString(R.string.text_page, textPage + 1, pages.size), 15f, bold = true))
-            addView(label(pages[textPage], 13f).apply { typeface = android.graphics.Typeface.MONOSPACE })
-            if (pages.size > 1) {
-                addView(
-                    row(
-                        action(getString(R.string.previous_page)) { turnPage(-1, pages.size) },
-                        action(getString(R.string.next_page)) { turnPage(1, pages.size) },
-                    ),
-                )
-            }
-            addView(action(getString(R.string.back), primary = true) { show(Screen.ABOUT) })
-        }
-
-    private fun turnPage(
-        delta: Int,
-        pages: Int,
-    ) {
-        textPage = (textPage + delta).coerceIn(0, pages - 1)
-        show(Screen.TEXT)
-    }
-
-    private fun confirm(
-        message: Int,
-        action: () -> Unit,
-    ) {
-        AlertDialog
-            .Builder(this)
-            .setMessage(message)
-            .setPositiveButton(R.string.delete) { _, _ ->
-                action()
-                show(Screen.DATA)
-            }.setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    @Suppress("TooGenericExceptionCaught") // any provider or I/O failure becomes a message on the Data screen
-    private fun exportTo(
-        uri: Uri,
-        write: (OutputStream) -> Unit,
-    ) {
-        notice =
-            try {
-                contentResolver.openOutputStream(uri, "wt")!!.use(write)
-                getString(R.string.exported)
-            } catch (error: Exception) {
-                getString(R.string.export_failed, error.message)
-            }
-        show(Screen.DATA)
-    }
-
     /**
      * One card per seat in its identity colour, with a words-and-colour chip per elbow.
      * Cards are built once and updated in place only when a state changes: rebuilding views
      * ten times a second would waste the main thread and flood accessibility services.
      */
-    private fun renderSeats(results: List<SeatResult>) {
+    internal fun renderSeats(results: List<SeatResult>) {
         val container = seatCards ?: return
         val shown = results.map { Triple(it.pose != null, it.left.state, it.right.state) }
         if (container.tag == shown) return
@@ -1347,51 +540,6 @@ class MainActivity : ComponentActivity() {
             },
         )
 
-    private fun diagnostics(active: Monitor): String {
-        val confidence = if (active.confidenceCount == 0) 0.0 else active.confidenceTotal / active.confidenceCount
-        val sorted = latencies.sorted()
-
-        fun percentile(p: Int) = if (sorted.isEmpty()) 0L else sorted[(sorted.size - 1) * p / 100]
-        val header =
-            getString(
-                R.string.diagnostics,
-                fps,
-                percentile(50),
-                percentile(95),
-                source?.dropped ?: 0L,
-                "${settings.model.name} · ${source?.processor?.name ?: settings.processor.name}",
-                thermal(),
-                getSystemService(BatteryManager::class.java)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 0,
-                active.violations,
-                confidence,
-            )
-        val arms =
-            active.results.flatMap { seat ->
-                listOf(getString(R.string.left) to seat.left, getString(R.string.right) to seat.right).map { (side, arm) ->
-                    armLine(seat.seat, side, arm)
-                }
-            }
-        return (listOf(header) + arms).joinToString("\n")
-    }
-
-    private fun armLine(
-        seat: Int,
-        side: String,
-        arm: ArmResult,
-    ): String {
-        val none = getString(R.string.none)
-
-        fun Double?.fmt(pattern: String) = this?.let { String.format(resources.configuration.locales[0], pattern, it) } ?: none
-        return getString(
-            R.string.arm_score,
-            seat,
-            side,
-            arm.score.fmt("%.2f"),
-            arm.features?.elbowDistance.fmt("%.2f"),
-            arm.features?.elbowAngle.fmt("%.0f°"),
-        )
-    }
-
     private fun startDemo() {
         val frame = FrameLayout(this)
         val overlay = StageView(this).also { it.clock = clock }.apply { synthetic = true }
@@ -1424,7 +572,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Watchdog: runs even without camera callbacks, so stale evidence expires and silences. */
-    private fun tick() {
+    internal fun tick() {
         val view = stage ?: return
         if (screen == Screen.DEMO) demoTick(view) else mealTick(view)
     }
@@ -1459,12 +607,12 @@ class MainActivity : ComponentActivity() {
         view.thanks = state.thanks
         view.dimmed = state.paused
         speaker.play(state.sound, settings.volume)
-        render(state)
+        with(monitorScreen) { render(state) }
         view.refresh()
         schedule()
     }
 
-    private fun onFrame(
+    internal fun onFrame(
         poses: List<Pose>,
         time: Long,
         info: FrameInfo,
@@ -1485,8 +633,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        if (screen == Screen.POSITION) refreshVisibility(poses)
-        if (screen == Screen.SEATS) refreshSeatCheck(poses)
+        if (screen == Screen.POSITION) with(setupScreen) { refreshVisibility(poses) }
+        if (screen == Screen.SEATS) with(setupScreen) { refreshSeatCheck(poses) }
         stage?.refresh()
     }
 
@@ -1507,13 +655,13 @@ class MainActivity : ComponentActivity() {
     /** The pose limit the open source was built with (the engine cannot change it later). */
     private var sourceLimit = 0
 
-    private fun openCamera() {
+    internal fun openCamera() {
         val view = preview ?: return
         sourceLimit = poseLimit(screen)
         source = sourceFactory(view, settings.copy(people = sourceLimit), ::onFrame, ::onCameraError).also { it.start() }
     }
 
-    private fun closeCamera() {
+    internal fun closeCamera() {
         source?.close()
         source = null
         frameInfo = null
@@ -1523,7 +671,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Clears every warning from the screen and stops any sound immediately. */
-    private fun silence() {
+    internal fun silence() {
         stage?.warning = VisualMode.OFF
         stage?.reminder = null
         stage?.thanks = false
@@ -1538,7 +686,7 @@ class MainActivity : ComponentActivity() {
         silence()
         meal = null
         closeRecorder()
-        training = false
+        monitorScreen.training = false
         val summary = current.summary(now)
         if (summary.activeSeconds > 0) lastSummary = summary
         if (settings.statistics && summary.activeSeconds > 0) {
@@ -1559,7 +707,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Thermal throttling explains slow processing on a phone that has run for a whole meal. */
-    private fun thermal(): String = thermalLabel(thermalStatus())
+    internal fun thermal(): String = thermalLabel(thermalStatus())
 
     private fun backCameras(): List<Lens> =
         try {

@@ -3,14 +3,18 @@
 # detekt rules on top of the default configuration (buildUponDefaultConfig). Every deviation
 # from the defaults is listed here with its reason; findings fail the pipeline.
 style:
+  # ktlint 1.x no longer removes unused imports; detekt reports them instead.
+  UnusedImports:
+    active: true
   MaxLineLength:
     # One line length for the whole project: ktlint's 140 columns.
     maxLineLength: 140
     excludeCommentStatements: true
   MagicNumber:
-    # Drawing code (dp, alpha, angles), the scripted synthetic demo and tests read better with
-    # inline literals; everywhere else numbers are named or come from declarations/enums.
-    excludes: ["**/test/**", "**/testFixtures/**", "**/androidTest/**", "**/ui/**", "**/demo/**", "**/MainActivity.kt"]
+    # Drawing and layout code (dp, sp, alpha, angles: ui/ and the *Screen/activity view
+    # builders), the scripted synthetic demo and tests read better with inline literals;
+    # everywhere else numbers are named or come from declarations/enums.
+    excludes: ["**/test/**", "**/testFixtures/**", "**/androidTest/**", "**/ui/**", "**/demo/**", "**/*Screen.kt", "**/MainActivity.kt"]
     ignorePropertyDeclaration: true
     ignoreEnums: true
     ignoreRanges: true
@@ -24,12 +28,13 @@ complexity:
   LongMethod:
     excludes: ["**/test/**", "**/androidTest/**"]
   LargeClass:
-    # MainActivity is the single-activity UI (all screens); splitting it into screen classes
-    # is tracked in plan.md (backlog). Every other class stays within the default.
-    excludes: ["**/test/**", "**/androidTest/**", "**/MainActivity.kt"]
+    excludes: ["**/test/**", "**/androidTest/**"]
   TooManyFunctions:
     excludes: ["**/test/**", "**/androidTest/**"]
     ignorePrivate: true
+    # Framework callbacks are not a design choice; the activity is the host API of six screens.
+    ignoreOverridden: true
+    thresholdInClasses: 15
   LongParameterList:
     # Constructors take injectable test seams with defaults; those are not "long" for callers.
     ignoreDefaultParameters: true
