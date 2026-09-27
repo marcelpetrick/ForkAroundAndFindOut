@@ -158,7 +158,8 @@ Release APKs are arm64-only and signed with the project key when it is configure
 | Robolectric | `./gradlew :app:testDebugUnitTest` | every screen flow, calibration, alarms, pause, stale data, permissions, storage, export, German locale, privacy guard |
 | Coverage | `./gradlew :app:koverHtmlReportAll` | merged over all modules; gate ≥ 95 % lines (currently 98 %) |
 | End-to-end | `scripts/emulator.sh && ./gradlew :app:connectedDebugAndroidTest` | real MediaPipe models offline (CPU, and a GPU request with fallback), UI flows with real touches on the emulator camera; verified on API 34 and API 36 |
-| Docker | `scripts/docker-smoke.sh` | image serves APK with correct type and checksum, license, notices |
+| Lint suite | `scripts/lint.sh` | REUSE/SPDX, Python, YAML, XML, Dockerfiles, workflows, Markdown (pinned containers) |
+| Docker | `scripts/docker-smoke.sh` | image serves APK with correct type and checksum, SBOM, licences, notices, source link |
 
 ## Pipeline and CI
 

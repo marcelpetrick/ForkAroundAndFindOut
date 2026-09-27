@@ -135,18 +135,18 @@ public release". Review range bb33681..77e41f5 (everything since the previous re
 - [ ] R6-1 (medium, architecture) `MainActivity` is 1600 lines and 143 members with detekt's
   LargeClass/MagicNumber off for it — extract the screens (setup, monitor, settings, data,
   About) into classes behind a small host interface and drop the exclusions (closes L9).
-- [ ] R6-2 (medium, code) `scripts/sbom.py` passes unknown POM licence names through as free
+- [x] R6-2 (medium, code) `scripts/sbom.py` passes unknown POM licence names through as free
   text (invalid SPDX) and enforces no GPLv3-compatible allowlist — map, allowlist, fail.
 - [ ] R6-3 (medium, docs) `docs/ux.md` contradicts the shipped monitor layout and misses the
   newer setup, settings and About behaviour — rewrite to match.
-- [ ] R6-4 (low) the About text claims all licences are GPL-compatible while
+- [x] R6-4 (low) the About text claims all licences are GPL-compatible while
   `docs/licensing.md` records an open question — limit the claim (en, de).
-- [ ] R6-5 (low) Docker staging needs the SBOM, so a standalone `docker-smoke.sh` fails on a
+- [x] R6-5 (low) Docker staging needs the SBOM, so a standalone `docker-smoke.sh` fails on a
   fresh clone; `docs/scripts.md` lists old pipeline stages — generate when missing, fix docs.
-- [ ] R6-6 (low) `sbom.py notices` may reuse a stale SBOM — always rebuild first.
-- [ ] R6-7 (low) `docs/data.md` header example lacks `holdMs` and its replay rule.
-- [ ] R6-8 (low) `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` can drift — identity check.
-- [ ] R6-9 (low) `plan.md` "Validation boundaries" is stale — rewrite.
+- [x] R6-6 (low) `sbom.py notices` may reuse a stale SBOM — always rebuild first.
+- [x] R6-7 (low) `docs/data.md` header example lacks `holdMs` and its replay rule.
+- [x] R6-8 (low) `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` can drift — identity check.
+- [x] R6-9 (low) `plan.md` "Validation boundaries" is stale — rewrite.
 - [ ] R6-10 full pipeline, green CI, public release; APK URL to the owner.
 
 ## Owner input log
@@ -283,10 +283,12 @@ covered by automated tests; physical-world outcomes are listed separately and ho
 
 ## Validation boundaries
 
-The host has Flutter 3.47.1/Dart 3.13.1, Android SDKs, Java, Docker and authenticated
-GitHub access. No Android device is attached. Tests can prove deterministic software
-behavior; real meal false-alarm rate, sustained-contact sensitivity and on-device FPS
-require consented physical sessions and must not be fabricated.
+The host has Java 21, the Android SDK with the `ForkApi34` and `ForkApi36` emulators, Docker
+and authenticated GitHub access; CI runs the same pipeline on an API 34 emulator. No physical
+phone is attached. Evidence so far is unit, Robolectric, emulator end-to-end (emulated rear
+camera, real MediaPipe models) and Docker; it proves deterministic software behaviour. Real
+meal false-alarm rate, sustained-contact sensitivity, on-device FPS, thermal behaviour and GPU
+speed require consented physical sessions on a phone and must not be fabricated.
 
 ## Commit ledger
 
@@ -1084,3 +1086,18 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: `/reviewBranch` over bb33681..77e41f5 → nine findings R6-1…R6-9 (three medium, six
   low) recorded above with the release as R6-10; owner input logged.
 - Validation: documentation only; whitespace, link and markdown checks.
+
+### 0.13.53 — fix: enforce GPL-compatible licences in the SBOM and correct the review's small findings
+
+- R6-2: `scripts/sbom.py` maps POM licence names strictly (unknown name → build fails) and
+  checks every component against a GPLv3-compatible allowlist (`ALLOWED`); verified with an
+  unknown name and EPL-1.0 (both rejected) and the MIT choice for checker-compat-qual.
+- R6-6: `notices` always rebuilds the SBOM first.
+- R6-4: the About text limits its claim to the declared licences and points to the review.
+- R6-5: `docker-dist.sh` builds the SBOM when missing (standalone `docker-smoke.sh` verified
+  after deleting `build/sbom`); `docs/scripts.md` lists the current stages; README testing
+  table gains the lint suite and the fuller Docker checks.
+- R6-7: `docs/data.md` shows `holdMs` and the replay rule. R6-8: `scripts/lint.sh` fails when
+  `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` differ. R6-9: validation boundaries rewritten.
+- Validation: reuse, ruff, markdownlint, ShellCheck, Robolectric tests, Android lint, SBOM
+  check, Docker smoke test.

@@ -8,8 +8,9 @@ scripts/sbom.py build [OUT]     read the Gradle CycloneDX SBOM of the release ru
                                 add the bundled MediaPipe models, normalise licence choices and
                                 write the release SBOM (default build/sbom/<name>-<version>.cdx.json)
 scripts/sbom.py notices [--check]
-                                write app/src/main/assets/third_party.json (read by the About
-                                screen) from that SBOM; --check fails when the checked-in list
+                                rebuild the release SBOM, then write
+                                app/src/main/assets/third_party.json (read by the About
+                                screen) from it; --check fails when the checked-in list
                                 differs, so the screen can never drift from what is shipped
 """
 
@@ -25,11 +26,33 @@ MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/{0}
 MODEL_CARD = "https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf"
 # Dual-licensed components: the licence this project uses them under (GPLv3-compatible).
 CHOICES = {"org.checkerframework:checker-compat-qual": "MIT"}
-# Licence names some POMs use instead of SPDX ids.
+# Licence names some POMs use instead of SPDX ids. An unknown name stops the build: map it here
+# after checking what it is, rather than letting free text into the SBOM and the About screen.
 NAMES = {
     "The Apache Software License, Version 2.0": "Apache-2.0",
+    "Apache License, Version 2.0": "Apache-2.0",
+    "Apache 2.0": "Apache-2.0",
     "The MIT License": "MIT",
+    "MIT License": "MIT",
     "BSD-3-Clause": "BSD-3-Clause",
+    "The 3-Clause BSD License": "BSD-3-Clause",
+    "BSD-2-Clause": "BSD-2-Clause",
+}
+# Licences this GPL-3.0-or-later app may bundle (compatible with GPLv3). Anything else fails the
+# build until it has been reviewed (docs/licensing.md) and, if compatible, added here.
+ALLOWED = {
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "MIT",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-or-later",
+    "GPL-3.0-or-later",
+    "CC0-1.0",
 }
 # Where the notices a licence asks to pass on (Apache NOTICE, BSD/MIT copyright) are shown in the app.
 NOTICE_FILES = {
@@ -53,10 +76,22 @@ def spdx(component: dict) -> str:
     ids = []
     for entry in component.get("licenses", []):
         lic = entry.get("license", {})
-        ids.append(lic.get("id") or NAMES.get(lic.get("name", ""), lic.get("name", "")) or entry.get("expression", ""))
+        name = lic.get("name")
+        if name is not None and name not in NAMES:
+            raise SystemExit(f"Unknown licence name {name!r} for {key}; review it and map it in scripts/sbom.py")
+        ids.append(lic.get("id") or NAMES.get(name or "", "") or entry.get("expression", ""))
     if not ids:
         raise SystemExit(f"No licence for {key}; add it to scripts/sbom.py before shipping it")
     return " AND ".join(sorted(set(ids)))
+
+
+def allowed(key: str, expression: str) -> str:
+    """The expression, if every licence in it is on the GPLv3-compatible allowlist."""
+    parts = {part.strip() for part in expression.replace("(", " ").replace(")", " ").split(" AND ")}
+    bad = sorted(part for part in parts if part not in ALLOWED)
+    if bad:
+        raise SystemExit(f"{key} is licensed {expression!r}: {', '.join(bad)} not allowed for a GPLv3 app")
+    return expression
 
 
 def model(name: str, sha256: str) -> dict:
@@ -94,7 +129,7 @@ def build(out: Path) -> Path:
         if component.get("group") == "it.marcelpetrick.fork":
             component["licenses"] = [{"license": {"id": "GPL-3.0-or-later"}}]
             continue
-        chosen = spdx(component)
+        chosen = allowed(f"{component.get('group', '')}:{component['name']}", spdx(component))
         declared = " AND ".join(sorted({lic.get("license", {}).get("id", "") for lic in component.get("licenses", [])}))
         if chosen != declared:
             component["licenses"] = [{"expression": chosen}]
@@ -133,7 +168,8 @@ def main(args: list[str]) -> int:
         print(f"Wrote {out}")
         return 0
     if args[:1] == ["notices"]:
-        source = default if default.is_file() else build(default)
+        # Always rebuilt from the Gradle SBOM, so a dependency change is never checked against stale data.
+        source = build(default)
         text = notices(json.loads(source.read_text(encoding="utf-8")))
         if args[1:] == ["--check"]:
             if not NOTICES.is_file() or NOTICES.read_text(encoding="utf-8") != text:

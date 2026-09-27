@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Marcel Petrick
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Run every non-Gradle linter through pinned container images (reproducible locally and in CI):
-#   reuse (REUSE 3.x / SPDX), ruff check + format (Python), yamllint (YAML), xmllint (XML/SVG),
+#   reuse (REUSE 3.x / SPDX, and LICENSE = LICENSES/GPL-3.0-or-later.txt), ruff check + format (Python), yamllint (YAML), xmllint (XML/SVG),
 #   hadolint (Dockerfiles), actionlint (GitHub workflows), markdownlint-cli2 (Markdown).
 # Kotlin is linted by Gradle (ktlint via Spotless, detekt, Android lint); shell by ShellCheck.
 # Usage: scripts/lint.sh [TOOL...]   (default: all; e.g. scripts/lint.sh reuse ruff)
@@ -17,7 +17,11 @@ MARKDOWNLINT="davidanson/markdownlint-cli2:v0.23.3@sha256:d5f3f3f04b2e285dcbcdcd
 toolbox() { docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "${PWD}:/work" -w /work "${LINT_IMAGE}" "$@"; }
 
 # Quiet when compliant; the full report (which files, which tags) when not.
-lint_reuse() { toolbox reuse lint --quiet || { toolbox reuse lint; return 1; }; }
+lint_reuse() {
+    # LICENSE (for GitHub) and LICENSES/GPL-3.0-or-later.txt (REUSE, shipped in the APK) must not drift.
+    cmp -s LICENSE LICENSES/GPL-3.0-or-later.txt || { echo "LICENSE differs from LICENSES/GPL-3.0-or-later.txt" >&2; return 1; }
+    toolbox reuse lint --quiet || { toolbox reuse lint; return 1; }
+}
 lint_ruff() { toolbox ruff check scripts && toolbox ruff format --check scripts; }
 lint_yaml() { toolbox yamllint --strict .github .yamllint.yaml .markdownlint-cli2.yaml; }
 lint_xml() {

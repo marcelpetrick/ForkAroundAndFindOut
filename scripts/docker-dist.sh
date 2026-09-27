@@ -26,7 +26,11 @@ cp "${apk}" "${out}/site/${name}"
 (cd "${out}/site" && sha256sum "${name}" > "${name}.sha256")
 sha="$(cut -d' ' -f1 "${out}/site/${name}.sha256")"
 sbom="build/sbom/fork-around-and-find-out-${version}.cdx.json"
-[[ -f "${sbom}" ]] || { echo "SBOM not found: ${sbom}. Run scripts/sbom.py build first." >&2; exit 1; }
+if [[ ! -f "${sbom}" ]]; then
+    # Standalone use (scripts/docker-smoke.sh on a fresh clone): build the SBOM first.
+    ./gradlew --console=plain -q :app:cyclonedxDirectBom
+    python3 scripts/sbom.py build
+fi
 cp "${sbom}" "${out}/site/"
 cp LICENSE "${out}/site/LICENSE.txt"
 mkdir -p "${out}/site/licenses"

@@ -23,11 +23,15 @@ analysis image (the app's single coordinate system).
 ```json
 {"type":"header","schema":1,"session":"…","app":"<version>","model":"FULL","people":4,
  "aspect":0.5625,"rotation":90,"table":[[x,y]×4],"seats":[[[x,y]×4]…],
- "timing":{"trigger":0.75,"clear":0.35,"triggerMs":1000,"clearMs":500,"cooldownMs":1500,"maxGapMs":500},
+ "timing":{"trigger":0.75,"clear":0.35,"triggerMs":1000,"clearMs":500,"cooldownMs":1500,"maxGapMs":500,"holdMs":600},
  "imageRecorded":false}
 {"type":"frame","t":123456,"aspect":0.5625,"poses":[[x,y,c × 33]…],"arms":[[seat,"L"|"R","STATE",score|null]…]}
 {"type":"label","t":123500,"label":"NORMAL|LEFT|RIGHT|BOTH|FALSE_ALARM|MISSED_VIOLATION","seat":1}
 ```
+
+`holdMs` (since 0.12.47) is how long a running reminder survived hidden joints when the log
+was recorded. Logs without it were decided without a hold and replay with `holdMs` 0, so live
+and replayed decisions stay identical; `replay --hold-ms` overrides it for experiments.
 
 `t` is the capture time in milliseconds of the phone's uptime clock; `arms` are the states
 the phone computed live. Landmarks rather than derived features are stored so that any

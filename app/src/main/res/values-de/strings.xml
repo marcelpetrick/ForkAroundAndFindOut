@@ -233,7 +233,7 @@
     <string name="gpl_title">GNU General Public License v3</string>
     <string name="about_source_version">Vollständiger Quellcode dieser Version: %1$s</string>
     <string name="third_party_title">Komponenten Dritter (%1$d)</string>
-    <string name="third_party_help">Alles, was diese App enthält, laut ihrer Software-Stückliste (SBOM). Alle Lizenzen sind mit der GPL v3 vereinbar.</string>
+    <string name="third_party_help">Alles, was diese App enthält, laut ihrer Software-Stückliste (SBOM). Die angegebenen Lizenzen (Apache-2.0, BSD-3-Clause, MIT) sind mit der GPL v3 vereinbar; die Prüfung der Hinweise zu MediaPipes nativen Bibliotheken steht in docs/licensing.md im Quellcode.</string>
     <string name="third_party_entry">%1$s %2$s · %3$s</string>
     <string name="read_notice">Hinweise zu %1$s</string>
     <string name="read_license">Lizenz %1$s lesen</string>
