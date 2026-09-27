@@ -1204,3 +1204,9 @@ is empty; the same method was applied to the session range instead. Findings fix
   effect of fewer redraws and allocations is not measured (needs a device).
 - Validation: all tests incl. the new invalidation test, detekt, Android lint; full local
   pipeline green in 4 min 20 s including e2e and Docker, with the configuration cache on.
+
+### 0.13.60 — chore(release): public release v0.13.60 (plan v7)
+
+- Gate: performance work P1–P11 done (0.13.59), full local pipeline green, committed tree
+  re-validated from a clean clone; release notes for 0.13.60.
+- Release: tag `v0.13.60` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
