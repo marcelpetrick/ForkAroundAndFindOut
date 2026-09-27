@@ -1101,3 +1101,10 @@ is empty; the same method was applied to the session range instead. Findings fix
   `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` differ. R6-9: validation boundaries rewritten.
 - Validation: reuse, ruff, markdownlint, ShellCheck, Robolectric tests, Android lint, SBOM
   check, Docker smoke test.
+
+### 0.13.54 — fix(ui): escape the apostrophe in the About licence note
+
+- Cause: 0.13.53 (7b3db51) added "MediaPipe's" unescaped to an Android string resource, which
+  breaks resource compilation; the commit was pushed because the command chain did not gate
+  on the Gradle exit code (its CI run is red). Fixed; the Gradle result now gates every commit.
+- Validation: Robolectric tests and Android lint pass (exit 0).

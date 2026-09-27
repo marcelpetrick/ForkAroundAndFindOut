@@ -239,7 +239,7 @@
     <string name="gpl_title">GNU General Public License v3</string>
     <string name="about_source_version">Complete source code of this version: %1$s</string>
     <string name="third_party_title">Third-party components (%1$d)</string>
-    <string name="third_party_help">Everything bundled in this app, from its software bill of materials (SBOM). Their declared licences (Apache-2.0, BSD-3-Clause, MIT) are compatible with the GPL v3; the review of MediaPipe's native-library notices is in docs/licensing.md in the source.</string>
+    <string name="third_party_help">Everything bundled in this app, from its software bill of materials (SBOM). Their declared licences (Apache-2.0, BSD-3-Clause, MIT) are compatible with the GPL v3; the review of MediaPipe\'s native-library notices is in docs/licensing.md in the source.</string>
     <string name="third_party_entry">%1$s %2$s · %3$s</string>
     <string name="read_notice">Notices of %1$s</string>
     <string name="read_license">Read the %1$s licence</string>
