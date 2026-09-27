@@ -1131,3 +1131,8 @@ is empty; the same method was applied to the session range instead. Findings fix
   0.13.55; committed tree re-validated from a fresh clone (REUSE, whitespace); release notes
   for 0.13.56. UI unchanged since the 0.13.51 screenshots.
 - Release: tag `v0.13.56` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
+
+### 0.13.57 — docs(release): name the right source tag in the release notes
+
+- 0.13.56's notes still pointed at tag `v0.13.51` for the source; corrected, and the release
+  moves to v0.13.57 (every commit bumps the version; `main` is never rewritten).
