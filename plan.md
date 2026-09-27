@@ -147,7 +147,7 @@ public release". Review range bb33681..77e41f5 (everything since the previous re
 - [x] R6-7 (low) `docs/data.md` header example lacks `holdMs` and its replay rule.
 - [x] R6-8 (low) `LICENSE` and `LICENSES/GPL-3.0-or-later.txt` can drift — identity check.
 - [x] R6-9 (low) `plan.md` "Validation boundaries" is stale — rewrite.
-- [ ] R6-10 full pipeline, green CI, public release; APK URL to the owner.
+- [x] R6-10 full pipeline, green CI, public release; APK URL to the owner.
 
 ## Owner input log
 
@@ -1124,3 +1124,10 @@ is empty; the same method was applied to the session range instead. Findings fix
   architecture and C4 docs name the screen classes.
 - Validation: all JVM/Robolectric tests, Android lint, detekt 0, coverage 97.6 %; full local
   pipeline with e2e.
+
+### 0.13.56 — chore(release): public release v0.13.56 (plan v6)
+
+- Gate: all review findings R6-1…R6-9 fixed (0.13.53–0.13.55); full local pipeline green on
+  0.13.55; committed tree re-validated from a fresh clone (REUSE, whitespace); release notes
+  for 0.13.56. UI unchanged since the 0.13.51 screenshots.
+- Release: tag `v0.13.56` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
