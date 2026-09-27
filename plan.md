@@ -149,6 +149,44 @@ public release". Review range bb33681..77e41f5 (everything since the previous re
 - [x] R6-9 (low) `plan.md` "Validation boundaries" is stale — rewrite.
 - [x] R6-10 full pipeline, green CI, public release; APK URL to the owner.
 
+## Plan v7 — performance review (owner request 2026-09-27)
+
+Owner input: "Can you do a performance review — can the code be improved without losing
+functionality? Are there superfluous computations or things which can be done differently?
+Review all for performance. Get it done." / "make a plan and then get it done".
+
+Hot paths: per analysed frame (10–30 Hz) — frame copy/rotation, MediaPipe, `onFrame`,
+`Monitor.frame` → `Detector` → `ArmClassifier`/`TemporalFilter`, session recording, overlay
+redraw; per 100 ms tick — `MonitorSession.tick`, `render`, overlay redraw. Behaviour must stay
+identical (the replay agreement and all tests pin it).
+
+- [ ] P1 Overlay drawing allocates on every draw: a new `Matrix` per point in the demo, a
+  `FloatArray` per point, a new `Path` per polygon and per margin shade, `getString` per seat
+  label. Reuse one matrix per draw, scratch arrays and paths, cached labels.
+- [ ] P2 Redundant redraws: the monitor invalidates the whole overlay on every frame and every
+  tick, even when nothing drawn changed (skeleton off, same warning/card). Invalidate only
+  when a drawn property changes; frames redraw only when poses are drawn.
+- [ ] P3 `Monitor.medianPeriodMs` sorts its window on every access — several times per frame
+  and per tick (freshness, gap, health). Cache it when the window changes.
+- [ ] P4 `render` searches the view tree for three tagged buttons every tick — keep direct
+  references.
+- [ ] P5 `SessionRecorder` lists the whole log directory on every flush (once a second) to
+  check the size limit — track the bytes instead.
+- [ ] P6 `VisibilityCheck.result()` regroups the whole 10 s window on every frame — keep the
+  counts incrementally.
+- [ ] P7 About text pages re-read and re-split the 2 MB MediaPipe notice on every page turn —
+  split once per text.
+- [ ] P8/P9 `ArmClassifier.track` builds a speed list and `Polygon.signedDistance` builds
+  point and sign lists per call (4× per person per frame) — single-pass loops.
+- [ ] P10 Build: enable Gradle's build cache and parallel project execution (and the
+  configuration cache if every plugin supports it); measure the pipeline before and after.
+- [ ] P11 Measure: a JVM micro-benchmark of the per-frame detection path before and after
+  (recorded here, not a gate); full pipeline, replay agreement unchanged; release.
+- Considered, not changed: MediaPipe-side rotation instead of the analyzer's 640×360 CPU
+  rotation (≈ 1 ms; changing where coordinates are rotated risks the calibration contract
+  without phone evidence); the 10 Hz watchdog tick (it bounds stale-evidence expiry, a
+  safety property); `LocalStore` rewriting its JSON on a feedback tap (rare, user-initiated).
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -193,6 +231,9 @@ Instructions from the owner, recorded so any agent can resume faithfully.
 - 2026-09-27: "/reviewBranch against the current state; fix all findings — architecture, code,
   documentation, everything which is off"; "get all done"; "fixed, then push and make a
   public release".
+- 2026-09-27: "performance review — can the code be improved without losing functionality?
+  superfluous computations? review all for performance, get it done"; "make a plan and then
+  get it done".
 - 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
   release"; "big plan, then iterate and get it done".
 
@@ -1136,3 +1177,8 @@ is empty; the same method was applied to the session range instead. Findings fix
 
 - 0.13.56's notes still pointed at tag `v0.13.51` for the source; corrected, and the release
   moves to v0.13.57 (every commit bumps the version; `main` is never rewritten).
+
+### 0.13.58 — docs: plan v7 performance review
+
+- Done: hot-path review recorded as P1–P11 with what was considered and deliberately kept.
+- Validation: documentation only.
