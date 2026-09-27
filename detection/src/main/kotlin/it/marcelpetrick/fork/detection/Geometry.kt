@@ -36,19 +36,27 @@ class Polygon(
         point: Point,
         aspect: Double = 1.0,
     ): Double {
-        val p = point.metric(aspect)
+        // Allocation-free: this runs twice per arm per frame. Same arithmetic as the
+        // cross product and projection with Point objects, so the results are identical.
+        val px = point.x * aspect
+        val py = point.y
         var distance = Double.POSITIVE_INFINITY
-        val signs = mutableListOf<Double>()
+        var allLeft = true
+        var allRight = true
         for (i in points.indices) {
-            val a = points[i].metric(aspect)
-            val b = points[(i + 1) % points.size].metric(aspect)
-            signs += cross(a, b, p)
-            val dx = b.x - a.x
+            val a = points[i]
+            val b = points[(i + 1) % points.size]
+            val ax = a.x * aspect
+            val bx = b.x * aspect
+            val dx = bx - ax
             val dy = b.y - a.y
-            val t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)).coerceIn(0.0, 1.0)
-            distance = min(distance, p.distance(Point(a.x + t * dx, a.y + t * dy)))
+            val turn = dx * (py - a.y) - dy * (px - ax)
+            allLeft = allLeft && turn >= -EPSILON
+            allRight = allRight && turn <= EPSILON
+            val t = (((px - ax) * dx + (py - a.y) * dy) / (dx * dx + dy * dy)).coerceIn(0.0, 1.0)
+            distance = min(distance, hypot(px - (ax + t * dx), py - (a.y + t * dy)))
         }
-        return if (signs.all { it >= -EPSILON } || signs.all { it <= EPSILON }) distance else -distance
+        return if (allLeft || allRight) distance else -distance
     }
 
     fun center(): Point = Point(points.sumOf { it.x } / CORNERS, points.sumOf { it.y } / CORNERS)

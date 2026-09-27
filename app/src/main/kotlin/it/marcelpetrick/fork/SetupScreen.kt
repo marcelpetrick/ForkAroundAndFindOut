@@ -5,7 +5,6 @@ package it.marcelpetrick.fork
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import it.marcelpetrick.fork.MainActivity.Companion.CONTINUE_TAG
 import it.marcelpetrick.fork.MainActivity.Companion.SLOW_FPS
 import it.marcelpetrick.fork.MainActivity.Screen
 import it.marcelpetrick.fork.detection.Point
@@ -27,6 +26,9 @@ import it.marcelpetrick.fork.ui.update
  * and navigation; the screen owns only its own views and state.
  */
 internal class SetupScreen {
+    /** *Mark table*, enabled once the visibility check passes (updated on every frame). */
+    private var markTable: View? = null
+
     private var advice: TextView? = null
 
     private var seatCheck: TextView? = null
@@ -61,7 +63,7 @@ internal class SetupScreen {
                 action(getString(R.string.mark_table), primary = true) {
                     if (visibilityCheck?.result()?.passed == true) show(Screen.TABLE)
                 }.apply {
-                    tag = CONTINUE_TAG
+                    markTable = this
                     isEnabled = false
                     alpha = 0.5f
                 },
@@ -170,7 +172,7 @@ internal class SetupScreen {
         visibilityCheck?.reset()
         status?.text = getString(R.string.people_detected, 0)
         advice?.text = getString(R.string.visibility_restarted)
-        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
+        markTable?.apply {
             isEnabled = false
             alpha = 0.5f
         }
@@ -190,7 +192,7 @@ internal class SetupScreen {
                 result.seconds,
             )
         advice?.update(visibilityAdvice(result))
-        panel?.findViewWithTag<View>(CONTINUE_TAG)?.apply {
+        markTable?.apply {
             isEnabled = result.passed
             alpha = if (result.passed) 1f else 0.5f
         }

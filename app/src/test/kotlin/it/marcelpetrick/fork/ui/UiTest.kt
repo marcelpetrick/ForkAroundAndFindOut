@@ -41,6 +41,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -264,5 +265,34 @@ class UiTest {
         verify(shared).unload(3)
         verify(shared, times(1)).load(context, R.raw.chime_glass, 1)
         assertEquals(listOf(R.raw.chime, R.raw.chime_marimba, R.raw.chime_glass), Chime.entries.map(::sound))
+    }
+
+    @Test
+    fun overlayRedrawsOnlyWhenSomethingDrawnChanges() {
+        val stage = StageView(context)
+        val shadow = shadowOf(stage)
+
+        fun redrawn(change: () -> Unit): Boolean {
+            shadow.clearWasInvalidated()
+            change()
+            return shadow.wasInvalidated()
+        }
+        // Without the skeleton, new poses and results are not drawn: no redraw per frame.
+        stage.skeleton = false
+        assertFalse(redrawn { stage.poses = listOf(pose()) })
+        assertFalse(redrawn { stage.results = emptyList() })
+        stage.skeleton = true
+        assertTrue(redrawn { stage.poses = listOf(pose()) })
+        assertTrue(redrawn { stage.results = emptyList() })
+        // Card, thank-you and dimming redraw on change only (the watchdog sets them every tick).
+        assertTrue(redrawn { stage.reminder = 1 to true })
+        assertFalse(redrawn { stage.reminder = 1 to true })
+        assertTrue(redrawn { stage.thanks = true })
+        assertFalse(redrawn { stage.thanks = true })
+        assertTrue(redrawn { stage.dimmed = true })
+        assertFalse(redrawn { stage.dimmed = true })
+        // An equal mapping (cameras hand out fresh Matrix objects) is no change.
+        assertTrue(redrawn { stage.mapping = Matrix().apply { setScale(2f, 2f) } })
+        assertFalse(redrawn { stage.mapping = Matrix().apply { setScale(2f, 2f) } })
     }
 }

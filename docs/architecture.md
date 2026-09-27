@@ -59,6 +59,26 @@ the image aspect and normalize by shoulder width.
   geometry change and model/native failures all silence immediately and explain the
   recovery. Uncertainty is shown as "Not visible", never as good posture.
 
+## Performance
+
+MediaPipe inference dominates each frame; everything around it is kept cheap and free of
+per-frame allocation, so a phone spends its time on the model, not on garbage collection:
+
+- The analyzer reuses its bitmaps and runs one frame at a time (latest only, drops counted).
+- Detection is single-pass: `Polygon.signedDistance` and the arm rule's motion statistics
+  use plain loops. The monitor caches the median frame period instead of sorting per read.
+  The visibility check keeps running counts instead of rescanning its 10 s window.
+  Measured on a desktop JVM: about 6 µs per frame for monitor + detector (two people), and
+  0.26 µs instead of 4.6 µs for the visibility check.
+- The overlay allocates nothing while drawing (one matrix, scratch arrays and paths, cached
+  labels). It redraws only when something it draws changes: new poses only with the skeleton
+  shown, the card, thank-you, dimming and warning only on change. The 100 ms watchdog tick
+  no longer forces a redraw.
+- The monitor keeps direct references to the views it updates every tick. The session
+  recorder checks its size limit from bytes, not by listing the log directory.
+- Build: Gradle's build cache, parallel execution and configuration cache are on. A clean
+  rebuild with a warm cache fell from 51 s to 3 s locally.
+
 ## Privacy by construction
 
 No image is stored anywhere; frames live in two reused bitmaps. The merged manifest has no

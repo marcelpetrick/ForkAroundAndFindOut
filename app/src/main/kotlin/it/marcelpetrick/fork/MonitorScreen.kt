@@ -7,13 +7,7 @@ import android.os.PowerManager
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import it.marcelpetrick.fork.MainActivity.Companion.DIAGNOSTICS_TAG
-import it.marcelpetrick.fork.MainActivity.Companion.LABELS_TAG
-import it.marcelpetrick.fork.MainActivity.Companion.PAUSE_TAG
-import it.marcelpetrick.fork.MainActivity.Companion.RECALIBRATE_TAG
 import it.marcelpetrick.fork.MainActivity.Companion.SEAT_COLOURS
-import it.marcelpetrick.fork.MainActivity.Companion.SEAT_TAG
-import it.marcelpetrick.fork.MainActivity.Companion.TRAINING_TAG
 import it.marcelpetrick.fork.MainActivity.Screen
 import it.marcelpetrick.fork.detection.ArmResult
 import it.marcelpetrick.fork.monitoring.Monitor
@@ -41,6 +35,13 @@ import java.util.UUID
  * and navigation; the screen owns only its own views and state.
  */
 internal class MonitorScreen {
+    // Direct references: render() runs every 100 ms and should not search the view tree.
+    private var pauseButton: TextView? = null
+    private var diagnosticsButton: TextView? = null
+    private var recalibrateButton: View? = null
+    private var trainingButton: TextView? = null
+    private var seatButton: TextView? = null
+    private var labelsRow: View? = null
     private var sessionLine: TextView? = null
 
     private var banner: LinearLayout? = null
@@ -63,15 +64,15 @@ internal class MonitorScreen {
             // Pause, Stop and the adult toggle come first and never move: everything whose size
             // changes during the meal (status, hints, banner, diagnostics, seats) sits below them,
             // so a control never shifts under a finger that is about to tap it.
-            addView(action(getString(R.string.pause), primary = true) { togglePause() }.apply { tag = PAUSE_TAG })
+            addView(action(getString(R.string.pause), primary = true) { togglePause() }.also { pauseButton = it })
             addView(
                 row(
                     action(getString(R.string.stop)) { show(Screen.WELCOME) },
-                    action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.apply { tag = DIAGNOSTICS_TAG },
+                    action(getString(R.string.show_diagnostics)) { toggleDiagnostics() }.also { diagnosticsButton = it },
                 ),
             )
             status = label("", 19f, bold = true).also(::addView)
-            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.apply { tag = RECALIBRATE_TAG })
+            addView(action(getString(R.string.recalibrate)) { begin(Screen.POSITION) }.also { recalibrateButton = it })
             hiddenHint = label("", 15f, bold = true, color = Palette.amber).apply { visibility = View.GONE }.also(::addView)
             banner =
                 card(
@@ -103,11 +104,11 @@ internal class MonitorScreen {
     fun MainActivity.render(state: MonitorUiState) {
         val current = meal ?: return
         if (screen != Screen.MONITOR || panel == null) return
-        panel!!.findViewWithTag<TextView>(PAUSE_TAG)?.update(getString(if (state.paused) R.string.resume else R.string.pause))
-        panel!!.findViewWithTag<TextView>(DIAGNOSTICS_TAG)?.update(
+        pauseButton?.update(getString(if (state.paused) R.string.resume else R.string.pause))
+        diagnosticsButton?.update(
             getString(if (diagnosticsOpen) R.string.hide_diagnostics else R.string.show_diagnostics),
         )
-        panel!!.findViewWithTag<View>(RECALIBRATE_TAG)?.visibility =
+        recalibrateButton?.visibility =
             if (state.status == Status.NOBODY_FOR_A_WHILE) View.VISIBLE else View.GONE
         status?.update(statusText(state))
         renderSeats(state.seats)
@@ -151,9 +152,9 @@ internal class MonitorScreen {
     private fun MainActivity.renderAdult(current: MonitorSession) {
         adult?.visibility = if (diagnosticsOpen) View.VISIBLE else View.GONE
         if (diagnosticsOpen) diagnosticsText?.update(diagnostics(current.monitor))
-        adult?.findViewWithTag<TextView>(TRAINING_TAG)?.update(getString(if (training) R.string.training_on else R.string.training_off))
-        adult?.findViewWithTag<TextView>(SEAT_TAG)?.update(getString(R.string.training_seat, trainingSeat))
-        adult?.findViewWithTag<View>(LABELS_TAG)?.visibility = if (training) View.VISIBLE else View.GONE
+        trainingButton?.update(getString(if (training) R.string.training_on else R.string.training_off))
+        seatButton?.update(getString(R.string.training_seat, trainingSeat))
+        labelsRow?.visibility = if (training) View.VISIBLE else View.GONE
     }
 
     /**
@@ -188,16 +189,16 @@ internal class MonitorScreen {
                     action(getString(R.string.missed_violation)) { feedback("MISSED_VIOLATION") },
                 ),
             )
-            addView(action(getString(R.string.training_off)) { toggleTraining() }.apply { tag = TRAINING_TAG })
+            addView(action(getString(R.string.training_off)) { toggleTraining() }.also { trainingButton = it })
             addView(
                 column(0).apply {
-                    tag = LABELS_TAG
+                    labelsRow = this
                     addView(label(getString(R.string.training_help), 14f, color = Palette.muted))
                     addView(
                         action(getString(R.string.training_seat, 1)) {
                             trainingSeat = trainingSeat % settings.people + 1
                             tick()
-                        }.apply { tag = SEAT_TAG },
+                        }.also { seatButton = it },
                     )
                     addView(
                         row(

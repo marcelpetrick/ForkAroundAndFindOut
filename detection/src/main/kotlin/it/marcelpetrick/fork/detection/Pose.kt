@@ -153,8 +153,18 @@ class ArmClassifier {
                 val d = it.point.distance(mean) / scale
                 d * d
             } / history.size
-        val speeds = history.zipWithNext { a, b -> a.point.distance(b.point) / scale * 1000 / (b.time - a.time) }
-        return Motion(if (speeds.isEmpty()) 0.0 else speeds.average(), speeds.maxOrNull() ?: 0.0, variance)
+        // One pass instead of a list of speeds (same summation order as average()).
+        var sum = 0.0
+        var max = 0.0
+        for (i in 1 until history.size) {
+            val a = history[i - 1]
+            val b = history[i]
+            val speed = a.point.distance(b.point) / scale * 1000 / (b.time - a.time)
+            sum += speed
+            if (i == 1 || speed > max) max = speed
+        }
+        val steps = history.size - 1
+        return Motion(if (steps == 0) 0.0 else sum / steps, if (steps == 0) 0.0 else max, variance)
     }
 
     private fun bridge(

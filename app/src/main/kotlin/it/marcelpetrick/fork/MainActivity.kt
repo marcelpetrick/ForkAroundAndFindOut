@@ -608,7 +608,6 @@ class MainActivity : ComponentActivity() {
         view.dimmed = state.paused
         speaker.play(state.sound, settings.volume)
         with(monitorScreen) { render(state) }
-        view.refresh()
         schedule()
     }
 
@@ -635,7 +634,7 @@ class MainActivity : ComponentActivity() {
         }
         if (screen == Screen.POSITION) with(setupScreen) { refreshVisibility(poses) }
         if (screen == Screen.SEATS) with(setupScreen) { refreshSeatCheck(poses) }
-        stage?.refresh()
+        // No unconditional redraw: the overlay invalidates itself when drawn state changes.
     }
 
     private fun onCameraError(message: String) {
@@ -736,13 +735,6 @@ class MainActivity : ComponentActivity() {
 
         /** Below this the setup suggests the Lite model. */
         const val SLOW_FPS = 5.0
-        const val PAUSE_TAG = "pause"
-        const val DIAGNOSTICS_TAG = "diagnostics"
-        const val TRAINING_TAG = "training"
-        const val CONTINUE_TAG = "continue"
-        const val RECALIBRATE_TAG = "recalibrate"
         val SEAT_COLOURS = listOf(R.string.seat_colour_1, R.string.seat_colour_2, R.string.seat_colour_3, R.string.seat_colour_4)
-        const val SEAT_TAG = "seat"
-        const val LABELS_TAG = "labels"
     }
 }

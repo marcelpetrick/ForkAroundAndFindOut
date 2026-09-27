@@ -40,9 +40,18 @@ class Monitor(
     private var previouslyViolating = emptySet<Pair<Int, Boolean>>()
     private val periods = ArrayDeque<Long>()
 
-    /** Median interval between accepted frames over the last [WINDOW] frames, if known. */
-    val medianPeriodMs: Long?
-        get() = if (periods.size < 3) null else periods.sorted()[periods.size / 2]
+    /**
+     * Median interval between accepted frames over the last [WINDOW] frames, if known. Cached,
+     * because freshness, gap and health read it several times per frame and per tick.
+     */
+    var medianPeriodMs: Long? = null
+        private set
+
+    private fun measured(period: Long) {
+        periods.addLast(period)
+        if (periods.size > WINDOW) periods.removeFirst()
+        medianPeriodMs = if (periods.size < MIN_PERIODS) null else periods.sorted()[periods.size / 2]
+    }
 
     val health: Health
         get() =
@@ -67,6 +76,7 @@ class Monitor(
         results = emptyList()
         previouslyViolating = emptySet()
         periods.clear()
+        medianPeriodMs = null
         started = now
         lastFrame = null
         active = true
@@ -98,8 +108,7 @@ class Monitor(
         }
         if (!fresh(captured, now)) return false
         lastFrame?.let {
-            periods.addLast(captured - it)
-            if (periods.size > WINDOW) periods.removeFirst()
+            measured(captured - it)
         }
         lastFrame = captured
         results = detector!!.process(poses, captured, aspect, gapMs)
@@ -160,6 +169,9 @@ class Monitor(
 
     companion object {
         const val WINDOW = 15
+
+        /** Intervals needed before a median is trusted. */
+        const val MIN_PERIODS = 3
         const val SLOW_MS = 200L
         const val TOO_SLOW_MS = 700L
         const val FRESHNESS_FLOOR_MS = 1500L

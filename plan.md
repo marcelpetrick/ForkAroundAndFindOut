@@ -160,27 +160,27 @@ Hot paths: per analysed frame (10–30 Hz) — frame copy/rotation, MediaPipe, `
 redraw; per 100 ms tick — `MonitorSession.tick`, `render`, overlay redraw. Behaviour must stay
 identical (the replay agreement and all tests pin it).
 
-- [ ] P1 Overlay drawing allocates on every draw: a new `Matrix` per point in the demo, a
+- [x] P1 Overlay drawing allocates on every draw: a new `Matrix` per point in the demo, a
   `FloatArray` per point, a new `Path` per polygon and per margin shade, `getString` per seat
   label. Reuse one matrix per draw, scratch arrays and paths, cached labels.
-- [ ] P2 Redundant redraws: the monitor invalidates the whole overlay on every frame and every
+- [x] P2 Redundant redraws: the monitor invalidates the whole overlay on every frame and every
   tick, even when nothing drawn changed (skeleton off, same warning/card). Invalidate only
   when a drawn property changes; frames redraw only when poses are drawn.
-- [ ] P3 `Monitor.medianPeriodMs` sorts its window on every access — several times per frame
+- [x] P3 `Monitor.medianPeriodMs` sorts its window on every access — several times per frame
   and per tick (freshness, gap, health). Cache it when the window changes.
-- [ ] P4 `render` searches the view tree for three tagged buttons every tick — keep direct
+- [x] P4 `render` searches the view tree for three tagged buttons every tick — keep direct
   references.
-- [ ] P5 `SessionRecorder` lists the whole log directory on every flush (once a second) to
+- [x] P5 `SessionRecorder` lists the whole log directory on every flush (once a second) to
   check the size limit — track the bytes instead.
-- [ ] P6 `VisibilityCheck.result()` regroups the whole 10 s window on every frame — keep the
+- [x] P6 `VisibilityCheck.result()` regroups the whole 10 s window on every frame — keep the
   counts incrementally.
-- [ ] P7 About text pages re-read and re-split the 2 MB MediaPipe notice on every page turn —
+- [x] P7 About text pages re-read and re-split the 2 MB MediaPipe notice on every page turn —
   split once per text.
-- [ ] P8/P9 `ArmClassifier.track` builds a speed list and `Polygon.signedDistance` builds
+- [x] P8/P9 `ArmClassifier.track` builds a speed list and `Polygon.signedDistance` builds
   point and sign lists per call (4× per person per frame) — single-pass loops.
-- [ ] P10 Build: enable Gradle's build cache and parallel project execution (and the
+- [x] P10 Build: enable Gradle's build cache and parallel project execution (and the
   configuration cache if every plugin supports it); measure the pipeline before and after.
-- [ ] P11 Measure: a JVM micro-benchmark of the per-frame detection path before and after
+- [x] P11 Measure: a JVM micro-benchmark of the per-frame detection path before and after
   (recorded here, not a gate); full pipeline, replay agreement unchanged; release.
 - Considered, not changed: MediaPipe-side rotation instead of the analyzer's 640×360 CPU
   rotation (≈ 1 ms; changing where coordinates are rotated risks the calibration contract
@@ -1182,3 +1182,25 @@ is empty; the same method was applied to the session range instead. Findings fix
 
 - Done: hot-path review recorded as P1–P11 with what was considered and deliberately kept.
 - Validation: documentation only.
+
+### 0.13.59 — perf: cheaper frame and tick paths, redraw only on change, cached builds (plan v7)
+
+- P1: the overlay reuses one matrix, scratch arrays, paths and rects and caches seat labels
+  (no allocation per draw; touch code copies mapped points it keeps). P2: `StageView`
+  invalidates only when drawn state changes (poses/results only with the skeleton; card,
+  thank-you, dimming, mapping on change); `onFrame` and the 100 ms tick no longer force a
+  redraw (Robolectric test pins it). P3: cached median frame period. P4: direct view
+  references instead of seven `findViewWithTag` searches per tick/frame (tag constants
+  removed). P5: recorder limit from bytes (others measured once + own file size). P6:
+  running counts in `VisibilityCheck` (side ties now resolve left, middle, right). P7: About
+  pages split once per text. P8/P9: single-pass `signedDistance` and motion statistics with
+  unchanged arithmetic (replay agreement tests unchanged).
+- P10: `org.gradle.caching`, `org.gradle.parallel`, `org.gradle.configuration-cache` (all
+  plugins store a configuration-cache entry without problems).
+- P11 measurements (desktop JVM, median of five 50 000-frame runs, two synthetic people):
+  monitor + detector 6.6 → ≈ 6 µs per frame (within noise — this path was already lean),
+  visibility check 4.6 → 0.26 µs per frame; clean rebuild of format + detekt + both APKs +
+  all unit tests 51 s → 3 s with a warm build cache, no-change build 2 s → 1 s. Phone-side
+  effect of fewer redraws and allocations is not measured (needs a device).
+- Validation: all tests incl. the new invalidation test, detekt, Android lint; full local
+  pipeline green in 4 min 20 s including e2e and Docker, with the configuration cache on.

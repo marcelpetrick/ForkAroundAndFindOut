@@ -25,6 +25,9 @@ class SessionRecorder(
     val file: File
     private val writer: Writer
     private var pending = 0
+
+    /** Bytes of the other logs, measured once: the limit check then needs one file size. */
+    private val others: Long
     var full = false
         private set
     var closed = false
@@ -32,7 +35,8 @@ class SessionRecorder(
 
     init {
         directory.mkdirs()
-        check(SessionFiles.totalBytes(directory) < limitBytes) { "Session log storage is full. Export and delete logs first." }
+        others = SessionFiles.totalBytes(directory)
+        check(others < limitBytes) { "Session log storage is full. Export and delete logs first." }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(now)
         file = File(directory, "$stamp-${session.take(ID_PREFIX)}.jsonl.gz")
         writer = GZIPOutputStream(file.outputStream(), true).bufferedWriter()
@@ -53,7 +57,7 @@ class SessionRecorder(
         if (flush) {
             writer.flush()
             pending = 0
-            if (SessionFiles.totalBytes(directory) >= limitBytes) full = true
+            if (others + file.length() >= limitBytes) full = true
         }
     }
 

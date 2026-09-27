@@ -85,10 +85,22 @@ internal class AboutScreen {
         show(Screen.TEXT)
     }
 
+    /** The last text split into pages: turning a page must not re-read a 2 MB notice. */
+    private var pagedAsset: String? = null
+    private var pages: List<String> = emptyList()
+
+    private fun MainActivity.pagesOf(path: String): List<String> {
+        if (path != pagedAsset) {
+            pages = asset(path).chunked(TEXT_PAGE_CHARS)
+            pagedAsset = path
+        }
+        return pages
+    }
+
     /** Long notices (MediaPipe's lists 187 native libraries) are shown in pages, not at once. */
     fun MainActivity.textPage(): View =
         column().apply {
-            val pages = asset(textAsset).chunked(TEXT_PAGE_CHARS)
+            val pages = pagesOf(textAsset)
             addView(title(textTitle))
             if (pages.size > 1) addView(label(getString(R.string.text_page, textPage + 1, pages.size), 15f, bold = true))
             addView(label(pages[textPage], 13f).apply { typeface = android.graphics.Typeface.MONOSPACE })

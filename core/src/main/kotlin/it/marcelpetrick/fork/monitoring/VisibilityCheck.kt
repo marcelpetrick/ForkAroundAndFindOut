@@ -17,9 +17,14 @@ class VisibilityCheck(
         val time: Long,
         val detected: Int,
         val visible: Int,
-        /** Horizontal image position of each person missing an arm joint. */
-        val hiddenAt: List<Double>,
+        /** Where in the picture each person missing an arm joint is. */
+        val hiddenAt: List<Side>,
     )
+
+    // Running counts over the window, so result() does not rescan it on every frame.
+    private val detectedCounts = mutableMapOf<Int, Int>()
+    private var enoughVisible = 0
+    private val sideCounts = IntArray(Side.entries.size)
 
     /** Why the check has not passed (or [PASSED]), so the screen can say what to change. */
     enum class Reason { PASSED, MEASURING, NOBODY, TOO_FEW, TOO_MANY, ARMS_HIDDEN }
@@ -55,22 +60,48 @@ class VisibilityCheck(
                     .takeIf { it.isNotEmpty() }
                     ?.map { it.point.x }
                     ?.average()
+                    ?.let(::side)
             }
-        samples.addLast(Sample(timeMs, poses.size, visible.size, hiddenAt))
-        while (timeMs - samples.first().time > windowMs) samples.removeFirst()
+        val sample = Sample(timeMs, poses.size, visible.size, hiddenAt)
+        samples.addLast(sample)
+        count(sample, 1)
+        while (timeMs - samples.first().time > windowMs) count(samples.removeFirst(), -1)
     }
 
-    fun reset() = samples.clear()
+    private fun side(x: Double) =
+        if (x < LEFT_THIRD) {
+            Side.LEFT
+        } else if (x > RIGHT_THIRD) {
+            Side.RIGHT
+        } else {
+            Side.MIDDLE
+        }
+
+    private fun count(
+        sample: Sample,
+        delta: Int,
+    ) {
+        detectedCounts.merge(sample.detected, delta, Int::plus)
+        if (sample.visible >= people) enoughVisible += delta
+        sample.hiddenAt.forEach { sideCounts[it.ordinal] += delta }
+    }
+
+    fun reset() {
+        samples.clear()
+        detectedCounts.clear()
+        enoughVisible = 0
+        sideCounts.fill(0)
+    }
 
     fun result(): Result {
         if (samples.isEmpty()) return Result(0, 0.0, 0.0, false)
+        // Most frequent head count; a tie goes to the larger count.
         val detected =
-            samples
-                .groupingBy { it.detected }
-                .eachCount()
+            detectedCounts.entries
+                .filter { it.value > 0 }
                 .maxWith(compareBy<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
                 .key
-        val armsVisible = samples.count { it.visible >= people }.toDouble() / samples.size
+        val armsVisible = enoughVisible.toDouble() / samples.size
         val seconds = (samples.last().time - samples.first().time) / 1000.0
         val enough = seconds * 1000 >= windowMs * MIN_COVERAGE
         val reason =
@@ -82,24 +113,12 @@ class VisibilityCheck(
                 !enough -> Reason.MEASURING
                 else -> Reason.PASSED
             }
+        // Side where arms are hidden most often; a tie resolves left, middle, right.
         val hiddenSide =
-            if (reason != Reason.ARMS_HIDDEN) {
+            if (reason != Reason.ARMS_HIDDEN || sideCounts.all { it == 0 }) {
                 null
             } else {
-                samples
-                    .flatMap { it.hiddenAt }
-                    .map { x ->
-                        if (x < LEFT_THIRD) {
-                            Side.LEFT
-                        } else if (x > RIGHT_THIRD) {
-                            Side.RIGHT
-                        } else {
-                            Side.MIDDLE
-                        }
-                    }.groupingBy { it }
-                    .eachCount()
-                    .maxByOrNull { it.value }
-                    ?.key
+                Side.entries.maxBy { sideCounts[it.ordinal] }
             }
         return Result(detected, armsVisible, seconds, reason == Reason.PASSED, reason, hiddenSide)
     }

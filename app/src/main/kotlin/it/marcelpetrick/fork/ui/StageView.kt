@@ -37,13 +37,28 @@ class StageView(
     var table: Polygon? = null
     var seats: List<Polygon> = emptyList()
     var taps: List<Point> = emptyList()
+
+    /** Poses and results are drawn only with the skeleton; otherwise new ones cause no redraw. */
     var poses: List<Pose> = emptyList()
+        set(value) {
+            field = value
+            if (skeleton) invalidate()
+        }
     var results: List<SeatResult> = emptyList()
+        set(value) {
+            field = value
+            if (skeleton) invalidate()
+        }
     var skeleton = true
     var synthetic = false
 
     /** Normalized image → view pixels; taps outside the image (letterbox margins) are rejected. */
     var mapping: Matrix? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            invalidate()
+        }
 
     /** Visual warning mode; changes fade in (400 ms) and out (600 ms), never pop or flash. */
     var warning = VisualMode.OFF
@@ -59,12 +74,27 @@ class StageView(
 
     /** The reminder card: which seat (colour and number) and side, or null. */
     var reminder: Pair<Int, Boolean>? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            invalidate()
+        }
 
     /** When set, a short "Thank you" card after a correction is shown. */
     var thanks = false
+        set(value) {
+            if (value == field) return
+            field = value
+            invalidate()
+        }
 
     /** Paused: the preview is dimmed so it is obvious nothing is being watched. */
     var dimmed = false
+        set(value) {
+            if (value == field) return
+            field = value
+            invalidate()
+        }
     var onTap: ((Point) -> Unit)? = null
     var onRejectedTap: (() -> Unit)? = null
 
@@ -86,6 +116,17 @@ class StageView(
             strokeCap = Paint.Cap.ROUND
         }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    // Reused on every draw: onDraw runs up to 30 times a second and must not allocate.
+    private val fullView = Matrix()
+    private val scratch = FloatArray(2)
+    private val shape = Path()
+    private val margins = Path()
+    private val imageRect = RectF()
+    private val loupeClip = Path()
+    private val loupeRect = RectF()
+    private val cardRect = RectF()
+    private val seatLabels = mutableMapOf<Int, String>()
     private val text =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = context.dp(16).toFloat()
@@ -106,7 +147,7 @@ class StageView(
                 val grab = context.dp(GRAB_DP).toFloat()
                 dragging =
                     taps.indices
-                        .map { it to view(taps[it]) }
+                        .map { it to view(taps[it]).copyOf() }
                         .filter { (_, xy) -> kotlin.math.hypot(xy[0] - event.x, xy[1] - event.y) <= grab }
                         .minByOrNull { (_, xy) -> kotlin.math.hypot(xy[0] - event.x, xy[1] - event.y) }
                         ?.first
@@ -169,7 +210,7 @@ class StageView(
     private fun drawSeats(canvas: Canvas) {
         seats.forEachIndexed { index, seat ->
             polygon(canvas, seat.points, Color.argb(30, 120, 200, 255), Color.rgb(120, 200, 255))
-            label(canvas, context.getString(R.string.seat_empty, index + 1).substringBefore(" ·"), seat.center(), Color.rgb(120, 200, 255))
+            label(canvas, seatLabel(index + 1), seat.center(), Color.rgb(120, 200, 255))
         }
     }
 
@@ -197,7 +238,7 @@ class StageView(
                 canvas.drawCircle(x, y, context.dp(12).toFloat(), fill.apply { color = Palette.of(arm.state) })
             }
             pose.center()?.let {
-                label(canvas, context.getString(R.string.seat_empty, seat.seat).substringBefore(" ·"), it, Color.WHITE)
+                label(canvas, seatLabel(seat.seat), it, Color.WHITE)
             }
         }
     }
@@ -212,14 +253,21 @@ class StageView(
         val radius = context.dp(LOUPE_DP).toFloat()
         val cx = x.coerceIn(radius, maxOf(radius, width - radius))
         val cy = if (y - radius * 2.2f > radius) y - radius * 2.2f else y + radius * 2.2f
-        val clip = Path().apply { addCircle(cx, cy, radius, Path.Direction.CW) }
+        val clip =
+            loupeClip.apply {
+                rewind()
+                addCircle(cx, cy, radius, Path.Direction.CW)
+            }
         canvas.withClip(clip) {
             drawColor(Palette.stageBackground)
             // Magnify around the finger: the loupe centre shows the point under the finger.
             translate(cx, cy)
             scale(LOUPE_ZOOM, LOUPE_ZOOM)
             translate(-x, -y)
-            still?.let { drawBitmap(it, null, RectF(0f, 0f, this@StageView.width.toFloat(), this@StageView.height.toFloat()), null) }
+            still?.let {
+                loupeRect.set(0f, 0f, this@StageView.width.toFloat(), this@StageView.height.toFloat())
+                drawBitmap(it, null, loupeRect, null)
+            }
             table?.let { polygon(canvas, it.points, Color.TRANSPARENT, Color.rgb(255, 214, 102)) }
             if (taps.isNotEmpty()) polygon(canvas, taps, Color.TRANSPARENT, Color.WHITE, closed = false)
         }
@@ -291,7 +339,7 @@ class StageView(
         val cardHeight = context.dp(if (detail.isEmpty()) 56 else 88).toFloat()
         val left0 = (width - cardWidth) / 2
         val top = height - cardHeight - context.dp(28)
-        val card = RectF(left0, top, left0 + cardWidth, top + cardHeight)
+        val card = cardRect.apply { set(left0, top, left0 + cardWidth, top + cardHeight) }
         fill.color = Palette.softOf(if (reminder == null) ElbowState.CLEAR else ElbowState.VIOLATION)
         canvas.drawRoundRect(card, pad, pad, fill)
         if (reminder !=
@@ -317,17 +365,31 @@ class StageView(
         text.textSize = context.dp(16).toFloat()
     }
 
-    private fun matrix(): Matrix = mapping ?: Matrix().apply { setScale(width.toFloat(), height.toFloat()) }
+    private fun matrix(): Matrix = mapping ?: fullView.apply { setScale(width.toFloat(), height.toFloat()) }
 
-    /** View pixel position of a normalized image point. */
-    private fun view(point: Point): FloatArray = floatArrayOf(point.x.toFloat(), point.y.toFloat()).also { matrix().mapPoints(it) }
+    /** "Seat n", formatted once per seat number. */
+    private fun seatLabel(seat: Int): String =
+        seatLabels.getOrPut(seat) { context.getString(R.string.seat_empty, seat).substringBefore(" ·") }
+
+    /**
+     * View pixel position of a normalized image point, in a reused array: destructure it at
+     * once (`val (x, y) = view(p)`); copy it to keep it.
+     */
+    private fun view(point: Point): FloatArray =
+        scratch.also {
+            it[0] = point.x.toFloat()
+            it[1] = point.y.toFloat()
+            matrix().mapPoints(it)
+        }
 
     private fun shadeMargins(mapping: Matrix): Path {
-        val image = RectF(0f, 0f, 1f, 1f).also { mapping.mapRect(it) }
-        return Path().apply {
+        imageRect.set(0f, 0f, 1f, 1f)
+        mapping.mapRect(imageRect)
+        return margins.apply {
+            rewind()
             fillType = Path.FillType.EVEN_ODD
             addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
-            addRect(image, Path.Direction.CW)
+            addRect(imageRect, Path.Direction.CW)
         }
     }
 
@@ -338,7 +400,7 @@ class StageView(
         lineColor: Int,
         closed: Boolean = true,
     ) {
-        val path = Path()
+        val path = shape.apply { rewind() }
         points.forEachIndexed { index, point ->
             val (x, y) = view(point)
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
