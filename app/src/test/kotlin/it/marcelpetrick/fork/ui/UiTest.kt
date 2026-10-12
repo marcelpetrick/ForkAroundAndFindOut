@@ -43,6 +43,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -294,5 +295,10 @@ class UiTest {
         // An equal mapping (cameras hand out fresh Matrix objects) is no change.
         assertTrue(redrawn { stage.mapping = Matrix().apply { setScale(2f, 2f) } })
         assertFalse(redrawn { stage.mapping = Matrix().apply { setScale(2f, 2f) } })
+    }
+
+    @Test
+    fun exportNameCarriesTheDate() {
+        assertEquals("fork-around-samples-2026-10-12.json", exportName(LocalDate.of(2026, 10, 12)))
     }
 }

@@ -203,7 +203,7 @@ Findings of the check and decisions, one item each:
   < 1 false alarm per ordinary meal, > 95 % of sustained violations reminded, three meals);
   optimisations keep behaviour identical (replay agreement and tests pin it); every ledger
   "New ideas" note lands in the backlog.
-- [ ] V8-3 Export file names carry the date (`fork-around-samples-YYYY-MM-DD.json`), so two
+- [x] V8-3 Export file names carry the date (`fork-around-samples-YYYY-MM-DD.json`), so two
   exports never overwrite each other in the picker's default folder.
 - [ ] V8-4 Class balance before any learned classifier: `scripts/replay.sh labels <logs…>`
   prints per session and in total how many labels of each kind exist and in how many sessions
@@ -377,7 +377,7 @@ Every "New ideas" note from the ledger lands here; closed items name where they 
 - [x] Labelled synthetic demo inside the native UI for repeatable e2e tests without footage (0.0.3; demo since 0.4.9).
 - [x] All computed feature values in labelled exports; heuristic scores never presented as calibrated probabilities or measured accuracy (0.1.5; `sampleRecord`, release notes).
 - [x] Demo as the README screenshot source; separating-axis seat overlap test (0.3.8; `scripts/screenshots.sh`, `Geometry`).
-- [ ] Export file name carries the date (0.5.12) — plan v8, V8-3.
+- [x] Export file name carries the date (0.5.12; 0.13.64, `exportName`).
 - [ ] Per-label training summary to check class balance before a learned classifier (0.5.12) — plan v8, V8-4.
 - [ ] Benchmark Full vs Lite on a phone (0.0.2) — needs a device; step 1 of `docs/hardware-validation.md`.
 - Declined: plan_v2 §8 "elbow-free streak" for kids (plan v8, V8-6).
@@ -1276,3 +1276,10 @@ is empty; the same method was applied to the session range instead. Findings fix
   (Git and releases); optimisations and refactorings keep behaviour identical (Quality gates);
   every ledger idea goes to the backlog, rejected ones stay as "Declined" (Plan first).
 - Validation: markdownlint.
+
+### 0.13.64 — feat(data): date in the suggested export file name (V8-3)
+
+- Done: the records export is suggested as `fork-around-samples-YYYY-MM-DD.json`
+  (`exportName` in `ui/Format.kt`), so a second export does not replace the first in the
+  picker's folder; `docs/data.md` names it.
+- Validation: spotless, detekt, `UiTest` (new `exportNameCarriesTheDate`).

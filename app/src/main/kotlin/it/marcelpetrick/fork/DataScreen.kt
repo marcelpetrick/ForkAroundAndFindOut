@@ -11,10 +11,12 @@ import it.marcelpetrick.fork.ui.Palette
 import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
 import it.marcelpetrick.fork.ui.column
+import it.marcelpetrick.fork.ui.exportName
 import it.marcelpetrick.fork.ui.label
 import it.marcelpetrick.fork.ui.row
 import it.marcelpetrick.fork.ui.title
 import java.io.OutputStream
+import java.time.LocalDate
 
 /**
  * Local data: stored records and session logs, with export and delete.
@@ -30,7 +32,7 @@ internal class DataScreen {
             store.notice?.let { addView(card(label(it, color = Palette.red))) }
             notice?.let { addView(label(it, bold = true)) }
             addView(label(getString(R.string.data_count, count), 19f, bold = true))
-            addView(action(getString(R.string.export)) { exporter.launch("fork-around-samples.json") })
+            addView(action(getString(R.string.export)) { exporter.launch(exportName(LocalDate.now())) })
             val logs = SessionFiles.list(sessionsDir)
             addView(label(getString(R.string.session_logs, logs.size, SessionFiles.totalBytes(sessionsDir) / 1024), 19f, bold = true))
             for (log in logs) {

@@ -11,8 +11,9 @@ Nothing leaves the phone unless the adult exports it. No image or video is ever 
 | `files/samples.json` | *False alarm* / *Missed violation* taps; session end if statistics are on | Feature vectors of all seats with session id; session statistics (duration, violations, false alarms, missed violations, mean joint confidence). Max. 5000 records, atomic writes |
 | `files/sessions/*.jsonl.gz` | Only while **training mode** is switched on in adult diagnostics | Session log (below). Max. 100 MB for all logs together |
 
-The *Local data* screen shows counts and sizes, exports the records (JSON) or any log
-(gzip) through the system file picker, deletes one log, or deletes everything.
+The *Local data* screen shows counts and sizes, exports the records (JSON, suggested as
+`fork-around-samples-YYYY-MM-DD.json`) or any log (gzip) through the system file picker,
+deletes one log, or deletes everything.
 
 ## Session log format (schema 1)
 
