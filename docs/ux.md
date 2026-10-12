@@ -27,9 +27,10 @@ meet its own 4.5:1 contrast rule.
   and never end a running meal.
 - English and German, with a per-app language on Android 13+.
 
-Each screen is its own class (`WelcomeScreen`, `SetupScreen`, `MonitorScreen`,
-`SettingsScreen`, `DataScreen`, `AboutScreen`). `MainActivity` hosts them: it owns the
-lifecycle, navigation, the camera and the frame loop.
+Each screen is its own class (`WelcomeScreen`, `SetupScreen`, `MonitorScreen`, `DemoScreen`,
+`SettingsScreen`, `DataScreen`, `AboutScreen`); `CameraScreen` holds the shared camera layout,
+the permission request and the frame source. `MainActivity` hosts them: it owns the
+lifecycle, navigation, the meal state and the watchdog tick.
 
 1. **Welcome / ready.** It explains local-only processing, that no images are saved, and
    where to place the camera.

@@ -209,7 +209,7 @@ Findings of the check and decisions, one item each:
   prints per session and in total how many labels of each kind exist and in how many sessions
   each kind occurs (whole-session splits need several sessions per class); documented in
   `docs/data.md` and `docs/scripts.md`.
-- [ ] V8-5 `MainActivity` is still 740 lines after R6-1: move the camera/layout plumbing and
+- [x] V8-5 `MainActivity` is still 740 lines after R6-1: move the camera/layout plumbing and
   the demo/meal tick out into focused classes behind the same host, behaviour unchanged
   (delegated to a subagent in an isolated worktree, integrated and reviewed here).
 - [x] V8-6 Decisions recorded, nothing built: plan_v2 §8 "elbow-free streak" is **declined**
@@ -1310,3 +1310,17 @@ is empty; the same method was applied to the session range instead. Findings fix
   sharing a session id are now merged into one session before counting. Test rewritten with
   distinct session ids, a meal split over two logs and an unknown label kind; `docs/data.md`.
 - Validation: spotless, detekt, `:tools:test`, markdownlint.
+
+### 0.13.68 — refactor(app): camera plumbing and the demo out of MainActivity (V8-5)
+
+- Done (subagent in an isolated worktree, reviewed and integrated here): `MainActivity`
+  740 → 417 lines, now lifecycle, navigation, meal state and the watchdog tick. New
+  `CameraScreen` (permission request, keep-screen-on and orientation lock, shared camera
+  layout, fade and insets, opening/closing the source, error handling, pose limit, rear-lens
+  list, `onFrame`, `SourceFactory`) and `DemoScreen` (demo layout, restart, demo tick);
+  `MonitorScreen` takes the meal tick and the seat cards it already rendered. `show()`'s
+  screen switch became `build()` (detekt complexity) — no suppressions, exclusions or test
+  changes. `docs/architecture.md` and `docs/ux.md` name the new classes (and `labels`).
+- Validation: full local pipeline green — 73 unit/Robolectric tests, coverage 97.7 %, detekt
+  0, Android lint 0, Lint Suite clean, SBOM matches, 4 e2e tests on the API 34 emulator,
+  Docker image serves the APK with a valid checksum.

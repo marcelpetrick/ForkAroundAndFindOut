@@ -10,6 +10,8 @@ import android.widget.TextView
 import it.marcelpetrick.fork.MainActivity.Companion.SEAT_COLOURS
 import it.marcelpetrick.fork.MainActivity.Screen
 import it.marcelpetrick.fork.detection.ArmResult
+import it.marcelpetrick.fork.detection.ElbowState
+import it.marcelpetrick.fork.detection.SeatResult
 import it.marcelpetrick.fork.monitoring.Monitor
 import it.marcelpetrick.fork.monitoring.MonitorSession
 import it.marcelpetrick.fork.monitoring.MonitorUiState
@@ -17,10 +19,13 @@ import it.marcelpetrick.fork.monitoring.PoseModel
 import it.marcelpetrick.fork.monitoring.SessionLog
 import it.marcelpetrick.fork.monitoring.SessionRecorder
 import it.marcelpetrick.fork.monitoring.Status
+import it.marcelpetrick.fork.monitoring.VisualMode
 import it.marcelpetrick.fork.monitoring.sampleRecord
 import it.marcelpetrick.fork.ui.Palette
+import it.marcelpetrick.fork.ui.StageView
 import it.marcelpetrick.fork.ui.action
 import it.marcelpetrick.fork.ui.card
+import it.marcelpetrick.fork.ui.chip
 import it.marcelpetrick.fork.ui.clockText
 import it.marcelpetrick.fork.ui.column
 import it.marcelpetrick.fork.ui.label
@@ -117,6 +122,71 @@ internal class MonitorScreen {
         sessionLine?.update(getString(R.string.session_line, clockText(state.activeSeconds), state.reminders))
         renderAdult(current)
     }
+
+    /** One watchdog step of the running meal: decide, sound, draw, and schedule the next. */
+    fun MainActivity.mealTick(view: StageView) {
+        val now = clock()
+        val current = meal ?: return
+        val state = current.tick(now)
+        if (current.monitor.calibrationInvalid) {
+            notice = getString(R.string.calibration_changed)
+            show(Screen.WELCOME)
+            return
+        }
+        view.results = state.seats
+        view.warning = if (state.warning) settings.visual else VisualMode.OFF
+        view.reminder = state.reminder
+        view.thanks = state.thanks
+        view.dimmed = state.paused
+        speaker.play(state.sound, settings.volume)
+        render(state)
+        schedule()
+    }
+
+    /**
+     * One card per seat in its identity colour, with a words-and-colour chip per elbow.
+     * Cards are built once and updated in place only when a state changes: rebuilding views
+     * ten times a second would waste the main thread and flood accessibility services.
+     */
+    fun MainActivity.renderSeats(results: List<SeatResult>) {
+        val container = seatCards ?: return
+        val shown = results.map { Triple(it.pose != null, it.left.state, it.right.state) }
+        if (container.tag == shown) return
+        container.tag = shown
+        container.removeAllViews()
+        for (seat in results) {
+            val name = label(getString(R.string.seat_name, seat.seat), 17f, bold = true, color = Palette.seat(seat.seat))
+            val card =
+                if (seat.pose == null) {
+                    card(name, label(getString(R.string.nobody_detected), 15f, color = Palette.muted))
+                } else {
+                    card(
+                        name,
+                        row(
+                            chip(getString(R.string.chip_left, word(seat.left.state)), seat.left.state),
+                            chip(getString(R.string.chip_right, word(seat.right.state)), seat.right.state),
+                        ),
+                    )
+                }
+            card.contentDescription =
+                if (seat.pose == null) {
+                    getString(R.string.seat_empty, seat.seat)
+                } else {
+                    getString(R.string.seat_status, seat.seat, word(seat.left.state), word(seat.right.state))
+                }
+            container.addView(card)
+        }
+    }
+
+    private fun MainActivity.word(state: ElbowState): String =
+        getString(
+            when (state) {
+                ElbowState.UNKNOWN -> R.string.state_unknown
+                ElbowState.CLEAR -> R.string.state_clear
+                ElbowState.SUSPECT -> R.string.state_suspect
+                ElbowState.VIOLATION -> R.string.state_violation
+            },
+        )
 
     private fun MainActivity.statusText(state: MonitorUiState): String =
         when (state.status) {
