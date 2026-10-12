@@ -23,8 +23,8 @@ const val USAGE = """Usage:
       live/replay agreement per session and in total. Split train/validation/test by
       passing whole session files, never frames (vision §22).
   labels SESSION.jsonl[.gz]...
-      Count the labels of each kind per session and in total, and in how many sessions
-      each kind occurs: a whole-session train/validation/test split needs every kind in
+      Count the labels of each kind per session (logs with the same session id count
+      as one) and in total, and in how many sessions each kind occurs: a whole-session train/validation/test split needs every kind in
       at least three sessions before any learned classifier is worth training.
   demo-log OUT.jsonl.gz [LOOPS]
       Write the labelled synthetic demo session (no real data) for trying the tools."""
@@ -120,7 +120,12 @@ private fun labels(
     out: PrintStream,
 ): Int {
     require(args.isNotEmpty()) { "No session files given" }
-    val counts = args.map { path -> load(File(path)).let { it.session to it.labels.groupingBy(Label::label).eachCount() } }
+    // Several logs of one meal are one session: a split must keep them together.
+    val counts =
+        args
+            .map { load(File(it)) }
+            .groupBy(Recording::session)
+            .map { (session, logs) -> session to logs.flatMap(Recording::labels).groupingBy(Label::label).eachCount() }
     val kinds = SessionLog.LABELS + counts.flatMap { it.second.keys }.distinct().filterNot { it in SessionLog.LABELS }
 
     fun line(count: (String) -> String) = kinds.joinToString(", ") { "$it ${count(it)}" }

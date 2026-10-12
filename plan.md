@@ -218,6 +218,8 @@ Findings of the check and decisions, one item each:
   per-person count); Full vs Lite on a phone stays in the hardware protocol (needs a device);
   the OpenCV 4-clause question stays an owner action (asking upstream is outward-facing).
 - [ ] V8-7 Self-review of the v8 diff, fixes, full pipeline, green CI, public release.
+  - [x] R8-1 (medium) `labels` counted files as sessions, so two logs of one meal looked like
+    two sessions and overstated what a whole-session split can use — group by session id.
 
 ## Owner input log
 
@@ -1301,3 +1303,10 @@ is empty; the same method was applied to the session range instead. Findings fix
   the table). Full vs Lite on a phone stays step 1 of `docs/hardware-validation.md`; the
   OpenCV 4-clause question stays recorded in `docs/licensing.md` as an owner action.
 - Validation: markdownlint.
+
+### 0.13.67 — fix(tools): count label sessions by session id, not by file (R8-1)
+
+- Done: self-review of the v8 diff found that `labels` treated each file as a session; logs
+  sharing a session id are now merged into one session before counting. Test rewritten with
+  distinct session ids, a meal split over two logs and an unknown label kind; `docs/data.md`.
+- Validation: spotless, detekt, `:tools:test`, markdownlint.

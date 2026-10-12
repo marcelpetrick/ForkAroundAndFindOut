@@ -57,7 +57,8 @@ timing is a regression check: the desktop replays exactly what the phone decided
 
 Evaluate by **whole sessions** (vision §22): pass training, validation and test sessions
 as separate file sets, never frames of one meal in different sets. `labels` shows whether that is
-possible yet: per session and in total it counts each label kind, says in how many sessions
+possible yet: per session (logs sharing a session id count as one) and in total it counts
+each label kind, says in how many sessions
 each kind occurs, and names every kind found in fewer than three sessions (too few for a
 whole-session train/validation/test split). A learned classifier
 (vision §10.2) is only worth training after enough real, consented sessions exist; this
