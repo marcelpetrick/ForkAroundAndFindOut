@@ -195,7 +195,7 @@ two subagents.
 
 Findings of the check and decisions, one item each:
 
-- [ ] V8-1 `plan.md` structure: the ledger heading holds only 0.0.1 and every later entry sits
+- [x] V8-1 `plan.md` structure: the ledger heading holds only 0.0.1 and every later entry sits
   under "New ideas backlog"; the owner input log is not chronological. Move the backlog above
   the ledger, collect every ledger "New ideas" note there (done ones closed with references),
   and order the log by date.
@@ -260,14 +260,17 @@ Instructions from the owner, recorded so any agent can resume faithfully.
   plan"; "then public release, again".
 - 2026-09-26: "yes, REUSE is a good thing, make sure we have a badge for the README"; "also mark
   all the guidelines I gave today in agents.md, so that we collect some really good guide".
+- 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
+  release"; "big plan, then iterate and get it done".
 - 2026-09-27: "/reviewBranch against the current state; fix all findings — architecture, code,
   documentation, everything which is off"; "get all done"; "fixed, then push and make a
   public release".
 - 2026-09-27: "performance review — can the code be improved without losing functionality?
   superfluous computations? review all for performance, get it done"; "make a plan and then
   get it done".
-- 2026-09-26: "add linters of all kinds, for this tech stack, to the pipeline — before the
-  release"; "big plan, then iterate and get it done".
+- 2026-10-12: "check the whole repository — what is inside, what was done, what is left for
+  the plan; also check agents.md"; "go, get it done"; "plan your own work and make it"; up to
+  two subagents.
 
 ## Tasks
 
@@ -363,6 +366,22 @@ camera, real MediaPipe models) and Docker; it proves deterministic software beha
 meal false-alarm rate, sustained-contact sensitivity, on-device FPS, thermal behaviour and GPU
 speed require consented physical sessions on a phone and must not be fabricated.
 
+## New ideas backlog
+
+Every "New ideas" note from the ledger lands here; closed items name where they were delivered.
+
+- [x] Deterministic synthetic scenario replay shared by demo and regression tests (`SyntheticDemo` drives the demo, `SyntheticDemoTest` and `replay.sh demo-log`).
+- [x] Calibration reminder after camera/model changes and orientation handling (aspect/rotation invalidation since 0.6.15, lens change clears the outline).
+- [x] Session-separated export metadata for future classifier training without leakage (session id in every log header; whole-session evaluation in `docs/data.md`).
+- [x] Reject ambiguous seat assignments, prefer UNKNOWN on hidden landmarks (0.0.2; `SeatTracker`, `ArmClassifier` confidence gates).
+- [x] Labelled synthetic demo inside the native UI for repeatable e2e tests without footage (0.0.3; demo since 0.4.9).
+- [x] All computed feature values in labelled exports; heuristic scores never presented as calibrated probabilities or measured accuracy (0.1.5; `sampleRecord`, release notes).
+- [x] Demo as the README screenshot source; separating-axis seat overlap test (0.3.8; `scripts/screenshots.sh`, `Geometry`).
+- [ ] Export file name carries the date (0.5.12) — plan v8, V8-3.
+- [ ] Per-label training summary to check class balance before a learned classifier (0.5.12) — plan v8, V8-4.
+- [ ] Benchmark Full vs Lite on a phone (0.0.2) — needs a device; step 1 of `docs/hardware-validation.md`.
+- Declined: plan_v2 §8 "elbow-free streak" for kids (plan v8, V8-6).
+
 ## Commit ledger
 
 ### 0.0.1 — docs: record vision and implementation working agreement
@@ -376,12 +395,6 @@ speed require consented physical sessions on a phone and must not be fabricated.
   diagnostic/demo UI and APK distribution. Keep conditional research visible.
 - New ideas: add deterministic scenario replay to make calibration/alarms testable
   without exposing family images; document camera movement/recalibration explicitly.
-
-## New ideas backlog
-
-- [x] Deterministic synthetic scenario replay shared by demo and regression tests (`SyntheticDemo` drives the demo, `SyntheticDemoTest` and `replay.sh demo-log`).
-- [x] Calibration reminder after camera/model changes and orientation handling (aspect/rotation invalidation since 0.6.15, lens change clears the outline).
-- [x] Session-separated export metadata for future classifier training without leakage (session id in every log header; whole-session evaluation in `docs/data.md`).
 
 ### 0.0.2 — docs: select native Kotlin and MediaPipe after framework comparison
 
@@ -1248,3 +1261,11 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Done: whole-repository check (contents, delivered plans v3–v7, open evidence, `agents.md`);
   findings and decisions recorded as V8-1…V8-7.
 - Validation: documentation only.
+
+### 0.13.62 — docs(plan): backlog before the ledger, every idea collected, log in date order (V8-1)
+
+- Done: "New ideas backlog" now precedes "Commit ledger" (all entries 0.0.1…0.13.62 sit under
+  the ledger again); the nine ledger "New ideas" notes are in the backlog — six closed with
+  references, two open as V8-3/V8-4, one waiting for a phone; the declined streak is listed;
+  the owner input log is in date order with today's request.
+- Validation: markdownlint.
