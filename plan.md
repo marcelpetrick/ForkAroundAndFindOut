@@ -212,7 +212,7 @@ Findings of the check and decisions, one item each:
 - [ ] V8-5 `MainActivity` is still 740 lines after R6-1: move the camera/layout plumbing and
   the demo/meal tick out into focused classes behind the same host, behaviour unchanged
   (delegated to a subagent in an isolated worktree, integrated and reviewed here).
-- [ ] V8-6 Decisions recorded, nothing built: plan_v2 §8 "elbow-free streak" is **declined**
+- [x] V8-6 Decisions recorded, nothing built: plan_v2 §8 "elbow-free streak" is **declined**
   (a per-child score turns a gentle reminder into surveillance and competition; the meal
   summary's positive "longest reminder-free stretch" covers the motivation without a
   per-person count); Full vs Lite on a phone stays in the hardware protocol (needs a device);
@@ -1293,3 +1293,11 @@ is empty; the same method was applied to the session range instead. Findings fix
   usage comment (which also lacked `--hold-ms`) updated.
 - Validation: spotless, detekt, `:tools:test` (new `labelsCountKindsPerSessionAndAcrossSessions`,
   usage error without files).
+
+### 0.13.66 — docs(ux): no per-person scores or streaks (V8-6)
+
+- Done: the declined plan_v2 §8 "elbow-free streak" becomes a guardrail in `docs/ux.md` (no
+  per-person scores, streaks or rankings; the meal summary's reminder-free stretch belongs to
+  the table). Full vs Lite on a phone stays step 1 of `docs/hardware-validation.md`; the
+  OpenCV 4-clause question stays recorded in `docs/licensing.md` as an owner action.
+- Validation: markdownlint.

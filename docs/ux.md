@@ -106,6 +106,9 @@ lifecycle, navigation, the camera and the frame loop.
 - Controls never move under a finger; text that grows goes below them.
 - Avoid full-screen flashing. Slow-pulse mode must remain slow and gentle.
 - Do not infer validated dining accuracy from a plausible skeleton overlay.
+- No per-person scores, streaks or rankings: seats are colours, and a counter per child
+  would turn a gentle reminder into surveillance and competition. The meal summary's
+  "longest reminder-free stretch" is the one positive figure, and it belongs to the table.
 
 ## Verification
 
