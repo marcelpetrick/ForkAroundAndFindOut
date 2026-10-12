@@ -31,6 +31,9 @@ instruction arrives, add it here in the fitting section and record it in `plan.m
 - "What is left?" is answered from `plan.md`: open items, the new-ideas backlog and the
   vision traceability table. Close backlog items with references when earlier work already
   delivered them.
+- Every "New ideas" note written in a ledger entry is also added to the new-ideas backlog, so
+  no idea lives only in the ledger. Ideas that are rejected stay listed as "Declined" with
+  the reason.
 - Work step by step until the whole project is done; do not stop early.
 
 ## Collaboration and working order
@@ -72,6 +75,10 @@ instruction arrives, add it here in the fitting section and record it in `plan.m
   continuously; never commit or push a known failing change.
 - Use semantic versioning. Every commit increments the patch version; a major feature
   also increments the minor version. `VERSION` is the release source of truth.
+- 1.0.0 is declared only with real household evidence (plan_v2 M9): the hardware protocol run
+  for at least three real meals, fewer than one false alarm per ordinary meal and more than
+  95 % of sustained violations reminded. If the numbers miss, plan the next tuning iteration
+  from replay data instead; synthetic or emulator results never count.
 - Update `plan.md` in each commit with the step, completed work, pending work,
   validation evidence, and new ideas. Identify entries by version and commit subject
   because a commit cannot contain its own hash.
@@ -94,6 +101,9 @@ instruction arrives, add it here in the fitting section and record it in `plan.m
   content description and let scrolling settle before tapping.
 - Make the local product work before Dockerizing it. Build and publish the resulting
   Docker image to GHCR through GitHub Actions.
+- Optimisations and refactorings keep behaviour identical: the replay agreement tests and the
+  existing test expectations must pass unchanged; anything that could move the calibration
+  or detection contract without phone evidence is recorded as "considered, not changed".
 - Write small reusable scripts for repeated tasks and document every script in
   `docs/scripts.md`.
 - Run `/updateDependencies` when asked or before a release batch; keep every version pinned.

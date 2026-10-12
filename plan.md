@@ -199,7 +199,7 @@ Findings of the check and decisions, one item each:
   under "New ideas backlog"; the owner input log is not chronological. Move the backlog above
   the ledger, collect every ledger "New ideas" note there (done ones closed with references),
   and order the log by date.
-- [ ] V8-2 `agents.md` gaps: 1.0.0 is declared only with the real-meal evidence (plan_v2 M9:
+- [x] V8-2 `agents.md` gaps: 1.0.0 is declared only with the real-meal evidence (plan_v2 M9:
   < 1 false alarm per ordinary meal, > 95 % of sustained violations reminded, three meals);
   optimisations keep behaviour identical (replay agreement and tests pin it); every ledger
   "New ideas" note lands in the backlog.
@@ -1268,4 +1268,11 @@ is empty; the same method was applied to the session range instead. Findings fix
   the ledger again); the nine ledger "New ideas" notes are in the backlog — six closed with
   references, two open as V8-3/V8-4, one waiting for a phone; the declined streak is listed;
   the owner input log is in date order with today's request.
+- Validation: markdownlint.
+
+### 0.13.63 — docs(agents): the 1.0.0 evidence gate, behaviour-preserving changes, ideas into the backlog (V8-2)
+
+- Done: `agents.md` gains three rules — 1.0.0 only with the real-meal evidence of plan_v2 M9
+  (Git and releases); optimisations and refactorings keep behaviour identical (Quality gates);
+  every ledger idea goes to the backlog, rejected ones stay as "Declined" (Plan first).
 - Validation: markdownlint.
