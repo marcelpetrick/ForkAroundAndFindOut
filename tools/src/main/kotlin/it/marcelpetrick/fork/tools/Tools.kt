@@ -3,6 +3,7 @@
 package it.marcelpetrick.fork.tools
 
 import it.marcelpetrick.fork.demo.SyntheticDemo
+import it.marcelpetrick.fork.monitoring.Label
 import it.marcelpetrick.fork.monitoring.Recording
 import it.marcelpetrick.fork.monitoring.Replay
 import it.marcelpetrick.fork.monitoring.SessionLog
@@ -21,6 +22,10 @@ const val USAGE = """Usage:
       FALSE_ALARM/NORMAL labels, detected positive labels, UNKNOWN fraction and
       live/replay agreement per session and in total. Split train/validation/test by
       passing whole session files, never frames (vision §22).
+  labels SESSION.jsonl[.gz]...
+      Count the labels of each kind per session and in total, and in how many sessions
+      each kind occurs: a whole-session train/validation/test split needs every kind in
+      at least three sessions before any learned classifier is worth training.
   demo-log OUT.jsonl.gz [LOOPS]
       Write the labelled synthetic demo session (no real data) for trying the tools."""
 
@@ -37,6 +42,10 @@ fun run(
         when (args.firstOrNull()) {
             "replay" -> {
                 replay(args.drop(1), out)
+            }
+
+            "labels" -> {
+                labels(args.drop(1), out)
             }
 
             "demo-log" -> {
@@ -106,6 +115,31 @@ private fun replay(
     return 0
 }
 
+private fun labels(
+    args: List<String>,
+    out: PrintStream,
+): Int {
+    require(args.isNotEmpty()) { "No session files given" }
+    val counts = args.map { path -> load(File(path)).let { it.session to it.labels.groupingBy(Label::label).eachCount() } }
+    val kinds = SessionLog.LABELS + counts.flatMap { it.second.keys }.distinct().filterNot { it in SessionLog.LABELS }
+
+    fun line(count: (String) -> String) = kinds.joinToString(", ") { "$it ${count(it)}" }
+    for ((session, perKind) in counts) {
+        out.println("$session: ${perKind.values.sum()} labels — ${line { (perKind[it] ?: 0).toString() }}")
+    }
+    val sessions = kinds.associateWith { kind -> counts.count { (it.second[kind] ?: 0) > 0 } }
+    val total = counts.sumOf { it.second.values.sum() }
+    out.println(
+        "TOTAL: ${counts.size} sessions, $total labels — " +
+            line { kind -> "${counts.sumOf { it.second[kind] ?: 0 }} in ${sessions.getValue(kind)} sessions" },
+    )
+    val thin = kinds.filter { sessions.getValue(it) < SPLIT_SESSIONS }
+    if (thin.isNotEmpty()) {
+        out.println("Fewer than $SPLIT_SESSIONS sessions (too few for a whole-session split): ${thin.joinToString(", ")}")
+    }
+    return 0
+}
+
 private fun demoLog(
     args: List<String>,
     out: PrintStream,
@@ -152,3 +186,6 @@ fun load(file: File): Recording {
 private const val DEFAULT_WINDOW_MS = 5_000L
 private const val DEFAULT_LOOPS = 3
 private const val BUFFER_BYTES = 64 * 1024
+
+/** Train, validation and test each need at least one session with the label. */
+private const val SPLIT_SESSIONS = 3

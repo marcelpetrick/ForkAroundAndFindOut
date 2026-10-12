@@ -52,6 +52,27 @@ class ToolsTest {
     }
 
     @Test
+    fun labelsCountKindsPerSessionAndAcrossSessions() {
+        val log = folder.root.resolve("demo.jsonl.gz").path
+        call("demo-log", log, "2")
+        val (code, out, _) = call("labels", log, log)
+        assertEquals(0, code)
+        // Two loops label NORMAL and LEFT once each; the same file twice counts as two sessions.
+        assertTrue(out, out.contains(": 4 labels — NORMAL 2, LEFT 2, RIGHT 0, BOTH 0, FALSE_ALARM 0, MISSED_VIOLATION 0"))
+        assertTrue(out, out.contains("TOTAL: 2 sessions, 8 labels — NORMAL 4 in 2 sessions, LEFT 4 in 2 sessions, RIGHT 0 in 0 sessions"))
+        assertTrue(out, out.contains("Fewer than 3 sessions (too few for a whole-session split): NORMAL, LEFT, RIGHT, BOTH"))
+        val plain = folder.root.resolve("other.jsonl")
+        plain.writeText(SyntheticDemo.sessionLog(loops = 1).joinToString("\n").replace("\"LEFT\"", "\"SNACK\""))
+        val other = call("labels", plain.path, log, log, log).second
+        assertTrue(other, other.contains("SNACK 1"))
+        assertTrue(other, other.contains("NORMAL 7 in 4 sessions, LEFT 6 in 3 sessions"))
+        assertEquals(
+            "Fewer than 3 sessions (too few for a whole-session split): RIGHT, BOTH, FALSE_ALARM, MISSED_VIOLATION, SNACK",
+            other.trimEnd().lines().last(),
+        )
+    }
+
+    @Test
     fun plainAndTruncatedGzipLogsAreRead() {
         val lines = SyntheticDemo.sessionLog(loops = 1)
         val plain = folder.root.resolve("plain.jsonl").apply { writeText(lines.joinToString("\n")) }
@@ -75,6 +96,7 @@ class ToolsTest {
             arrayOf("replay", "--trigger-ms", "soon", "x"),
             arrayOf("replay", "--speed", "3", "x"),
             arrayOf("replay", folder.root.resolve("missing.jsonl").path),
+            arrayOf("labels"),
             arrayOf("demo-log"),
         )) {
             val (code, _, err) = call(*args)

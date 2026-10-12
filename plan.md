@@ -205,7 +205,7 @@ Findings of the check and decisions, one item each:
   "New ideas" note lands in the backlog.
 - [x] V8-3 Export file names carry the date (`fork-around-samples-YYYY-MM-DD.json`), so two
   exports never overwrite each other in the picker's default folder.
-- [ ] V8-4 Class balance before any learned classifier: `scripts/replay.sh labels <logs…>`
+- [x] V8-4 Class balance before any learned classifier: `scripts/replay.sh labels <logs…>`
   prints per session and in total how many labels of each kind exist and in how many sessions
   each kind occurs (whole-session splits need several sessions per class); documented in
   `docs/data.md` and `docs/scripts.md`.
@@ -378,7 +378,7 @@ Every "New ideas" note from the ledger lands here; closed items name where they 
 - [x] All computed feature values in labelled exports; heuristic scores never presented as calibrated probabilities or measured accuracy (0.1.5; `sampleRecord`, release notes).
 - [x] Demo as the README screenshot source; separating-axis seat overlap test (0.3.8; `scripts/screenshots.sh`, `Geometry`).
 - [x] Export file name carries the date (0.5.12; 0.13.64, `exportName`).
-- [ ] Per-label training summary to check class balance before a learned classifier (0.5.12) — plan v8, V8-4.
+- [x] Per-label training summary to check class balance before a learned classifier (0.5.12; 0.13.65, `replay.sh labels`).
 - [ ] Benchmark Full vs Lite on a phone (0.0.2) — needs a device; step 1 of `docs/hardware-validation.md`.
 - Declined: plan_v2 §8 "elbow-free streak" for kids (plan v8, V8-6).
 
@@ -1283,3 +1283,13 @@ is empty; the same method was applied to the session range instead. Findings fix
   (`exportName` in `ui/Format.kt`), so a second export does not replace the first in the
   picker's folder; `docs/data.md` names it.
 - Validation: spotless, detekt, `UiTest` (new `exportNameCarriesTheDate`).
+
+### 0.13.65 — feat(tools): label balance across sessions before any learned classifier (V8-4)
+
+- Done: `scripts/replay.sh labels LOG…` (`:tools` command `labels`) prints per session and in
+  total how many labels of each kind exist, in how many sessions each kind occurs, and names
+  the kinds in fewer than three sessions (too few for a whole-session split); unknown kinds
+  are listed after the six known ones. `docs/data.md`, `docs/scripts.md` and the script's
+  usage comment (which also lacked `--hold-ms`) updated.
+- Validation: spotless, detekt, `:tools:test` (new `labelsCountKindsPerSessionAndAcrossSessions`,
+  usage error without files).

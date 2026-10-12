@@ -45,6 +45,7 @@ future rule or model can be recomputed from the same sessions. Feedback taps use
 scripts/replay.sh demo-log /tmp/demo.jsonl.gz 3          # synthetic, labelled session
 scripts/replay.sh replay /tmp/demo.jsonl.gz               # evaluate as recorded
 scripts/replay.sh replay --trigger-ms 1500 meal-*.jsonl.gz   # tuning experiment
+scripts/replay.sh labels meal-*.jsonl.gz                 # class balance before training
 ```
 
 Per session the tool re-runs the detector and prints frames, duration, reminder onsets,
@@ -55,6 +56,9 @@ log switched on mid-session replays from a cold detector). 100 % agreement with 
 timing is a regression check: the desktop replays exactly what the phone decided.
 
 Evaluate by **whole sessions** (vision §22): pass training, validation and test sessions
-as separate file sets, never frames of one meal in different sets. A learned classifier
+as separate file sets, never frames of one meal in different sets. `labels` shows whether that is
+possible yet: per session and in total it counts each label kind, says in how many sessions
+each kind occurs, and names every kind found in fewer than three sessions (too few for a
+whole-session train/validation/test split). A learned classifier
 (vision §10.2) is only worth training after enough real, consented sessions exist; this
 repository contains no family recordings and must never receive any.
