@@ -187,6 +187,38 @@ identical (the replay agreement and all tests pin it).
   without phone evidence); the 10 Hz watchdog tick (it bounds stale-evidence expiry, a
   safety property); `LocalStore` rewriting its JSON on a feedback tap (rare, user-initiated).
 
+## Plan v8 — repository check and the loose ends (owner request 2026-10-12)
+
+Owner input: "check the whole repository — what is inside, what was done, what is left for the
+plan; also check agents.md", then "go, get it done", "plan your own work and make it", up to
+two subagents.
+
+Findings of the check and decisions, one item each:
+
+- [ ] V8-1 `plan.md` structure: the ledger heading holds only 0.0.1 and every later entry sits
+  under "New ideas backlog"; the owner input log is not chronological. Move the backlog above
+  the ledger, collect every ledger "New ideas" note there (done ones closed with references),
+  and order the log by date.
+- [ ] V8-2 `agents.md` gaps: 1.0.0 is declared only with the real-meal evidence (plan_v2 M9:
+  < 1 false alarm per ordinary meal, > 95 % of sustained violations reminded, three meals);
+  optimisations keep behaviour identical (replay agreement and tests pin it); every ledger
+  "New ideas" note lands in the backlog.
+- [ ] V8-3 Export file names carry the date (`fork-around-samples-YYYY-MM-DD.json`), so two
+  exports never overwrite each other in the picker's default folder.
+- [ ] V8-4 Class balance before any learned classifier: `scripts/replay.sh labels <logs…>`
+  prints per session and in total how many labels of each kind exist and in how many sessions
+  each kind occurs (whole-session splits need several sessions per class); documented in
+  `docs/data.md` and `docs/scripts.md`.
+- [ ] V8-5 `MainActivity` is still 740 lines after R6-1: move the camera/layout plumbing and
+  the demo/meal tick out into focused classes behind the same host, behaviour unchanged
+  (delegated to a subagent in an isolated worktree, integrated and reviewed here).
+- [ ] V8-6 Decisions recorded, nothing built: plan_v2 §8 "elbow-free streak" is **declined**
+  (a per-child score turns a gentle reminder into surveillance and competition; the meal
+  summary's positive "longest reminder-free stretch" covers the motivation without a
+  per-person count); Full vs Lite on a phone stays in the hardware protocol (needs a device);
+  the OpenCV 4-clause question stays an owner action (asking upstream is outward-facing).
+- [ ] V8-7 Self-review of the v8 diff, fixes, full pipeline, green CI, public release.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -1210,3 +1242,9 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Gate: performance work P1–P11 done (0.13.59), full local pipeline green, committed tree
   re-validated from a clean clone; release notes for 0.13.60.
 - Release: tag `v0.13.60` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
+
+### 0.13.61 — docs: plan v8 from the repository check
+
+- Done: whole-repository check (contents, delivered plans v3–v7, open evidence, `agents.md`);
+  findings and decisions recorded as V8-1…V8-7.
+- Validation: documentation only.
