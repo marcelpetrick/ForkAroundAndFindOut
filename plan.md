@@ -1324,3 +1324,9 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: full local pipeline green — 73 unit/Robolectric tests, coverage 97.7 %, detekt
   0, Android lint 0, Lint Suite clean, SBOM matches, 4 e2e tests on the API 34 emulator,
   Docker image serves the APK with a valid checksum.
+
+### 0.13.69 — chore(release): public release v0.13.69 (plan v8)
+
+- Gate: V8-1…V8-6 and R8-1 done, full local pipeline green (0.13.68, incl. e2e and Docker);
+  release notes for 0.13.69.
+- Release: tag `v0.13.69` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.

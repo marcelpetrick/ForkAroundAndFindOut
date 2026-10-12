@@ -1,7 +1,7 @@
 <!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-**Fork Around & Find Out 0.13.60** — an offline Android helper that gently reminds a family
+**Fork Around & Find Out 0.13.69** — an offline Android helper that gently reminds a family
 to keep elbows off the dinner table.
 
 **Status: software complete, real-table validation pending.** Everything below is
@@ -10,7 +10,19 @@ Android 16 emulators, Docker). How often it gives a false reminder at a real mea
 been measured yet**; the protocol is in `docs/hardware-validation.md`. Version 1.0.0 is
 reserved for when those targets are met.
 
-## New since 0.13.57
+## New since 0.13.60
+
+- **Export:** the records export is suggested with the date in its name
+  (`fork-around-samples-YYYY-MM-DD.json`), so a second export no longer replaces the first.
+- **Training data:** `scripts/replay.sh labels` counts label kinds per session (logs of one
+  meal count once) and across sessions, and names the kinds found in fewer than three
+  sessions — too few for a whole-session train/validation/test split.
+- **Code:** the camera plumbing and the demo moved out of the main activity into their own
+  screen classes; behaviour is unchanged.
+- **Docs and rules:** no per-person scores or streaks (a UX guardrail); 1.0.0 needs the
+  real-meal evidence; the plan's backlog collects every idea.
+
+## Since 0.13.57
 
 - **Performance:** the camera overlay no longer allocates while drawing and redraws only when
   something it shows changes (with the skeleton hidden, new camera frames cause no redraw);
@@ -63,10 +75,10 @@ against its return.
 
 ## Install
 
-Download `fork-around-and-find-out-0.13.60.apk` below (arm64, Android 14+), verify it with the
+Download `fork-around-and-find-out-0.13.69.apk` below (arm64, Android 14+), verify it with the
 `.sha256` file, and install it. Signing certificate SHA-256:
 `AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0`.
-The SBOM is `fork-around-and-find-out-0.13.60.cdx.json`. Or run the download server:
+The SBOM is `fork-around-and-find-out-0.13.69.cdx.json`. Or run the download server:
 `docker run --rm -p 8080:8080 ghcr.io/marcelpetrick/forkaroundandfindout:latest`.
 
-GPL-3.0-or-later. Complete source of this version: tag `v0.13.60`. Third-party notices: `NOTICES.md`.
+GPL-3.0-or-later. Complete source of this version: tag `v0.13.69`. Third-party notices: `NOTICES.md`.
