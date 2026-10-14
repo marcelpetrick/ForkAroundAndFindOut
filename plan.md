@@ -217,7 +217,7 @@ Findings of the check and decisions, one item each:
   summary's positive "longest reminder-free stretch" covers the motivation without a
   per-person count); Full vs Lite on a phone stays in the hardware protocol (needs a device);
   the OpenCV 4-clause question stays an owner action (asking upstream is outward-facing).
-- [ ] V8-7 Self-review of the v8 diff, fixes, full pipeline, green CI, public release.
+- [x] V8-7 Self-review of the v8 diff, fixes, full pipeline, green CI, public release.
   - [x] R8-1 (medium) `labels` counted files as sessions, so two logs of one meal looked like
     two sessions and overstated what a whole-session split can use — group by session id.
 
@@ -1330,3 +1330,12 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Gate: V8-1…V8-6 and R8-1 done, full local pipeline green (0.13.68, incl. e2e and Docker);
   release notes for 0.13.69.
 - Release: tag `v0.13.69` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.
+
+### 0.13.70 — docs(plan): plan v8 closed after the v0.13.69 release (V8-7)
+
+- Done: release `v0.13.69` published from a green tag run — APK checksum verified, signing
+  certificate SHA-256 `AA:F8:58…5A:E0` unchanged, GHCR image `:0.13.69` serves the APK, SBOM
+  attached; every `main` run of plan v8 green (two emulator-boot flakes on the runner passed
+  on re-run without changes). Plan v8 has no open items; what remains needs a phone (see
+  the backlog and "Validation boundaries").
+- Validation: markdownlint; documentation only.
