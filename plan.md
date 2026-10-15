@@ -238,7 +238,7 @@ service, PyPI, Docker Hub, GitHub releases):
   Mockito 5.24.0, JUnit 4.13.2, Robolectric 4.17, ktlint 1.8.0, detekt 1.23.8, yamllint
   1.38.0, reuse 6.2.0, checkout 7.0.1, setup-android 4.0.4, cache 6.1.0, emulator-runner
   2.38.0, hadolint 2.15.1, actionlint 1.7.12, markdownlint-cli2 0.23.3.
-- [ ] D2 Full local pipeline incl. e2e and Docker, green CI, public release; APK URL to the
+- [x] D2 Full local pipeline incl. e2e and Docker, green CI, public release; APK URL to the
   owner.
 
 ## Owner input log
@@ -1380,3 +1380,9 @@ is empty; the same method was applied to the session range instead. Findings fix
 - Validation: full local pipeline green — 73 unit/Robolectric tests incl. both real models,
   coverage 97.7 %, detekt 0, Android lint 0, Lint Suite (ruff 0.17.0 confirmed in the image),
   SBOM 95 components matching the About list, 4 e2e tests on the API 34 emulator, Docker.
+
+### 0.13.73 — chore(release): public release v0.13.73 (plan v9)
+
+- Gate: D1 done, full local pipeline green (0.13.72, incl. e2e and Docker); release notes
+  for 0.13.73.
+- Release: tag `v0.13.73` after green `main` CI → signed APK, SHA-256, SBOM, GHCR image.

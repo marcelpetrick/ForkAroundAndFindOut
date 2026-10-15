@@ -1,7 +1,7 @@
 <!-- SPDX-FileCopyrightText: 2026 Marcel Petrick -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-**Fork Around & Find Out 0.13.69** — an offline Android helper that gently reminds a family
+**Fork Around & Find Out 0.13.73** — an offline Android helper that gently reminds a family
 to keep elbows off the dinner table.
 
 **Status: software complete, real-table validation pending.** Everything below is
@@ -10,7 +10,15 @@ Android 16 emulators, Docker). How often it gives a false reminder at a real mea
 been measured yet**; the protocol is in `docs/hardware-validation.md`. Version 1.0.0 is
 reserved for when those targets are met.
 
-## New since 0.13.60
+## New since 0.13.69
+
+- **Dependencies:** MediaPipe Tasks 1.1.1 (was 1.0.0), Gradle 9.8.1, newer build plugins
+  (Kover, Spotless, CycloneDX), ruff 0.17.0, nginx 1.30.6 for the download server and newer
+  CI actions. The app's third-party notices follow MediaPipe's new notice file. The licence
+  check found no new kind of licence, see `docs/licensing.md`. The APK is about 3 MB larger
+  because of MediaPipe's native library.
+
+## Since 0.13.60
 
 - **Export:** the records export is suggested with the date in its name
   (`fork-around-samples-YYYY-MM-DD.json`), so a second export no longer replaces the first.
@@ -75,10 +83,10 @@ against its return.
 
 ## Install
 
-Download `fork-around-and-find-out-0.13.69.apk` below (arm64, Android 14+), verify it with the
+Download `fork-around-and-find-out-0.13.73.apk` below (arm64, Android 14+), verify it with the
 `.sha256` file, and install it. Signing certificate SHA-256:
 `AA:F8:58:04:C1:50:BB:DF:83:8A:28:49:B1:5A:7A:F3:F8:A9:74:7F:08:3E:A0:82:47:33:7A:10:7A:86:5A:E0`.
-The SBOM is `fork-around-and-find-out-0.13.69.cdx.json`. Or run the download server:
+The SBOM is `fork-around-and-find-out-0.13.73.cdx.json`. Or run the download server:
 `docker run --rm -p 8080:8080 ghcr.io/marcelpetrick/forkaroundandfindout:latest`.
 
-GPL-3.0-or-later. Complete source of this version: tag `v0.13.69`. Third-party notices: `NOTICES.md`.
+GPL-3.0-or-later. Complete source of this version: tag `v0.13.73`. Third-party notices: `NOTICES.md`.
