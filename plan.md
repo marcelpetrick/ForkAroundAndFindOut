@@ -221,6 +221,26 @@ Findings of the check and decisions, one item each:
   - [x] R8-1 (medium) `labels` counted files as sessions, so two logs of one meal looked like
     two sessions and overstated what a whole-session split can use — group by session id.
 
+## Plan v9 — dependency update and release (owner request 2026-10-15)
+
+Owner input: "/updateDependencies and then make a public release".
+
+Registry check 2026-10-15 (Google Maven, Maven Central, Gradle Plugin Portal, Gradle version
+service, PyPI, Docker Hub, GitHub releases):
+
+- [ ] D1 Update every outdated pin in one `build(deps)` commit: MediaPipe Tasks Vision 1.0.0 →
+  1.1.1 (runtime: SBOM, About list and native notices regenerate; real-model tests and e2e
+  must pass), Gradle 9.8.0 → 9.8.1, Kover 0.9.9 → 0.9.11, Spotless 8.10.3 → 8.10.4,
+  CycloneDX 3.4.1 → 3.5.1, ruff 0.16.9 → 0.17.0, nginx 1.30.5 → 1.30.6 (stable line; 1.31 is
+  mainline), Python 3.14-slim digest refresh, actions/setup-java 6.0.1 → 6.1.0, gradle/actions
+  6.3.0 → 6.4.0, actions/upload-artifact 7.0.1 → 7.0.2. Already latest: AGP 9.4.1,
+  activity-ktx 1.13.0, CameraX 1.6.2, test runner 1.7.0, ext-junit 1.3.0, UiAutomator 2.4.0,
+  Mockito 5.24.0, JUnit 4.13.2, Robolectric 4.17, ktlint 1.8.0, detekt 1.23.8, yamllint
+  1.38.0, reuse 6.2.0, checkout 7.0.1, setup-android 4.0.4, cache 6.1.0, emulator-runner
+  2.38.0, hadolint 2.15.1, actionlint 1.7.12, markdownlint-cli2 0.23.3.
+- [ ] D2 Full local pipeline incl. e2e and Docker, green CI, public release; APK URL to the
+  owner.
+
 ## Owner input log
 
 Instructions from the owner, recorded so any agent can resume faithfully.
@@ -273,6 +293,7 @@ Instructions from the owner, recorded so any agent can resume faithfully.
 - 2026-10-12: "check the whole repository — what is inside, what was done, what is left for
   the plan; also check agents.md"; "go, get it done"; "plan your own work and make it"; up to
   two subagents.
+- 2026-10-15: "/updateDependencies and then make a public release".
 
 ## Tasks
 
@@ -1339,3 +1360,8 @@ is empty; the same method was applied to the session range instead. Findings fix
   on re-run without changes). Plan v8 has no open items; what remains needs a phone (see
   the backlog and "Validation boundaries").
 - Validation: markdownlint; documentation only.
+
+### 0.13.71 — docs: plan v9 for the dependency update and release
+
+- Done: every pin checked against its registry; eleven outdated, recorded as D1; release D2.
+- Validation: documentation only.
