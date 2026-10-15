@@ -228,7 +228,7 @@ Owner input: "/updateDependencies and then make a public release".
 Registry check 2026-10-15 (Google Maven, Maven Central, Gradle Plugin Portal, Gradle version
 service, PyPI, Docker Hub, GitHub releases):
 
-- [ ] D1 Update every outdated pin in one `build(deps)` commit: MediaPipe Tasks Vision 1.0.0 →
+- [x] D1 Update every outdated pin in one `build(deps)` commit: MediaPipe Tasks Vision 1.0.0 →
   1.1.1 (runtime: SBOM, About list and native notices regenerate; real-model tests and e2e
   must pass), Gradle 9.8.0 → 9.8.1, Kover 0.9.9 → 0.9.11, Spotless 8.10.3 → 8.10.4,
   CycloneDX 3.4.1 → 3.5.1, ruff 0.16.9 → 0.17.0, nginx 1.30.5 → 1.30.6 (stable line; 1.31 is
@@ -1365,3 +1365,18 @@ is empty; the same method was applied to the session range instead. Findings fix
 
 - Done: every pin checked against its registry; eleven outdated, recorded as D1; release D2.
 - Validation: documentation only.
+
+### 0.13.72 — build(deps): MediaPipe Tasks 1.1.1, Gradle 9.8.1, plugins, ruff, nginx, actions (D1)
+
+- Done: every outdated pin updated as listed in D1 (images by multi-arch index digest).
+  MediaPipe 1.1.1 brings a new `META-INF/NOTICE` (identical in tasks-core and tasks-vision):
+  `notices/mediapipe.txt` replaced, the About list regenerated (only the two MediaPipe
+  versions change; transitive dependencies are identical), and `docs/licensing.md` records a
+  section-by-section comparison — 38 new sections, all Apache-2.0, MIT, BSD or public domain
+  except LLVM toolchain entries (Apache-2.0 with LLVM exceptions; autoconf's GPL-2.0
+  `config.guess` is a build script, not library code); no new licence family. The release
+  APK grows 39.4 → 42.8 MB (larger native library). ruff 0.17.0 and the newer plugins raised
+  no findings; the About test expects the new version.
+- Validation: full local pipeline green — 73 unit/Robolectric tests incl. both real models,
+  coverage 97.7 %, detekt 0, Android lint 0, Lint Suite (ruff 0.17.0 confirmed in the image),
+  SBOM 95 components matching the About list, 4 e2e tests on the API 34 emulator, Docker.

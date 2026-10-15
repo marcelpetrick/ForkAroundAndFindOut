@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 plugins {
     id("com.android.application") version "9.4.1" apply false
-    id("org.jetbrains.kotlinx.kover") version "0.9.9" apply false
-    id("com.diffplug.spotless") version "8.10.3"
+    id("org.jetbrains.kotlinx.kover") version "0.9.11" apply false
+    id("com.diffplug.spotless") version "8.10.4"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
-    id("org.cyclonedx.bom") version "3.4.1"
+    id("org.cyclonedx.bom") version "3.5.1"
 }
 // One identity for every module, so the SBOM names this project's components correctly.
 allprojects {

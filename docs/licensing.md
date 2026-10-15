@@ -70,11 +70,18 @@ user out of running modified versions, so no signing key needs to be published.
 | MIT | checker-qual; checker-compat-qual (dual "GPL-2.0 with Classpath exception" OR MIT, used under MIT) | Compatible; copyright notice shown in the app |
 
 MediaPipe's native library (`libmediapipe_tasks_jni.so`) is built from many upstream
-projects. Its NOTICE (187 sections) was scanned for licence families. Found: Apache-2.0,
+projects. Its NOTICE (187 sections in 1.0.0) was scanned for licence families. Found: Apache-2.0,
 BSD, MIT, ISC, zlib, Unicode and public-domain texts. Also found were MPL-2.0 (Eigen), the
 GCC runtime library exception, and a triple-licensed library (googleurl, MPL/GPL/LGPL). All
 are compatible with GPLv3. BoringSSL is under Apache-2.0. Two copies of the historic UC
 Berkeley 4-clause BSD text appear; the University rescinded its advertising clause in 1999.
+
+The 1.1.1 NOTICE (shipped since 0.13.72) was compared with 1.0.0 section by section: 38 new
+sections, 2 removed. Every new section is Apache-2.0, MIT, BSD or public domain, except the
+LLVM toolchain entries: LLVM itself is Apache-2.0 with LLVM exceptions, and its list of
+third-party files includes autoconf's `config.guess` under GPL-2.0, a build script that is
+not part of the library. No new licence family and no non-commercial terms were added, so
+the assessment above is unchanged.
 
 **Open question (recorded honestly).** The OpenCV section is a catalogue of every licence
 used anywhere in OpenCV's tree. It includes a generic 4-clause BSD template with no named

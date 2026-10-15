@@ -64,7 +64,7 @@ SPDX-FileCopyrightText = "Google LLC"
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
-# Apache-2.0 NOTICE files of MediaPipe Tasks (META-INF/NOTICE of tasks-core/tasks-vision 1.0.0,
+# Apache-2.0 NOTICE files of MediaPipe Tasks (META-INF/NOTICE of tasks-core/tasks-vision 1.1.1,
 # listing the native libraries' upstream notices) and of jakarta.inject-api 2.0.1.
 path = ["app/src/main/assets/notices/mediapipe.txt", "app/src/main/assets/notices/jakarta-inject.txt"]
 precedence = "override"

@@ -76,7 +76,7 @@ conditional as specified in the vision; a Raspberry Pi appliance will never be b
 - [MediaPipe task and bundled models](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker)
 - [Android API, live stream and pose-count options](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/android)
 - [MediaPipe Apache-2.0 source license](https://github.com/google-ai-edge/mediapipe/blob/master/LICENSE)
-- [Maven artifact license metadata](https://dl.google.com/dl/android/maven2/com/google/mediapipe/tasks-vision/1.0.0/tasks-vision-1.0.0.pom)
+- [Maven artifact license metadata](https://dl.google.com/dl/android/maven2/com/google/mediapipe/tasks-vision/1.1.1/tasks-vision-1.1.1.pom)
 - [ML Kit limitations and beta status](https://developers.google.com/ml-kit/vision/pose-detection)
 - [MoveNet single/multi-pose configuration](https://github.com/tensorflow/tfjs-models/blob/master/pose-detection/src/movenet/README.md)
 - [RTMPose Android deployment and benchmarks](https://github.com/open-mmlab/mmpose/blob/main/projects/rtmpose/README.md)

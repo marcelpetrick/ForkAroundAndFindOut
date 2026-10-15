@@ -3,7 +3,7 @@
 # Distribution image: serves the Android APK, its SHA-256, the license and an install
 # page. The phone camera is never used here; monitoring runs only on the phone.
 # Build context: the directory staged by scripts/docker-dist.sh.
-FROM nginx:1.30.5-alpine@sha256:985220252f3863977e468f611ef118ebd01421289dd86ee1ae99cb068c3bce2b
+FROM nginx:1.30.6-alpine@sha256:ff8328b4279ec385af48cde9ef486e7165ad74b7065cb3cd86c377384e2e2dd5
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Fork Around & Find Out" \
       org.opencontainers.image.description="Download server for the offline Android elbow-on-table monitor APK" \

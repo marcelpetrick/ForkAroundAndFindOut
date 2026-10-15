@@ -180,7 +180,7 @@ class MainActivityTest {
             assertTrue(activity.texts().contains("WITHOUT ANY WARRANTY"))
             assertTrue(activity.texts().contains("github.com/marcelpetrick/ForkAroundAndFindOut/tree/v${BuildConfig.VERSION_NAME}"))
             // Every bundled component with its licence, from the SBOM-derived list.
-            assertTrue(activity.texts().contains("tasks-vision 1.0.0 · Apache-2.0"))
+            assertTrue(activity.texts().contains("tasks-vision 1.1.1 · Apache-2.0"))
             assertTrue(activity.texts().contains("protobuf-javalite"))
             assertTrue(Regex("Third-party components \\((\\d+)\\)").find(activity.texts())!!.groupValues[1].toInt() > 50)
             activity.click("Read the GNU General Public License v3")

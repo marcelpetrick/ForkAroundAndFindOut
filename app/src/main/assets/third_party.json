@@ -535,7 +535,7 @@
   {
    "group": "com.google.mediapipe",
    "name": "tasks-core",
-   "version": "1.0.0",
+   "version": "1.1.1",
    "license": "Apache-2.0",
    "url": "",
    "notice": "notices/mediapipe.txt"
@@ -543,7 +543,7 @@
   {
    "group": "com.google.mediapipe",
    "name": "tasks-vision",
-   "version": "1.0.0",
+   "version": "1.1.1",
    "license": "Apache-2.0",
    "url": "",
    "notice": "notices/mediapipe.txt"

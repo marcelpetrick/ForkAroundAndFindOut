@@ -5,7 +5,7 @@
 
 The product is an Android app: the camera, pose model and warnings run only on the
 phone. Docker therefore does **not** run the monitor. The image is a small, pinned
-`nginx:1.30.5-alpine` server that distributes the app:
+`nginx:1.30.6-alpine` server that distributes the app:
 
 | Path | Content |
 | --- | --- |
